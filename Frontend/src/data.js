@@ -1,0 +1,478 @@
+export const INITIAL_EMPLOYEES = [
+  {
+    id: 'EMP101',
+    name: 'Sarah Connor',
+    photo: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=200&auto=format&fit=crop',
+    department: 'Sales',
+    designation: 'Senior Sales Executive',
+    post: 'L3 Specialist',
+    joiningDate: '2023-04-12',
+    officialEmail: 'sarah.connor@myzo.com',
+    phone: '+1 (555) 019-2831',
+    reportsTo: 'Robert Vance (Sales Manager)',
+    reportsToDesignation: 'Sales Director',
+    directReportingEmployees: [],
+    employmentStatus: 'Active',
+    role: 'Employee',
+    salary: 25000
+  },
+  {
+    id: 'EMP102',
+    name: 'Rajesh Kumar',
+    photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop',
+    department: 'Web Developer',
+    designation: 'Full-stack Developer',
+    post: 'L2 Engineer',
+    joiningDate: '2024-01-15',
+    officialEmail: 'rajesh.kumar@myzo.com',
+    phone: '+1 (555) 014-9982',
+    reportsTo: 'Linus Torvalds (Lead Developer)',
+    reportsToDesignation: 'Engineering Director',
+    directReportingEmployees: [],
+    employmentStatus: 'Active',
+    role: 'Employee',
+    salary: 30000
+  },
+  {
+    id: 'EMP103',
+    name: 'David Miller',
+    photo: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=200&auto=format&fit=crop',
+    department: 'Finance',
+    designation: 'Financial Analyst',
+    post: 'L3 Specialist',
+    joiningDate: '2022-09-01',
+    officialEmail: 'david.miller@myzo.com',
+    phone: '+1 (555) 012-4411',
+    reportsTo: 'Dwight Schrute (Admin)',
+    reportsToDesignation: 'Chief of Operations',
+    directReportingEmployees: [],
+    employmentStatus: 'Active',
+    role: 'Employee',
+    salary: 28000
+  },
+  {
+    id: 'EMP104',
+    name: 'Jessica Pearson',
+    photo: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=200&auto=format&fit=crop',
+    department: 'HR',
+    designation: 'HR Recruiter',
+    post: 'L2 Specialist',
+    joiningDate: '2023-11-20',
+    officialEmail: 'jessica.p@myzo.com',
+    phone: '+1 (555) 018-3344',
+    reportsTo: 'Pam Beesly (HR Manager)',
+    reportsToDesignation: 'VP of Human Resources',
+    directReportingEmployees: [],
+    employmentStatus: 'Active',
+    role: 'Employee',
+    salary: 22000
+  },
+  {
+    id: 'EMP105',
+    name: 'Rahul Sharma',
+    photo: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=200&auto=format&fit=crop',
+    department: 'Sales',
+    designation: 'Sales Representative (Associate)',
+    post: 'L1 Associate',
+    joiningDate: '2026-06-01',
+    officialEmail: 'rahul.sharma@myzo.com',
+    phone: '+91 98765 43210',
+    reportsTo: 'Robert Vance (Sales Manager)',
+    reportsToDesignation: 'Sales Manager',
+    directReportingEmployees: [],
+    employmentStatus: 'Active',
+    role: 'Employee',
+    salary: 20000
+  },
+  {
+    id: 'MGR201',
+    name: 'Robert Vance',
+    photo: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=200&auto=format&fit=crop',
+    department: 'Sales',
+    designation: 'Sales Manager',
+    post: 'Director of Business Development',
+    joiningDate: '2021-03-10',
+    officialEmail: 'robert.vance@myzo.com',
+    phone: '+1 (555) 016-7281',
+    reportsTo: 'Dwight Schrute (Admin)',
+    reportsToDesignation: 'Chief of Operations',
+    directReportingEmployees: ['Sarah Connor', 'Rahul Sharma'],
+    employmentStatus: 'Active',
+    role: 'Manager',
+    salary: 60000
+  },
+  {
+    id: 'MGR202',
+    name: 'Linus Torvalds',
+    photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=200&auto=format&fit=crop',
+    department: 'Web Developer',
+    designation: 'Lead Developer',
+    post: 'Director of Technology',
+    joiningDate: '2020-05-18',
+    officialEmail: 'linus.t@myzo.com',
+    phone: '+1 (555) 011-8822',
+    reportsTo: 'Dwight Schrute (Admin)',
+    reportsToDesignation: 'Chief of Operations',
+    directReportingEmployees: ['Rajesh Kumar'],
+    employmentStatus: 'Active',
+    role: 'Manager',
+    salary: 75000
+  },
+  {
+    id: 'HR301',
+    name: 'Pam Beesly',
+    photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
+    department: 'HR',
+    designation: 'HR Manager',
+    post: 'VP of Human Resources',
+    joiningDate: '2021-06-01',
+    officialEmail: 'pam.b@myzo.com',
+    phone: '+1 (555) 015-4422',
+    reportsTo: 'Dwight Schrute (Admin)',
+    reportsToDesignation: 'Chief of Operations',
+    directReportingEmployees: ['Jessica Pearson'],
+    employmentStatus: 'Active',
+    role: 'HR',
+    salary: 50000
+  },
+  {
+    id: 'ADM401',
+    name: 'Dwight Schrute',
+    photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&auto=format&fit=crop',
+    department: 'Admin',
+    designation: 'IT Admin & Operations',
+    post: 'Chief of Operations',
+    joiningDate: '2019-01-01',
+    officialEmail: 'dwight.s@myzo.com',
+    phone: '+1 (555) 010-1000',
+    reportsTo: 'Board of Directors',
+    reportsToDesignation: 'Company Founders',
+    directReportingEmployees: ['Robert Vance', 'Linus Torvalds', 'Pam Beesly', 'David Miller'],
+    employmentStatus: 'Active',
+    role: 'Admin',
+    salary: 90000
+  }
+];
+
+export const INITIAL_TASKS = [
+  // Today Tasks
+  {
+    id: 'TSK-101',
+    title: 'Update Daily Work Log',
+    description: 'Provide breakdown of hours spent on the dashboard wireframe and mock database integrations.',
+    priority: 'High',
+    dueDate: '2026-07-13',
+    progress: 40,
+    status: 'In Progress',
+    comments: [
+      { author: 'Linus Torvalds', text: 'Please ensure we have all KPI data structures specified.', date: '2026-07-13 10:00 AM' }
+    ],
+    type: 'Today',
+    assignedTo: 'EMP102',
+    assignedBy: 'MGR202'
+  },
+  {
+    id: 'TSK-102',
+    title: 'Review Sprint Bug backlog',
+    description: 'Verify if the latency issue on the database queries has been resolved in the dev branch.',
+    priority: 'Medium',
+    dueDate: '2026-07-13',
+    progress: 100,
+    status: 'Completed',
+    comments: [],
+    type: 'Today',
+    assignedTo: 'EMP102',
+    assignedBy: 'MGR202'
+  },
+  // Weekly Tasks
+  {
+    id: 'TSK-201',
+    title: 'UI Component Library Audit',
+    description: 'Inspect all icons and motion components to verify proper Tailwind v4 declarations.',
+    priority: 'Low',
+    dueDate: '2026-07-17',
+    progress: 75,
+    status: 'In Review',
+    comments: [
+      { author: 'Linus Torvalds', text: 'Check the responsiveness on tablet resolutions.', date: '2026-07-12 04:30 PM' }
+    ],
+    type: 'Weekly',
+    assignedTo: 'EMP102',
+    assignedBy: 'MGR202'
+  },
+  {
+    id: 'TSK-202',
+    title: 'Weekly Leads Follow-up',
+    description: 'Reach out to the warm CRM leads from our June campaign and check if they want a live demo.',
+    priority: 'High',
+    dueDate: '2026-07-16',
+    progress: 10,
+    status: 'To Do',
+    comments: [],
+    type: 'Weekly',
+    assignedTo: 'EMP105',
+    assignedBy: 'MGR201'
+  },
+  // Monthly Tasks
+  {
+    id: 'TSK-301',
+    title: 'Monthly Database Refactoring',
+    description: 'Clean up stale indexing, update query pipelines, and optimize connection pooling thresholds.',
+    priority: 'Medium',
+    dueDate: '2026-07-31',
+    progress: 20,
+    status: 'In Progress',
+    comments: [],
+    type: 'Monthly',
+    assignedTo: 'EMP102',
+    assignedBy: 'MGR202'
+  },
+  // Yearly Tasks
+  {
+    id: 'TSK-401',
+    title: 'ISO-27001 Security Audit Preparation',
+    description: 'Document architecture diagrams, database compliance records, and employee workspace security rules.',
+    priority: 'High',
+    dueDate: '2026-12-15',
+    progress: 50,
+    status: 'In Progress',
+    comments: [
+      { author: 'Dwight Schrute', text: 'This is crucial for the corporate client onboarding next quarter. Do not miss any server log schemas.', date: '2026-06-01 09:00 AM' }
+    ],
+    type: 'Yearly',
+    assignedTo: 'MGR202',
+    assignedBy: 'ADM401'
+  }
+];
+
+export const INITIAL_HOLIDAYS = [
+  { id: 'HOL-01', name: 'New Year Day', date: '2026-01-01', type: 'National' },
+  { id: 'HOL-02', name: 'MYZO Foundation Day', date: '2026-03-15', type: 'Company' },
+  { id: 'HOL-03', name: 'Memorial Day', date: '2026-05-25', type: 'National' },
+  { id: 'HOL-04', name: 'Midyear Corporate Retreat', date: '2026-07-04', type: 'Company' },
+  { id: 'HOL-05', name: 'Sales Kickoff Summit', date: '2026-07-18', type: 'Department', department: 'Sales' },
+  { id: 'HOL-06', name: 'Hackathon Summer Fest', date: '2026-07-22', type: 'Department', department: 'Web Developer' },
+  { id: 'HOL-07', name: 'Independence Day', date: '2026-07-04', type: 'National' },
+  { id: 'HOL-08', name: 'Labor Day', date: '2026-09-07', type: 'National' },
+  { id: 'HOL-09', name: 'Thanksgiving', date: '2026-11-26', type: 'National' },
+  { id: 'HOL-10', name: 'Christmas Day', date: '2026-12-25', type: 'National' }
+];
+
+export const INITIAL_NOTIFICATIONS = [
+  {
+    id: 'NOT-01',
+    title: 'Attendance Checked In',
+    message: 'You have successfully checked in today at 09:12 AM.',
+    time: '2 hours ago',
+    read: false,
+    category: 'Attendance'
+  },
+  {
+    id: 'NOT-02',
+    title: 'New Comment on Task TSK-101',
+    message: 'Linus Torvalds left a comment: "Please ensure we have all KPI data structures specified."',
+    time: '3 hours ago',
+    read: false,
+    category: 'Task'
+  },
+  {
+    id: 'NOT-03',
+    title: 'Upcoming Corporate Event',
+    message: 'The Hackathon Summer Fest is scheduled for next week. Mark your calendars!',
+    time: '1 day ago',
+    read: true,
+    category: 'Holiday'
+  },
+  {
+    id: 'NOT-04',
+    title: 'System Security Update',
+    message: 'ERP core packages updated. Passwords are now encrypted with standard security protocols.',
+    time: '2 days ago',
+    read: true,
+    category: 'System'
+  }
+];
+
+export const INITIAL_KPIS = {
+  EMP101: {
+    sales: {
+      dailyTarget: 5000,
+      dailyValue: 3200,
+      monthlyTarget: 120000,
+      monthlyValue: 84000,
+      yearlyTarget: 1500000,
+      yearlyValue: 1120000,
+      leads: [
+        { name: 'Acme Corp', status: 'In Negotiation', value: 45000 },
+        { name: 'Globex Industries', status: 'Proposal Sent', value: 25000 },
+        { name: 'Initech SaaS', status: 'Discovery Call', value: 12000 },
+        { name: 'Hooli Network', status: 'Warm Lead', value: 30000 }
+      ],
+      collections: 72000
+    }
+  },
+  MGR201: {
+    sales: {
+      dailyTarget: 25000,
+      dailyValue: 18500,
+      monthlyTarget: 600000,
+      monthlyValue: 490000,
+      yearlyTarget: 7500000,
+      yearlyValue: 5600000,
+      leads: [
+        { name: 'Wayne Enterprises', status: 'Signed', value: 250000 },
+        { name: 'Stark Industries', status: 'Proposal Sent', value: 500000 },
+        { name: 'Umbrella Corp', status: 'Contract Review', value: 180000 }
+      ],
+      collections: 410000
+    }
+  },
+  EMP102: {
+    developer: {
+      sprintTasksCompleted: 8,
+      sprintTasksTotal: 12,
+      bugsFixed: 14,
+      bugsTotal: 16,
+      featuresDelivered: 5,
+      codeReviewStatus: 'Pending',
+      deploymentProgress: 80
+    }
+  },
+  MGR202: {
+    developer: {
+      sprintTasksCompleted: 34,
+      sprintTasksTotal: 45,
+      bugsFixed: 52,
+      bugsTotal: 60,
+      featuresDelivered: 22,
+      codeReviewStatus: 'Approved',
+      deploymentProgress: 92
+    }
+  },
+  EMP103: {
+    finance: {
+      invoicesProcessed: 42,
+      invoicesTotal: 50,
+      paymentVerifications: 18,
+      monthlyClosingProgress: 75,
+      budgetProgress: 65,
+      financialAccuracy: 99.8
+    }
+  },
+  EMP104: {
+    hr: {
+      interviewsScheduled: 14,
+      hiringTarget: 10,
+      hiringValue: 6,
+      onboardingCount: 4,
+      employeeEngagement: 8.4
+    }
+  },
+  HR301: {
+    hr: {
+      interviewsScheduled: 38,
+      hiringTarget: 30,
+      hiringValue: 24,
+      onboardingCount: 18,
+      employeeEngagement: 8.1
+    }
+  },
+  ADM401: {
+    finance: {
+      invoicesProcessed: 120,
+      invoicesTotal: 130,
+      paymentVerifications: 88,
+      monthlyClosingProgress: 90,
+      budgetProgress: 82,
+      financialAccuracy: 99.9
+    },
+    hr: {
+      interviewsScheduled: 50,
+      hiringTarget: 40,
+      hiringValue: 32,
+      onboardingCount: 28,
+      employeeEngagement: 8.5
+    }
+  },
+  EMP105: {
+    sales: {
+      dailyTarget: 1000,
+      dailyValue: 850,
+      monthlyTarget: 400000, // 20x of 20000 salary
+      monthlyValue: 280000,
+      yearlyTarget: 4800000,
+      yearlyValue: 3200000,
+      leads: [
+        { name: 'Apex Ltd', status: 'Warm Lead', value: 50000 },
+        { name: 'Zenith Labs', status: 'In Negotiation', value: 120000 },
+        { name: 'Beta Systems', status: 'Proposal Sent', value: 80000 }
+      ],
+      collections: 190000
+    }
+  }
+};
+
+export const INITIAL_ATTENDANCE_HISTORY = [
+  { date: '2026-07-01', checkIn: '08:55 AM', checkOut: '05:05 PM', workingHours: 8.16, overtime: 0.16, status: 'Present', lateMark: false },
+  { date: '2026-07-02', checkIn: '09:02 AM', checkOut: '05:00 PM', workingHours: 7.96, overtime: 0, status: 'Present', lateMark: false },
+  { date: '2026-07-03', checkIn: '09:18 AM', checkOut: '05:12 PM', workingHours: 7.9, overtime: 0, status: 'Late', lateMark: true },
+  { date: '2026-07-06', checkIn: '08:48 AM', checkOut: '06:15 PM', workingHours: 9.45, overtime: 1.45, status: 'Present', lateMark: false },
+  { date: '2026-07-07', checkIn: '08:59 AM', checkOut: '05:03 PM', workingHours: 8.06, overtime: 0.06, status: 'Present', lateMark: false },
+  { date: '2026-07-08', checkIn: '09:12 AM', checkOut: '05:00 PM', workingHours: 7.8, overtime: 0, status: 'Present', lateMark: false },
+  { date: '2026-07-09', checkIn: '08:52 AM', checkOut: '05:30 PM', workingHours: 8.63, overtime: 0.63, status: 'Present', lateMark: false },
+  { date: '2026-07-10', checkIn: '09:25 AM', checkOut: '05:10 PM', workingHours: 7.75, overtime: 0, status: 'Late', lateMark: true },
+  { date: '2026-07-13', checkIn: '09:12 AM', checkOut: null, workingHours: 4.2, overtime: 0, status: 'Present', lateMark: false } // Today
+];
+
+export const INITIAL_REPORTS = [
+  {
+    id: 'REP-01',
+    date: '2026-07-10',
+    employeeId: 'EMP102',
+    employeeName: 'Rajesh Kumar',
+    department: 'Web Developer',
+    tasksCompleted: 'Completed testing of the charts components inside the reporting dashboard and integrated motion transitions.',
+    challengesFaced: 'Encountered some typescript warning errors with the chart responsiveness, which was solved by wrapping inside ResponsiveContainer from recharts.',
+    nextDayPlan: 'Refactor types, prepare for full client-side integration and prepare task boards.',
+    hoursSpent: 8,
+    status: 'Reviewed',
+    reviewComments: 'Excellent work on the charts, Rajesh. Transitions are incredibly smooth.'
+  },
+  {
+    id: 'REP-02',
+    date: '2026-07-09',
+    employeeId: 'EMP102',
+    employeeName: 'Rajesh Kumar',
+    department: 'Web Developer',
+    tasksCompleted: 'Wrote layout schemas and collapsible sidebar structures with Tailwind v4.',
+    challengesFaced: 'Adjusting padding elements for the collapsible views so elements remain perfectly aligned.',
+    nextDayPlan: 'Integrate the calendar views and begin working on charts.',
+    hoursSpent: 8.5,
+    status: 'Submitted'
+  },
+  {
+    id: 'REP-03',
+    date: '2026-07-13',
+    employeeId: 'EMP105',
+    employeeName: 'Rahul Sharma',
+    department: 'Sales',
+    tasksCompleted: 'Contacted 15 prospective customers and qualified 3 high-value leads for Zenith Labs under the 20x salary target guidance.',
+    challengesFaced: 'A few leads had incorrect contact information, but corrected them via online directories.',
+    nextDayPlan: 'Follow up on the Zenith Labs proposal and send demo invitations.',
+    hoursSpent: 8,
+    status: 'Submitted'
+  },
+  {
+    id: 'REP-04',
+    date: '2026-07-10',
+    employeeId: 'EMP105',
+    employeeName: 'Rahul Sharma',
+    department: 'Sales',
+    tasksCompleted: 'Generated ₹45,000 in new sales contracts, pushing closer towards the monthly 20x salary quota.',
+    challengesFaced: 'Client negotiation took longer than expected due to budget cycles.',
+    nextDayPlan: 'Submit contract docs to Robert Vance and coordinate with Sarah Connor.',
+    hoursSpent: 8,
+    status: 'Reviewed',
+    reviewComments: 'Solid performance, Rahul! Keep up this velocity.'
+  }
+];

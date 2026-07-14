@@ -1,0 +1,6 @@
+{
+  "name": "MYZO Employee ERP",
+  "description": "A premium, role-adapted enterprise Employee ERP system for MYZO featuring real-time attendance, customizable task boards, hierarchical reporting visualizations, and role-specific department KPI dashboards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
