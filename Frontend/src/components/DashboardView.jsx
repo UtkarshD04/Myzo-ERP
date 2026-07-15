@@ -86,10 +86,10 @@ export default function DashboardView({
   const nextHoliday = upcomingHolidays[0];
 
   // Reporting Manager Information
-  const manager = employees.find(e => e.name.includes(employee.reportsTo.split(' (')[0])) || employees.find(e => e.role === 'Admin');
+  const manager = employees.find(e => employee.reportsTo && e.name && e.name.includes(employee.reportsTo.split(' (')[0])) || employees.find(e => e.role === 'Admin');
 
   // Direct Reports (if any)
-  const directReports = employees.filter(e => e.reportsTo.includes(employee.name));
+  const directReports = employees.filter(e => e.reportsTo && e.reportsTo.includes(employee.name));
 
   // Color constants for charts
   const BLUE_COLOR = '#2563EB';
@@ -782,7 +782,7 @@ export default function DashboardView({
               referrerPolicy="no-referrer"
             />
             <div className="min-w-0 flex-1">
-              <h4 className="font-bold text-xs text-slate-800 truncate">{employee.reportsTo.split(' (')[0]}</h4>
+              <h4 className="font-bold text-xs text-slate-800 truncate">{employee.reportsTo?.split(' (')[0] || 'Admin'}</h4>
               <p className="text-[10px] text-slate-400 truncate">{employee.reportsToDesignation || 'Supervisor'}</p>
             </div>
           </div>
@@ -980,6 +980,13 @@ export default function DashboardView({
         {employee.department === 'Web Developer' && currentKPIs.developer && renderDevKPIs(currentKPIs.developer)}
         {employee.department === 'Finance' && currentKPIs.finance && renderFinanceKPIs(currentKPIs.finance)}
         {employee.department === 'HR' && currentKPIs.hr && renderHRKPIs(currentKPIs.hr)}
+        {employee.department === 'Sales' && !currentKPIs.sales && (
+          <div className="text-center py-10 text-slate-400 text-sm">
+            <TrendingUp className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+            <p className="font-semibold">Sales KPIs not configured yet.</p>
+            <p className="text-xs mt-1">Contact your manager to set up your targets.</p>
+          </div>
+        )}
         
         {/* Admin Dashboard: Aggregates everything */}
         {employee.department === 'Admin' && (

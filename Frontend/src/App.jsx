@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api } from './api';
 import {
   INITIAL_EMPLOYEES,
   INITIAL_TASKS,
@@ -30,36 +31,54 @@ export default function App() {
     return cached ? JSON.parse(cached) : null;
   });
 
-  const [employees, setEmployees] = useState(() => {
-    const cached = localStorage.getItem('myzo_employees');
-    return cached ? JSON.parse(cached) : INITIAL_EMPLOYEES;
-  });
-
-  const [tasks, setTasks] = useState(() => {
-    const cached = localStorage.getItem('myzo_tasks');
-    return cached ? JSON.parse(cached) : INITIAL_TASKS;
-  });
-
-  const [holidays] = useState(INITIAL_HOLIDAYS);
-
-  const [notifications, setNotifications] = useState(() => {
-    const cached = localStorage.getItem('myzo_notifications');
-    return cached ? JSON.parse(cached) : INITIAL_NOTIFICATIONS;
-  });
-
-  const [attendanceHistory, setAttendanceHistory] = useState(() => {
-    const cached = localStorage.getItem('myzo_attendance_history');
-    return cached ? JSON.parse(cached) : INITIAL_ATTENDANCE_HISTORY;
-  });
-
-  const [reports, setReports] = useState(() => {
-    const cached = localStorage.getItem('myzo_reports');
-    return cached ? JSON.parse(cached) : INITIAL_REPORTS;
-  });
+  const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
+  const [tasks, setTasks] = useState(INITIAL_TASKS);
+  const [holidays, setHolidays] = useState(INITIAL_HOLIDAYS);
+  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [attendanceHistory, setAttendanceHistory] = useState(INITIAL_ATTENDANCE_HISTORY);
+  const [reports, setReports] = useState(INITIAL_REPORTS);
+  const [apiStatus, setApiStatus] = useState('connecting');
 
   // --- UI States ---
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const applyServerState = (state) => {
+    if (state.employees) setEmployees(state.employees);
+    if (state.tasks) setTasks(state.tasks);
+    if (state.holidays) setHolidays(state.holidays);
+    if (state.notifications) setNotifications(state.notifications);
+    if (state.attendance) setAttendanceHistory(state.attendance);
+    if (state.reports) setReports(state.reports);
+  };
+
+  // --- API Bootstrap ---
+  useEffect(() => {
+    let mounted = true;
+
+    api.bootstrap()
+      .then((state) => {
+        if (!mounted) return;
+        applyServerState(state);
+        setApiStatus('connected');
+
+        const cachedEmployee = localStorage.getItem('myzo_logged_in_employee');
+        if (cachedEmployee) {
+          const current = JSON.parse(cachedEmployee);
+          const refreshedEmployee = state.employees?.find(emp => emp.id === current.id);
+          if (refreshedEmployee) {
+            setEmployee(refreshedEmployee);
+          }
+        }
+      })
+      .catch(() => {
+        if (mounted) setApiStatus('offline');
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // --- LocalStorage Synchronization ---
   useEffect(() => {
@@ -70,42 +89,21 @@ export default function App() {
     }
   }, [employee]);
 
-  useEffect(() => {
-    localStorage.setItem('myzo_employees', JSON.stringify(employees));
-  }, [employees]);
-
-  useEffect(() => {
-    localStorage.setItem('myzo_tasks', JSON.stringify(tasks));
-  }, [tasks]);
-
-  useEffect(() => {
-    localStorage.setItem('myzo_notifications', JSON.stringify(notifications));
-  }, [notifications]);
-
-  useEffect(() => {
-    localStorage.setItem('myzo_attendance_history', JSON.stringify(attendanceHistory));
-  }, [attendanceHistory]);
-
-  useEffect(() => {
-    localStorage.setItem('myzo_reports', JSON.stringify(reports));
-  }, [reports]);
-
   // --- Core Business Logics ---
 
-  const handleLoginSuccess = (user) => {
-    setEmployee(user);
-    setActiveTab('dashboard');
+  const getDefaultTab = (emp) => {
+    const role = emp.role?.toLowerCase() || '';
+    if (role === 'admin') return 'dashboard';
+    if (role === 'manager') return 'dashboard';
+    if (role === 'hr') return 'dashboard';
+    return 'dashboard'; // Employee, Sales Associate, etc.
+  };
 
-    // Create a welcome notification
-    const newAlert = {
-      id: `NOT-${Date.now().toString().slice(-4)}`,
-      title: 'Sign In Approved',
-      message: `Access granted under Designation: ${user.designation}. Welcome back to MYZO, ${user.name}!`,
-      time: 'Just now',
-      read: false,
-      category: 'System'
-    };
-    setNotifications(prev => [newAlert, ...prev]);
+  const handleLoginSuccess = async ({ employeeId: email, password }) => {
+    const response = await api.login(email, password);
+    applyServerState(response);
+    setEmployee(response.employee);
+    setActiveTab(getDefaultTab(response.employee));
   };
 
   const handleLogout = () => {
@@ -113,83 +111,42 @@ export default function App() {
     localStorage.removeItem('myzo_logged_in_employee');
   };
 
-  const handleCheckIn = () => {
-    const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-
-    // Check if already checked in today
-    const exists = attendanceHistory.some(r => r.date === dateStr);
-    if (exists) {
-      alert("You have already initiated a clock-in record for today!");
-      return;
+  const handleCheckIn = async () => {
+    try {
+      const state = await api.checkIn(employee.id);
+      applyServerState(state);
+    } catch (err) {
+      alert(err.message);
     }
-
-    const newRecord = {
-      date: dateStr,
-      checkIn: timeStr,
-      checkOut: null,
-      workingHours: 0,
-      overtime: 0,
-      status: 'Present',
-      lateMark: false
-    };
-
-    setAttendanceHistory(prev => [...prev, newRecord]);
-
-    // Notification trigger
-    const newAlert = {
-      id: `NOT-${Date.now().toString().slice(-4)}`,
-      title: 'Shift Logged: In',
-      message: `Checked in successfully today at ${timeStr}. Roster active.`,
-      time: 'Just now',
-      read: false,
-      category: 'Attendance'
-    };
-    setNotifications(prev => [newAlert, ...prev]);
   };
 
-  const handleCheckOut = () => {
-    const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-
-    const updated = attendanceHistory.map(record => {
-      if (record.date === dateStr) {
-        // Calculate dynamic mockup working hours (between 7.5 to 9.25 hours)
-        const mockHours = +(7.5 + Math.random() * 1.75).toFixed(2);
-        const mockOvertime = mockHours > 8 ? +(mockHours - 8).toFixed(2) : 0;
-        return {
-          ...record,
-          checkOut: timeStr,
-          workingHours: mockHours,
-          overtime: mockOvertime
-        };
-      }
-      return record;
-    });
-
-    setAttendanceHistory(updated);
-
-    // Notification trigger
-    const newAlert = {
-      id: `NOT-${Date.now().toString().slice(-4)}`,
-      title: 'Shift Logged: Out',
-      message: `Checked out successfully today at ${timeStr}. Overtime logged.`,
-      time: 'Just now',
-      read: false,
-      category: 'Attendance'
-    };
-    setNotifications(prev => [newAlert, ...prev]);
+  const handleCheckOut = async () => {
+    try {
+      const state = await api.checkOut(employee.id);
+      applyServerState(state);
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
-  const markAllNotificationsAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  const markAllNotificationsAsRead = async () => {
+    const state = await api.markAllNotificationsRead();
+    applyServerState(state);
+  };
+
+  const markNotificationAsRead = async (id) => {
+    const state = await api.markNotificationRead(id);
+    applyServerState(state);
+  };
+
+  const deleteNotification = async (id) => {
+    const state = await api.deleteNotification(id);
+    applyServerState(state);
   };
 
   // --- Auth Guard ---
   if (!employee) {
-    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+    return <LoginScreen employees={employees} onLoginSuccess={handleLoginSuccess} />;
   }
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
@@ -304,12 +261,13 @@ export default function App() {
           )}
 
           {activeTab === 'notifications' && (
-            <NotificationsView
-              notifications={notifications}
-              setNotifications={setNotifications}
-              markAllNotificationsAsRead={markAllNotificationsAsRead}
-            />
-          )}
+          <NotificationsView
+            notifications={notifications}
+            markAllNotificationsAsRead={markAllNotificationsAsRead}
+            markNotificationAsRead={markNotificationAsRead}
+            deleteNotification={deleteNotification}
+          />
+        )}
         </main>
 
       </div>

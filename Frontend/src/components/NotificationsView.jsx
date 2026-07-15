@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
 import { Bell, CheckCheck, Trash2, Filter } from 'lucide-react';
 
-export default function NotificationsView({ notifications, setNotifications, markAllNotificationsAsRead }) {
+export default function NotificationsView({
+  notifications,
+  markAllNotificationsAsRead,
+  markNotificationAsRead,
+  deleteNotification
+}) {
   const [filter, setFilter] = useState('all');
 
   const filteredNotifications = filter === 'all' 
@@ -20,16 +25,6 @@ export default function NotificationsView({ notifications, setNotifications, mar
       case 'System': return 'bg-amber-50 text-amber-700';
       default: return 'bg-slate-50 text-slate-700';
     }
-  };
-
-  const markAsRead = (id) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
-  };
-
-  const deleteNotification = (id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
   return (
@@ -147,7 +142,7 @@ export default function NotificationsView({ notifications, setNotifications, mar
                 <div className="flex items-center space-x-2 ml-4">
                   {!notification.read && (
                     <button 
-                      onClick={() => markAsRead(notification.id)}
+                      onClick={() => markNotificationAsRead(notification.id)}
                       className="p-2 hover:bg-blue-50 rounded-lg transition-all"
                       title="Mark as read"
                     >
