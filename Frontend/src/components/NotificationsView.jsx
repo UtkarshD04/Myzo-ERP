@@ -28,7 +28,7 @@ export default function NotificationsView({
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -50,7 +50,7 @@ export default function NotificationsView({
 
       {/* Filters */}
       <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
           <Filter className="w-4 h-4 text-slate-400" />
           <button 
             onClick={() => setFilter('all')}

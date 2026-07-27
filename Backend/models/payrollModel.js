@@ -1,0 +1,63 @@
+import mongoose from 'mongoose';
+
+const payrollSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  employeeId: { type: String, required: true },
+  employeeName: String,
+  department: String,
+  designation: String,
+  month: { type: String, required: true }, // 'YYYY-MM'
+
+  // Snapshot of the structure used at generation time, so later edits to an
+  // employee's config don't retroactively change historical payslips.
+  salary: { type: Number, default: 0 },
+  basicPercent: { type: Number, default: 50 },
+  hraPercent: { type: Number, default: 40 },
+  medicalAllowance: { type: Number, default: 2000 },
+  pfPercent: { type: Number, default: 12 },
+
+  basicPay: { type: Number, default: 0 },
+  hra: { type: Number, default: 0 },
+  medical: { type: Number, default: 0 },
+  grossEarnings: { type: Number, default: 0 },
+
+  workingDays: { type: Number, default: 0 },
+  presentDays: { type: Number, default: 0 },
+  lopDays: { type: Number, default: 0 },
+  lopAmount: { type: Number, default: 0 },
+
+  pf: { type: Number, default: 0 },
+  otherDeductions: { type: Number, default: 0 },
+  totalDeductions: { type: Number, default: 0 },
+  netPay: { type: Number, default: 0 },
+
+  status: { type: String, default: 'Generated' }, // 'Generated' | 'Paid'
+  generatedBy: String,
+  generatedByName: String,
+  paidAt: { type: Date, default: null }
+}, { timestamps: true });
+
+payrollSchema.index({ employeeId: 1, month: 1 }, { unique: true });
+
+export const Payroll = mongoose.model('Payroll', payrollSchema);
+
+export async function findAllPayrolls() {
+  return Payroll.find({}).sort({ month: -1, employeeName: 1 }).lean();
+}
+
+export async function findPayrollsByMonth(month) {
+  return Payroll.find({ month }).lean();
+}
+
+export async function upsertPayrollForMonth(employeeId, month, data) {
+  await Payroll.findOneAndUpdate(
+    { employeeId, month },
+    { $set: { employeeId, month, ...data } },
+    { upsert: true, setDefaultsOnInsert: true }
+  );
+}
+
+export async function updatePayrollById(id, updates) {
+  await Payroll.findOneAndUpdate({ id }, updates);
+  return findAllPayrolls();
+}

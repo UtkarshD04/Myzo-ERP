@@ -1,0 +1,17 @@
+import { findAllCandidates } from '../models/candidateModel.js';
+import { createCandidate, updateCandidate } from '../services/recruitmentService.js';
+
+export async function getCandidates(req, res) {
+  const candidates = await findAllCandidates();
+  res.json({ candidates });
+}
+
+export async function addCandidate(req, res) {
+  const result = await createCandidate(req.body, req.headers['x-user-role']);
+  res.status(201).json(result);
+}
+
+export async function modifyCandidate(req, res) {
+  const result = await updateCandidate(req.params.id, req.body, req.headers['x-user-role']);
+  res.json(result);
+}

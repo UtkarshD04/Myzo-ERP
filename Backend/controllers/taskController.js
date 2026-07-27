@@ -1,4 +1,4 @@
-import { createTask, findAllTasks } from '../models/taskModel.js';
+import { createTask, findAllTasks, updateTask } from '../models/taskModel.js';
 import { buildId } from '../services/timeService.js';
 
 export async function getTasks(req, res) {
@@ -14,6 +14,13 @@ export async function addTask(req, res) {
     status: 'To Do',
     ...req.body
   };
-  const db = await createTask(task);
-  res.status(201).json(db);
+  const tasks = await createTask(task);
+  res.status(201).json({ tasks });
 }
+
+export async function modifyTask(req, res) {
+  const { id } = req.params;
+  const tasks = await updateTask(id, req.body);
+  res.json({ tasks });
+}
+

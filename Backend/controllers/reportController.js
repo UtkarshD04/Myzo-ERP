@@ -1,4 +1,4 @@
-import { createReport, findAllReports } from '../models/reportModel.js';
+import { createReport, findAllReports, updateReport } from '../models/reportModel.js';
 import { buildId, getTodayDate } from '../services/timeService.js';
 
 export async function getReports(req, res) {
@@ -13,6 +13,13 @@ export async function addReport(req, res) {
     status: 'Submitted',
     ...req.body
   };
-  const db = await createReport(report);
-  res.status(201).json(db);
+  const reports = await createReport(report);
+  res.status(201).json({ reports });
 }
+
+export async function modifyReport(req, res) {
+  const { id } = req.params;
+  const reports = await updateReport(id, req.body);
+  res.json({ reports });
+}
+

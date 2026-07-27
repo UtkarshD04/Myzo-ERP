@@ -34,7 +34,7 @@ export default function TasksView({ employee, employees, tasks, setTasks }) {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -54,7 +54,7 @@ export default function TasksView({ employee, employees, tasks, setTasks }) {
 
       {/* Filters */}
       <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-1">
           <button 
             onClick={() => setFilter('all')}
             className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${

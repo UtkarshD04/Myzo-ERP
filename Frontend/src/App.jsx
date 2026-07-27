@@ -1,109 +1,124 @@
 import React, { useState, useEffect } from 'react';
 import { api } from './api';
-import {
-  INITIAL_EMPLOYEES,
-  INITIAL_TASKS,
-  INITIAL_HOLIDAYS,
-  INITIAL_NOTIFICATIONS,
-  INITIAL_ATTENDANCE_HISTORY,
-  INITIAL_REPORTS
-} from './data';
 
-// Component Imports
-import LoginScreen from './components/LoginScreen';
-import Sidebar from './components/Sidebar';
-import Navbar from './components/Navbar';
-import DashboardView from './components/DashboardView';
-import ProfileView from './components/ProfileView';
-import AttendanceView from './components/AttendanceView';
-import HolidaysView from './components/HolidaysView';
-import TasksView from './components/TasksView';
-import TargetsView from './components/TargetsView';
-import WorkReportView from './components/WorkReportView';
-import DocumentsView from './components/DocumentsView';
-import SettingsView from './components/SettingsView';
-import NotificationsView from './components/NotificationsView';
+// Layout Components
+import LoginScreen from './components/auth/LoginScreen';
+import Sidebar from './components/layout/Sidebar';
+import Navbar from './components/layout/Navbar';
+
+// View Components
+import DashboardView from './components/views/DashboardView';
+import AttendanceView from './components/views/AttendanceView';
+import TasksView from './components/views/TasksView';
+import HolidaysView from './components/views/HolidaysView';
+import WorkReportView from './components/views/WorkReportView';
+import DocumentsView from './components/views/DocumentsView';
+import ProfileView from './components/views/ProfileView';
+import SettingsView from './components/views/SettingsView';
+import NotificationsView from './components/views/NotificationsView';
+import EmployeeManagementView from './components/views/EmployeeManagementView';
+import QuotationsView from './components/views/QuotationsView';
+import CustomersView from './components/views/CustomersView';
+import InvoicesView from './components/views/InvoicesView';
+import ProductsManagementView from './components/views/ProductsManagementView';
+import PayrollView from './components/views/PayrollView';
+import LeaveManagementView from './components/views/LeaveManagementView';
+import RecruitmentView from './components/views/RecruitmentView';
+import OnboardingView from './components/views/OnboardingView';
+import InventoryView from './components/views/InventoryView';
 
 export default function App() {
-  // --- Persistent States ---
+  // ─── Persistent State ───────────────────────────────────────────────────────
   const [employee, setEmployee] = useState(() => {
     const cached = localStorage.getItem('myzo_logged_in_employee');
     return cached ? JSON.parse(cached) : null;
   });
 
-  const [employees, setEmployees] = useState(INITIAL_EMPLOYEES);
-  const [tasks, setTasks] = useState(INITIAL_TASKS);
-  const [holidays, setHolidays] = useState(INITIAL_HOLIDAYS);
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
-  const [attendanceHistory, setAttendanceHistory] = useState(INITIAL_ATTENDANCE_HISTORY);
-  const [reports, setReports] = useState(INITIAL_REPORTS);
+  const [employees, setEmployees] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [holidays, setHolidays] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [attendanceHistory, setAttendanceHistory] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [manageProducts, setManageProducts] = useState([]);
+  const [quotations, setQuotations] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [payrolls, setPayrolls] = useState([]);
+  const [leaves, setLeaves] = useState([]);
+  const [candidates, setCandidates] = useState([]);
+  const [onboarding, setOnboarding] = useState([]);
+  const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [stockMovements, setStockMovements] = useState([]);
   const [apiStatus, setApiStatus] = useState('connecting');
 
-  // --- UI States ---
+  // ─── UI State ────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
+  // ─── Apply server state ──────────────────────────────────────────────────────
   const applyServerState = (state) => {
-    if (state.employees) setEmployees(state.employees);
-    if (state.tasks) setTasks(state.tasks);
-    if (state.holidays) setHolidays(state.holidays);
+    if (state.employees)    setEmployees(state.employees);
+    if (state.tasks)        setTasks(state.tasks);
+    if (state.holidays)     setHolidays(state.holidays);
     if (state.notifications) setNotifications(state.notifications);
-    if (state.attendance) setAttendanceHistory(state.attendance);
-    if (state.reports) setReports(state.reports);
+    if (state.attendance)   setAttendanceHistory(state.attendance);
+    if (state.reports)      setReports(state.reports);
+    if (state.products)     setProducts(state.products);
+    if (state.manageProducts) setManageProducts(state.manageProducts);
+    if (state.quotations)   setQuotations(state.quotations);
+    if (state.invoices)     setInvoices(state.invoices);
+    if (state.customers)    setCustomers(state.customers);
+    if (state.payrolls)     setPayrolls(state.payrolls);
+    if (state.leaves)       setLeaves(state.leaves);
+    if (state.candidates)   setCandidates(state.candidates);
+    if (state.onboarding)   setOnboarding(state.onboarding);
+    if (state.purchaseOrders) setPurchaseOrders(state.purchaseOrders);
+    if (state.stockMovements) setStockMovements(state.stockMovements);
   };
 
-  // --- API Bootstrap ---
+  // ─── Bootstrap from API on mount ────────────────────────────────────────────
   useEffect(() => {
     let mounted = true;
-
     api.bootstrap()
-      .then((state) => {
+      .then(state => {
         if (!mounted) return;
         applyServerState(state);
         setApiStatus('connected');
 
-        const cachedEmployee = localStorage.getItem('myzo_logged_in_employee');
-        if (cachedEmployee) {
-          const current = JSON.parse(cachedEmployee);
-          const refreshedEmployee = state.employees?.find(emp => emp.id === current.id);
-          if (refreshedEmployee) {
-            setEmployee(refreshedEmployee);
+        const cached = localStorage.getItem('myzo_logged_in_employee');
+        if (cached) {
+          const current = JSON.parse(cached);
+          const refreshed = state.employees?.find(e => e.id === current.id);
+          if (refreshed) {
+            setEmployee(refreshed);
+          } else {
+            // Cached employee no longer exists (e.g. data was reset) — don't keep
+            // operating as a ghost identity, force back to login instead.
+            setEmployee(null);
+            localStorage.removeItem('myzo_logged_in_employee');
           }
         }
       })
-      .catch(() => {
-        if (mounted) setApiStatus('offline');
-      });
+      .catch(() => { if (mounted) setApiStatus('offline'); });
 
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
-  // --- LocalStorage Synchronization ---
+  // ─── Sync employee to localStorage ──────────────────────────────────────────
   useEffect(() => {
-    if (employee) {
-      localStorage.setItem('myzo_logged_in_employee', JSON.stringify(employee));
-    } else {
-      localStorage.removeItem('myzo_logged_in_employee');
-    }
+    if (employee) localStorage.setItem('myzo_logged_in_employee', JSON.stringify(employee));
+    else          localStorage.removeItem('myzo_logged_in_employee');
   }, [employee]);
 
-  // --- Core Business Logics ---
-
-  const getDefaultTab = (emp) => {
-    const role = emp.role?.toLowerCase() || '';
-    if (role === 'admin') return 'dashboard';
-    if (role === 'manager') return 'dashboard';
-    if (role === 'hr') return 'dashboard';
-    return 'dashboard'; // Employee, Sales Associate, etc.
-  };
-
+  // ─── Auth Handlers ───────────────────────────────────────────────────────────
   const handleLoginSuccess = async ({ employeeId: email, password }) => {
     const response = await api.login(email, password);
     applyServerState(response);
     setEmployee(response.employee);
-    setActiveTab(getDefaultTab(response.employee));
+    setActiveTab('dashboard');
   };
 
   const handleLogout = () => {
@@ -111,9 +126,44 @@ export default function App() {
     localStorage.removeItem('myzo_logged_in_employee');
   };
 
+  // ─── Geo-location Helper ─────────────────────────────────────────────────────
+  const getLocation = () => new Promise(resolve => {
+    if (!navigator.geolocation) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        const { latitude: lat, longitude: lng } = coords;
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+            { headers: { 'Accept-Language': 'en' }, signal: controller.signal }
+          );
+          clearTimeout(timeoutId);
+          const data = await res.json();
+          const a = data.address || {};
+          const placeName = [
+            a.road || a.neighbourhood || a.suburb,
+            a.city || a.town || a.village || a.county,
+            a.state
+          ].filter(Boolean).join(', ');
+          resolve({ lat, lng, placeName: placeName || data.display_name || `${lat}, ${lng}` });
+        } catch {
+          // Reverse-geocoding can hang or fail (rate limits, blocked network) —
+          // never let that stall check-in/check-out; fall back to raw coordinates.
+          resolve({ lat, lng, placeName: `${lat.toFixed(4)}, ${lng.toFixed(4)}` });
+        }
+      },
+      () => resolve(null),
+      { timeout: 8000 }
+    );
+  });
+
+  // ─── Attendance Handlers ─────────────────────────────────────────────────────
   const handleCheckIn = async () => {
     try {
-      const state = await api.checkIn(employee.id);
+      const location = await getLocation();
+      const state = await api.checkIn(employee.id, location);
       applyServerState(state);
     } catch (err) {
       alert(err.message);
@@ -122,13 +172,15 @@ export default function App() {
 
   const handleCheckOut = async () => {
     try {
-      const state = await api.checkOut(employee.id);
+      const location = await getLocation();
+      const state = await api.checkOut(employee.id, location);
       applyServerState(state);
     } catch (err) {
       alert(err.message);
     }
   };
 
+  // ─── Notification Handlers ───────────────────────────────────────────────────
   const markAllNotificationsAsRead = async () => {
     const state = await api.markAllNotificationsRead();
     applyServerState(state);
@@ -144,27 +196,201 @@ export default function App() {
     applyServerState(state);
   };
 
-  // --- Auth Guard ---
+  // ─── Employee Management Handlers ───────────────────────────────────────────
+  const handleAddEmployee = async (payload) => {
+    const { employee: created } = await api.addEmployee(payload);
+    setEmployees(prev => [created, ...prev]);
+  };
+
+  const handleUpdateEmployee = async (id, updates, requesterRole = employee?.role) => {
+    const { employee: updated } = await api.updateEmployee(id, updates, requesterRole);
+    setEmployees(prev => prev.map(e => (e.id === id ? updated : e)));
+    if (employee && employee.id === id) setEmployee(prev => ({ ...prev, ...updated }));
+  };
+
+  const handleDeleteEmployee = async (id) => {
+    await api.deleteEmployee(id);
+    setEmployees(prev => prev.filter(e => e.id !== id));
+  };
+
+  // ─── Quotation Handlers ─────────────────────────────────────────────────────
+  // A quotation's status change nudges its linked customer's pipeline stage
+  // forward on the backend, so the customer list is refetched to pick that up.
+  const refreshCustomers = async () => {
+    const { customers: updated } = await api.getCustomers();
+    setCustomers(updated);
+  };
+
+  const handleAddQuotation = async (payload) => {
+    const response = await api.addQuotation(payload);
+    setQuotations(response.quotations);
+    refreshCustomers();
+    return response;
+  };
+
+  const handleUpdateQuotation = async (id, updates) => {
+    const { quotations: updated } = await api.updateQuotation(id, updates);
+    setQuotations(updated);
+    if (updates.status) refreshCustomers();
+  };
+
+  const handleSendQuotationFollowUp = async (id) => {
+    const response = await api.sendQuotationFollowUp(id);
+    setQuotations(response.quotations);
+    if (response.notifications) setNotifications(response.notifications);
+    return response;
+  };
+
+  // ─── Invoice Handlers ────────────────────────────────────────────────────────
+  const handleConvertQuotationToInvoice = async (quotationId) => {
+    const response = await api.convertQuotationToInvoice(quotationId);
+    setInvoices(response.invoices);
+    setQuotations(response.quotations);
+    if (response.products) setProducts(response.products);
+    if (response.manageProducts) setManageProducts(response.manageProducts);
+    return response.invoice;
+  };
+
+  const handleUpdateInvoice = async (id, updates) => {
+    const { invoices: updated } = await api.updateInvoice(id, updates);
+    setInvoices(updated);
+  };
+
+  // ─── Customer Handlers ───────────────────────────────────────────────────────
+  const handleAddCustomer = async (payload) => {
+    const { customers: updated } = await api.addCustomer(payload);
+    setCustomers(updated);
+    return updated;
+  };
+
+  const handleSetCustomerBlocked = async (id, isBlocked) => {
+    const { customers: updated } = await api.setCustomerBlocked(id, isBlocked);
+    setCustomers(updated);
+  };
+
+  const handleUpdateCustomer = async (id, updates) => {
+    const { customers: updated } = await api.updateCustomer(id, updates);
+    setCustomers(updated);
+    return updated;
+  };
+
+  const handleDeleteCustomer = async (id) => {
+    const { customers: updated } = await api.deleteCustomer(id);
+    setCustomers(updated);
+  };
+
+  // ─── Product Handlers ───────────────────────────────────────────────────────
+  const handleAddProduct = async (payload) => {
+    const { products: updated } = await api.addProduct(payload);
+    setManageProducts(updated);
+  };
+
+  const handleUpdateProduct = async (id, updates) => {
+    const { products: updated } = await api.updateProduct(id, updates);
+    setManageProducts(updated);
+  };
+
+  const handleDeleteProduct = async (id) => {
+    const { products: updated } = await api.deleteProduct(id);
+    setManageProducts(updated);
+  };
+
+  // ─── Payroll Handlers ────────────────────────────────────────────────────────
+  const handleGeneratePayroll = async (month) => {
+    const response = await api.generatePayroll(month, employee.role, employee.name);
+    setPayrolls(response.payrolls);
+    return response;
+  };
+
+  const handleUpdatePayroll = async (id, updates) => {
+    const { payrolls: updated } = await api.updatePayroll(id, updates, employee.role);
+    setPayrolls(updated);
+  };
+
+  // ─── Leave Management Handlers ──────────────────────────────────────────────
+  const handleRequestLeave = async (payload) => {
+    const state = await api.requestLeave({ employeeId: employee.id, ...payload });
+    applyServerState(state);
+  };
+
+  const handleUpdateLeaveStatus = async (id, updates) => {
+    const state = await api.updateLeaveStatus(
+      id,
+      { ...updates, employeeId: employee.id, reviewerName: employee.name },
+      employee.role
+    );
+    applyServerState(state);
+  };
+
+  // ─── Recruitment Handlers ────────────────────────────────────────────────────
+  const handleAddCandidate = async (payload) => {
+    const state = await api.addCandidate({ ...payload, addedBy: employee.name }, employee.role);
+    applyServerState(state);
+  };
+
+  const handleUpdateCandidate = async (id, updates) => {
+    const state = await api.updateCandidate(id, updates, employee.role);
+    applyServerState(state);
+  };
+
+  // ─── Onboarding Handlers ─────────────────────────────────────────────────────
+  const handleUpdateOnboardingItem = async (id, itemId, done) => {
+    const state = await api.updateOnboarding(id, { itemId, done, completedBy: employee.name }, employee.role);
+    applyServerState(state);
+  };
+
+  const handleLinkOnboardingEmployee = async (id, employeeId) => {
+    const state = await api.updateOnboarding(id, { employeeId }, employee.role);
+    applyServerState(state);
+  };
+
+  // ─── Inventory Handlers ──────────────────────────────────────────────────────
+  const handleAddPurchaseOrder = async (payload) => {
+    const { purchaseOrders: updated } = await api.addPurchaseOrder(payload, employee.role);
+    setPurchaseOrders(updated);
+  };
+
+  const handleUpdatePurchaseOrder = async (id, updates) => {
+    const state = await api.updatePurchaseOrder(id, updates, employee.role);
+    applyServerState(state);
+  };
+
+  // ─── Auth Guard ──────────────────────────────────────────────────────────────
   if (!employee) {
     return <LoginScreen employees={employees} onLoginSuccess={handleLoginSuccess} />;
   }
 
-  const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.read).length;
+  const myAttendance = attendanceHistory.filter(a => a.employeeId === employee.id);
 
+  // ─── Main Layout ─────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen flex bg-[#F8FAFC] font-sans antialiased text-[#1E293B]">
+    <div className="min-h-screen flex bg-slate-50 font-sans antialiased text-slate-800">
 
-      {/* Collapsible Left Sidebar */}
-      <Sidebar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        collapsed={sidebarCollapsed}
-        setCollapsed={setSidebarCollapsed}
-        employee={employee}
-        employees={employees}
-        onLogout={handleLogout}
-        unreadNotifications={unreadNotificationsCount}
-      />
+      {/* Mobile Backdrop Overlay */}
+      {mobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
+      {/* Collapsible Sidebar */}
+      <div className={`fixed inset-y-0 left-0 z-50 lg:static lg:z-auto transition-transform duration-300 ${
+        mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      }`}>
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={(tab) => {
+            setActiveTab(tab);
+            setMobileSidebarOpen(false);
+          }}
+          collapsed={sidebarCollapsed}
+          setCollapsed={setSidebarCollapsed}
+          employee={employee}
+          unreadNotifications={unreadCount}
+        />
+      </div>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -172,14 +398,16 @@ export default function App() {
         {/* Top Navbar */}
         <Navbar
           employee={employee}
-          setEmployee={setEmployee}
           notifications={notifications}
+          attendanceHistory={myAttendance}
           markAllNotificationsAsRead={markAllNotificationsAsRead}
           onLogout={handleLogout}
+          onMenuClick={() => setMobileSidebarOpen(true)}
         />
 
-        {/* Scrollable View Panel */}
-        <main className="flex-1 overflow-y-auto bg-[#F8FAFC]">
+        {/* Scrollable Page Content */}
+        <main className="flex-1 overflow-y-auto bg-slate-50 pb-20 lg:pb-0">
+
           {activeTab === 'dashboard' && (
             <DashboardView
               employee={employee}
@@ -187,7 +415,9 @@ export default function App() {
               tasks={tasks}
               holidays={holidays}
               notifications={notifications}
-              attendanceHistory={attendanceHistory}
+              attendanceHistory={myAttendance}
+              allAttendance={attendanceHistory}
+              quotations={quotations}
               reports={reports}
               setActiveTab={setActiveTab}
               onCheckIn={handleCheckIn}
@@ -195,26 +425,42 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'profile' && (
-            <ProfileView
-              employee={employee}
-              employees={employees}
-            />
-          )}
-
           {activeTab === 'attendance' && (
             <AttendanceView
               employee={employee}
-              attendanceHistory={attendanceHistory}
+              attendanceHistory={myAttendance}
               onCheckIn={handleCheckIn}
               onCheckOut={handleCheckOut}
             />
           )}
 
-          {activeTab === 'holidays' && (
-            <HolidaysView
+          {activeTab === 'leaves' && (
+            <LeaveManagementView
               employee={employee}
-              holidays={holidays}
+              leaves={leaves}
+              onRequestLeave={handleRequestLeave}
+              onUpdateLeaveStatus={handleUpdateLeaveStatus}
+            />
+          )}
+
+          {activeTab === 'recruitment' && (
+            <RecruitmentView
+              employee={employee}
+              candidates={candidates}
+              onAddCandidate={handleAddCandidate}
+              onUpdateCandidate={handleUpdateCandidate}
+              setActiveTab={setActiveTab}
+            />
+          )}
+
+          {activeTab === 'onboarding' && (
+            <OnboardingView
+              employee={employee}
+              employees={employees}
+              onboarding={onboarding}
+              onUpdateOnboardingItem={handleUpdateOnboardingItem}
+              onLinkEmployee={handleLinkOnboardingEmployee}
+              setActiveTab={setActiveTab}
             />
           )}
 
@@ -228,8 +474,19 @@ export default function App() {
           )}
 
           {activeTab === 'targets' && (
-            <TargetsView
+            <DashboardView
               employee={employee}
+              employees={employees}
+              tasks={tasks}
+              holidays={holidays}
+              notifications={notifications}
+              attendanceHistory={myAttendance}
+              allAttendance={attendanceHistory}
+              quotations={quotations}
+              reports={reports}
+              setActiveTab={setActiveTab}
+              onCheckIn={handleCheckIn}
+              onCheckOut={handleCheckOut}
             />
           )}
 
@@ -242,36 +499,145 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'employeereport' && (
-            <WorkReportView
+          {activeTab === 'documents' && (
+            <DocumentsView employee={employee} payrolls={payrolls} />
+          )}
+
+          {activeTab === 'holidays' && (
+            <HolidaysView employee={employee} holidays={holidays} />
+          )}
+
+          {activeTab === 'profile' && (
+            <ProfileView
               employee={employee}
               employees={employees}
-              reports={reports}
-              setReports={setReports}
-              initialSubTab="team-logs"
+              onUpdatePhoto={(photo) => handleUpdateEmployee(employee.id, { photo })}
             />
           )}
 
-          {activeTab === 'documents' && (
-            <DocumentsView />
-          )}
-
           {activeTab === 'settings' && (
-            <SettingsView />
+            <SettingsView
+              employee={employee}
+              onUpdateEmployee={handleUpdateEmployee}
+            />
           )}
 
           {activeTab === 'notifications' && (
-          <NotificationsView
-            notifications={notifications}
-            markAllNotificationsAsRead={markAllNotificationsAsRead}
-            markNotificationAsRead={markNotificationAsRead}
-            deleteNotification={deleteNotification}
-          />
-        )}
+            <NotificationsView
+              notifications={notifications}
+              markAllNotificationsAsRead={markAllNotificationsAsRead}
+              markNotificationAsRead={markNotificationAsRead}
+              deleteNotification={deleteNotification}
+            />
+          )}
+
+          {activeTab === 'employees' && (
+            <EmployeeManagementView
+              employees={employees}
+              attendanceHistory={attendanceHistory}
+              quotations={quotations}
+              onAddEmployee={handleAddEmployee}
+              onUpdateEmployee={handleUpdateEmployee}
+              onDeleteEmployee={handleDeleteEmployee}
+            />
+          )}
+
+          {activeTab === 'quotations' && (
+            <QuotationsView
+              employee={employee}
+              employees={employees}
+              quotations={quotations}
+              products={products}
+              customers={customers}
+              onAddQuotation={handleAddQuotation}
+              onUpdateQuotation={handleUpdateQuotation}
+              onSendFollowUp={handleSendQuotationFollowUp}
+              onAddCustomer={handleAddCustomer}
+              onSetCustomerBlocked={handleSetCustomerBlocked}
+              onDeleteCustomer={handleDeleteCustomer}
+              onConvertToInvoice={handleConvertQuotationToInvoice}
+              setActiveTab={setActiveTab}
+            />
+          )}
+
+          {activeTab === 'customers' && (
+            <CustomersView
+              employee={employee}
+              customers={customers}
+              quotations={quotations}
+              onAddCustomer={handleAddCustomer}
+              onUpdateCustomer={handleUpdateCustomer}
+              onSetCustomerBlocked={handleSetCustomerBlocked}
+              onDeleteCustomer={handleDeleteCustomer}
+            />
+          )}
+
+          {activeTab === 'invoices' && (
+            <InvoicesView
+              employee={employee}
+              invoices={invoices}
+              onUpdateInvoice={handleUpdateInvoice}
+            />
+          )}
+
+          {activeTab === 'products' && (
+            <ProductsManagementView
+              products={manageProducts}
+              onAddProduct={handleAddProduct}
+              onUpdateProduct={handleUpdateProduct}
+              onDeleteProduct={handleDeleteProduct}
+            />
+          )}
+
+          {activeTab === 'inventory' && (
+            <InventoryView
+              employee={employee}
+              manageProducts={manageProducts}
+              purchaseOrders={purchaseOrders}
+              stockMovements={stockMovements}
+              onAddPurchaseOrder={handleAddPurchaseOrder}
+              onUpdatePurchaseOrder={handleUpdatePurchaseOrder}
+            />
+          )}
+
+          {activeTab === 'payroll' && (
+            <PayrollView
+              payrolls={payrolls}
+              employees={employees}
+              onGeneratePayroll={handleGeneratePayroll}
+              onUpdatePayroll={handleUpdatePayroll}
+            />
+          )}
         </main>
 
-      </div>
+        {/* Mobile Bottom Navigation */}
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-30 flex items-center justify-around px-2 py-2 safe-area-pb">
+          {[
+            { id: 'dashboard', icon: '⊞', label: 'Home' },
+            { id: 'attendance', icon: '⏱', label: 'Attend' },
+            { id: 'tasks', icon: '✓', label: 'Tasks' },
+            { id: 'notifications', icon: '🔔', label: 'Alerts', badge: unreadCount },
+            { id: 'profile', icon: '👤', label: 'Profile' },
+          ].map(item => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`flex flex-col items-center px-3 py-1 rounded-xl relative transition-all cursor-pointer ${
+                activeTab === item.id ? 'text-blue-600' : 'text-slate-400'
+              }`}
+            >
+              <span className="text-xl leading-none">{item.icon}</span>
+              <span className="text-[10px] font-semibold mt-0.5">{item.label}</span>
+              {item.badge > 0 && (
+                <span className="absolute top-0 right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                  {item.badge > 9 ? '9+' : item.badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
 
+      </div>
     </div>
   );
 }

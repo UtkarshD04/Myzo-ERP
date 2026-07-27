@@ -18,12 +18,11 @@ import {
   Briefcase,
   FileSpreadsheet,
   Award,
-  ChevronUp,
   FileCheck2,
   Smile,
   Activity
 } from 'lucide-react';
-import { INITIAL_KPIS } from '../data';
+import { INITIAL_KPIS, INITIAL_EMPLOYEES } from '../data';
 import { 
   ResponsiveContainer, 
   BarChart, 
@@ -100,124 +99,102 @@ export default function DashboardView({
   // ----------------------------------------------------
   // DYNAMIC COMPONENT: SALES KPI VIEWS
   // ----------------------------------------------------
-  const renderSalesKPIs = (kpiData) => {
-    const monthlyTarget = employee.salary ? (employee.salary * 20) : kpiData.monthlyTarget;
-    const targetProgressData = [
-      { name: 'Daily', Progress: Math.round((kpiData.dailyValue / kpiData.dailyTarget) * 100), label: `₹${kpiData.dailyValue} / ₹${kpiData.dailyTarget}` },
-      { name: 'Monthly', Progress: Math.round((kpiData.monthlyValue / monthlyTarget) * 100), label: `₹${kpiData.monthlyValue} / ₹${monthlyTarget}` },
-      { name: 'Yearly', Progress: Math.round((kpiData.yearlyValue / kpiData.yearlyTarget) * 100), label: `₹${kpiData.yearlyValue} / ₹${kpiData.yearlyTarget}` },
-    ];
+  const renderSalesKPIs = (kpiData, salaryOverride) => {
+    const salary = salaryOverride ?? employee.salary;
+    const monthlyTarget = salary ? salary * 20 : kpiData.monthlyTarget;
+    const monthlyPct = Math.min(100, Math.round((kpiData.monthlyValue / monthlyTarget) * 100));
+    const dailyPct = Math.min(100, Math.round((kpiData.dailyValue / kpiData.dailyTarget) * 100));
+    const collectionPct = Math.min(100, Math.round((kpiData.collections / monthlyTarget) * 100));
+    const remaining = Math.max(0, monthlyTarget - kpiData.monthlyValue);
 
-    const pieData = [
-      { name: 'Collected', value: kpiData.collections },
-      { name: 'Outstanding', value: Math.max(0, monthlyTarget - kpiData.collections) },
-    ];
+    const leadStatusColor = (s) => {
+      if (s === 'Signed') return 'bg-emerald-100 text-emerald-700';
+      if (s === 'In Negotiation') return 'bg-amber-100 text-amber-700';
+      if (s === 'Proposal Sent') return 'bg-blue-100 text-blue-700';
+      return 'bg-slate-100 text-slate-500';
+    };
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-5">
         <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center">
           <TrendingUp className="w-4 h-4 text-blue-600 mr-2" />
-          Role Metrics: Sales Analytics
+          Sales Performance
         </h3>
-        
-        {employee.salary && (
-          <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl text-xs flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+
+        {/* Hero: 20x Target Card */}
+        <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 p-5 text-white">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest block">📊 Salary-Based Sale Multiplier</span>
-              <p className="text-slate-700 font-bold mt-0.5">Your monthly goal is to generate 20x of your salary in sales.</p>
-              <p className="text-slate-400 font-medium">Salary: ₹{employee.salary.toLocaleString()} | Required Target: ₹{monthlyTarget.toLocaleString()}</p>
+              <p className="text-blue-200 text-[10px] font-bold uppercase tracking-widest">Monthly Sales Target (20× Salary)</p>
+              <p className="text-3xl font-black mt-1">₹{monthlyTarget.toLocaleString()}</p>
+              <p className="text-blue-200 text-xs mt-1">Salary ₹{salary?.toLocaleString()} × 20</p>
             </div>
-            <div className="bg-emerald-600 text-white font-extrabold px-3.5 py-2 rounded-xl text-center">
-              Target Achieved: {Math.round((kpiData.monthlyValue / monthlyTarget) * 100)}%
-            </div>
-          </div>
-        )}
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="erp-card p-5 flex items-center justify-between">
-            <div>
-              <p className="text-slate-400 text-xs font-semibold">Today's Sales</p>
-              <h4 className="text-xl font-extrabold text-slate-800 mt-1">₹{kpiData.dailyValue.toLocaleString()}</h4>
-              <p className="text-[10px] text-emerald-600 font-bold mt-1 flex items-center">
-                <ChevronUp className="w-3 h-3" />
-                {Math.round((kpiData.dailyValue / kpiData.dailyTarget) * 100)}% of target
-              </p>
-            </div>
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-              <DollarSign className="w-5 h-5" />
+            <div className="flex flex-col items-center justify-center bg-white/15 rounded-2xl px-6 py-4 min-w-[100px]">
+              <span className="text-4xl font-black">{monthlyPct}%</span>
+              <span className="text-blue-200 text-[10px] font-bold uppercase tracking-wider mt-1">Achieved</span>
             </div>
           </div>
 
-          <div className="erp-card p-5 flex items-center justify-between">
-            <div>
-              <p className="text-slate-400 text-xs font-semibold">Monthly Collected</p>
-              <h4 className="text-xl font-extrabold text-slate-800 mt-1">₹{kpiData.collections.toLocaleString()}</h4>
-              <p className="text-[10px] text-slate-400 font-semibold mt-1">
-                Target: ₹{monthlyTarget.toLocaleString()}
-              </p>
+          {/* Progress bar */}
+          <div className="mt-4">
+            <div className="flex justify-between text-[10px] text-blue-200 font-semibold mb-1.5">
+              <span>₹{kpiData.monthlyValue.toLocaleString()} earned</span>
+              <span>₹{remaining.toLocaleString()} remaining</span>
             </div>
-            <div className="p-3 bg-emerald-50 text-emerald-500 rounded-2xl">
-              <FileSpreadsheet className="w-5 h-5" />
-            </div>
-          </div>
-
-          <div className="erp-card p-5 flex items-center justify-between">
-            <div>
-              <p className="text-slate-400 text-xs font-semibold">Yearly Forecast Status</p>
-              <h4 className="text-xl font-extrabold text-slate-800 mt-1">${kpiData.yearlyValue.toLocaleString()}</h4>
-              <p className="text-[10px] text-blue-600 font-bold mt-1">
-                Progress: {Math.round((kpiData.yearlyValue / kpiData.yearlyTarget) * 100)}%
-              </p>
-            </div>
-            <div className="p-3 bg-amber-50 text-amber-500 rounded-2xl">
-              <Award className="w-5 h-5" />
+            <div className="w-full bg-white/20 rounded-full h-2.5">
+              <div
+                className="h-2.5 rounded-full transition-all"
+                style={{ width: `${monthlyPct}%`, background: monthlyPct >= 100 ? '#22C55E' : '#fff' }}
+              />
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Chart target progress */}
-          <div className="erp-card p-5">
-            <h4 className="font-bold text-xs text-slate-700 uppercase tracking-wider mb-4">Target Achievement (%)</h4>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={targetProgressData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748B', fontWeight: 600 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: '#64748B' }} domain={[0, 100]} axisLine={false} tickLine={false} />
-                  <Tooltip formatter={(value) => [`${value}%`, 'Progress']} contentStyle={{ background: '#1E293B', borderRadius: '12px', border: 'none', color: '#fff', fontSize: '11px' }} />
-                  <Bar dataKey="Progress" radius={[8, 8, 0, 0]}>
-                    {targetProgressData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={index === 0 ? BLUE_COLOR : index === 1 ? GREEN_COLOR : AMBER_COLOR} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+        {/* Stat row */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="erp-card p-4">
+            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Today's Sales</p>
+            <h4 className="text-lg font-black text-slate-800 mt-1">₹{kpiData.dailyValue.toLocaleString()}</h4>
+            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
+              <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${dailyPct}%` }} />
             </div>
+            <p className="text-[10px] text-slate-400 mt-1">{dailyPct}% of daily target</p>
           </div>
 
-          {/* Leads CRM list */}
-          <div className="erp-card p-5">
-            <h4 className="font-bold text-xs text-slate-700 uppercase tracking-wider mb-4">Active Sales Pipeline</h4>
-            <div className="divide-y divide-slate-100 overflow-y-auto max-h-64 pr-2">
-              {kpiData.leads.map((lead, i) => {
-                let statusColor = "bg-slate-100 text-slate-600";
-                if (lead.status === 'Signed') statusColor = "bg-emerald-100 text-emerald-700";
-                else if (lead.status === 'In Negotiation') statusColor = "bg-amber-100 text-amber-700";
-                else if (lead.status === 'Proposal Sent') statusColor = "bg-blue-100 text-blue-700";
-
-                return (
-                  <div key={i} className="flex items-center justify-between py-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold text-xs text-slate-700 truncate">{lead.name}</p>
-                      <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md mt-1 inline-block ${statusColor}`}>
-                        {lead.status}
-                      </span>
-                    </div>
-                    <p className="font-extrabold text-xs text-slate-800 ml-4">${lead.value.toLocaleString()}</p>
-                  </div>
-                );
-              })}
+          <div className="erp-card p-4">
+            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Collections</p>
+            <h4 className="text-lg font-black text-slate-800 mt-1">₹{kpiData.collections.toLocaleString()}</h4>
+            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
+              <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${collectionPct}%` }} />
             </div>
+            <p className="text-[10px] text-slate-400 mt-1">{collectionPct}% of target</p>
+          </div>
+
+          <div className="erp-card p-4">
+            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Gap to Close</p>
+            <h4 className="text-lg font-black text-slate-800 mt-1">₹{remaining.toLocaleString()}</h4>
+            <p className="text-[10px] mt-3 font-bold"
+              style={{ color: remaining === 0 ? '#22C55E' : remaining > monthlyTarget * 0.5 ? '#EF4444' : '#F59E0B' }}>
+              {remaining === 0 ? '🎯 Target Met!' : remaining > monthlyTarget * 0.5 ? 'Needs push' : 'Almost there'}
+            </p>
+          </div>
+        </div>
+
+        {/* Pipeline */}
+        <div className="erp-card p-5">
+          <h4 className="font-bold text-xs text-slate-700 uppercase tracking-wider mb-3">Active Pipeline</h4>
+          <div className="divide-y divide-slate-100">
+            {kpiData.leads.map((lead, i) => (
+              <div key={i} className="flex items-center justify-between py-2.5">
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-xs text-slate-700 truncate">{lead.name}</p>
+                  <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-md mt-1 inline-block ${leadStatusColor(lead.status)}`}>
+                    {lead.status}
+                  </span>
+                </div>
+                <p className="font-extrabold text-xs text-slate-800 ml-4">₹{lead.value.toLocaleString()}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -674,7 +651,7 @@ export default function DashboardView({
   const supportRequired = teamStats.filter(d => d['Actual Completion'] < d['Target Completion']);
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto font-sans text-slate-800">
+    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto font-sans text-slate-800">
       
       {/* Top Banner section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between bg-white rounded-2xl border border-slate-100 p-6 shadow-sm shadow-slate-100/50">
@@ -718,7 +695,7 @@ export default function DashboardView({
       </div>
 
       {/* Grid of standard dashboard widgets */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         
         {/* Widget 1: Attendance Summary */}
         <div className="erp-card p-5 flex flex-col justify-between h-36">
@@ -791,7 +768,7 @@ export default function DashboardView({
       </div>
 
       {/* Monthly Task Completion vs Target Analytics */}
-      {!(employee.department === 'Sales' && !hasDirectReports) && (
+      {employee.department !== 'Sales' && (
         <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
             <div className="space-y-1">
@@ -976,7 +953,7 @@ export default function DashboardView({
 
       {/* Primary Role-Based Performance Metrics Panel */}
       <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-        {employee.department === 'Sales' && currentKPIs.sales && renderSalesKPIs(currentKPIs.sales)}
+        {employee.department === 'Sales' && currentKPIs.sales && renderSalesKPIs(currentKPIs.sales, employee.salary)}
         {employee.department === 'Web Developer' && currentKPIs.developer && renderDevKPIs(currentKPIs.developer)}
         {employee.department === 'Finance' && currentKPIs.finance && renderFinanceKPIs(currentKPIs.finance)}
         {employee.department === 'HR' && currentKPIs.hr && renderHRKPIs(currentKPIs.hr)}
@@ -1003,7 +980,7 @@ export default function DashboardView({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="border border-slate-100 p-4.5 rounded-2xl bg-slate-50/20">
                 <h4 className="font-bold text-xs text-slate-600 uppercase tracking-wider mb-3">Enterprise Sales funnel</h4>
-                {INITIAL_KPIS.MGR201.sales && renderSalesKPIs(INITIAL_KPIS.MGR201.sales)}
+                {INITIAL_KPIS.MGR201.sales && renderSalesKPIs(INITIAL_KPIS.MGR201.sales, INITIAL_EMPLOYEES.find(e => e.id === 'MGR201')?.salary)}
               </div>
               <div className="border border-slate-100 p-4.5 rounded-2xl bg-slate-50/20">
                 <h4 className="font-bold text-xs text-slate-600 uppercase tracking-wider mb-3">Engineering Delivery Pipeline</h4>

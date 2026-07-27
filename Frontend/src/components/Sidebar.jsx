@@ -32,7 +32,9 @@ export default function Sidebar({
   ];
 
   return (
-    <aside className={`bg-white border-r border-slate-100 flex flex-col justify-between transition-all duration-300 select-none shrink-0 ${collapsed ? 'w-16' : 'w-56'}`}>
+    <aside className={`bg-white border-r border-slate-100 flex flex-col justify-between transition-all duration-300 select-none shrink-0 h-full ${
+      collapsed ? 'w-16' : 'w-56'
+    }`}>
       <div>
         {/* Logo */}
         <div className="flex items-center justify-between px-3 py-4 border-b border-slate-100">

@@ -1,7 +1,7 @@
-import { Employee } from '../models/employeeModel.js';
-import { readDb, updateDb } from '../db/fileDb.js';
 import { buildId } from './timeService.js';
 import bcrypt from 'bcryptjs';
+import { Employee } from '../models/employeeModel.js';
+import { addNotification } from '../models/notificationModel.js';
 
 export async function login({ email, password }) {
   if (!email) {
@@ -23,6 +23,13 @@ export async function login({ email, password }) {
   if (!employee) {
     const error = new Error('No account found with this email.');
     error.statusCode = 401;
+    throw error;
+  }
+
+  const status = employee.status || employee.employmentStatus;
+  if (status && status !== 'Active') {
+    const error = new Error('This account has been deactivated. Contact HR/Admin for access.');
+    error.statusCode = 403;
     throw error;
   }
 
@@ -64,20 +71,16 @@ export async function login({ email, password }) {
     employmentStatus: employee.status || employee.employmentStatus || 'Active',
   };
 
-  // Add welcome notification to file DB
-  const db = await updateDb(state => {
-    const notif = {
-      id: buildId('NOT'),
-      title: 'Sign In Approved',
-      message: `Welcome back, ${employee.name}! Role: ${employee.role}`,
-      time: 'Just now',
-      read: false,
-      category: 'System'
-    };
-    return { ...state, notifications: [notif, ...state.notifications] };
+  const notifications = await addNotification({
+    id: buildId('NOT'),
+    title: 'Sign In Approved',
+    message: `Welcome back, ${employee.name}! Role: ${employee.role}`,
+    time: 'Just now',
+    read: false,
+    category: 'System'
   });
 
   // Remove password from response
   const { password: _pw, ...safeEmployee } = normalizedEmployee;
-  return { employee: safeEmployee, db };
+  return { employee: safeEmployee, notifications };
 }
