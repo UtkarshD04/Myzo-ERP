@@ -97,7 +97,7 @@ export default function InvoicesView({ employee, invoices = [], onUpdateInvoice 
             </div>
           </div>
 
-          <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-6 space-y-6">
+          <div className="print-area bg-white border border-slate-100 rounded-2xl shadow-sm p-6 space-y-6">
 
             <div className="flex items-start justify-between flex-wrap gap-3 border-b border-slate-50 pb-4">
               <div className="flex items-center gap-2.5">

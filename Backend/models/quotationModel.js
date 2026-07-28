@@ -45,6 +45,7 @@ const quotationSchema = new mongoose.Schema({
   createdByName: String,
   invoiceId: String,
   sentAt: Date,
+  acceptedAt: Date,
   lastFollowUpAt: Date,
   followUpCount: { type: Number, default: 0 }
 }, { timestamps: true });

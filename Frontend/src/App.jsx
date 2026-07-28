@@ -8,6 +8,7 @@ import Navbar from './components/layout/Navbar';
 
 // View Components
 import DashboardView from './components/views/DashboardView';
+import TargetsView from './components/views/TargetsView';
 import AttendanceView from './components/views/AttendanceView';
 import TasksView from './components/views/TasksView';
 import HolidaysView from './components/views/HolidaysView';
@@ -80,8 +81,12 @@ export default function App() {
   };
 
   // ─── Bootstrap from API on mount ────────────────────────────────────────────
+  // Bootstrap returns the full company dataset, so it must never be called
+  // before authentication — only attempt it when a session token exists.
   useEffect(() => {
     let mounted = true;
+    if (!api.hasSession()) return;
+
     api.bootstrap()
       .then(state => {
         if (!mounted) return;
@@ -99,10 +104,21 @@ export default function App() {
             // operating as a ghost identity, force back to login instead.
             setEmployee(null);
             localStorage.removeItem('myzo_logged_in_employee');
+            api.logout();
           }
         }
       })
-      .catch(() => { if (mounted) setApiStatus('offline'); });
+      .catch((err) => {
+        if (!mounted) return;
+        setApiStatus('offline');
+        // Only a rejected/expired token should force a fresh login — a plain
+        // network hiccup shouldn't log an already-verified session out.
+        if (err.status === 401) {
+          setEmployee(null);
+          localStorage.removeItem('myzo_logged_in_employee');
+          api.logout();
+        }
+      });
 
     return () => { mounted = false; };
   }, []);
@@ -115,13 +131,18 @@ export default function App() {
 
   // ─── Auth Handlers ───────────────────────────────────────────────────────────
   const handleLoginSuccess = async ({ employeeId: email, password }) => {
-    const response = await api.login(email, password);
-    applyServerState(response);
-    setEmployee(response.employee);
+    // login() only returns the caller's own identity; the rest of the app's
+    // data is fetched via the now-authenticated bootstrap call that follows.
+    const { employee: loggedInEmployee, notifications } = await api.login(email, password);
+    const state = await api.bootstrap();
+    applyServerState(state);
+    if (notifications) setNotifications(notifications);
+    setEmployee(loggedInEmployee);
     setActiveTab('dashboard');
   };
 
   const handleLogout = () => {
+    api.logout();
     setEmployee(null);
     localStorage.removeItem('myzo_logged_in_employee');
   };
@@ -202,8 +223,8 @@ export default function App() {
     setEmployees(prev => [created, ...prev]);
   };
 
-  const handleUpdateEmployee = async (id, updates, requesterRole = employee?.role) => {
-    const { employee: updated } = await api.updateEmployee(id, updates, requesterRole);
+  const handleUpdateEmployee = async (id, updates) => {
+    const { employee: updated } = await api.updateEmployee(id, updates);
     setEmployees(prev => prev.map(e => (e.id === id ? updated : e)));
     if (employee && employee.id === id) setEmployee(prev => ({ ...prev, ...updated }));
   };
@@ -303,7 +324,7 @@ export default function App() {
   };
 
   const handleUpdatePayroll = async (id, updates) => {
-    const { payrolls: updated } = await api.updatePayroll(id, updates, employee.role);
+    const { payrolls: updated } = await api.updatePayroll(id, updates);
     setPayrolls(updated);
   };
 
@@ -316,42 +337,41 @@ export default function App() {
   const handleUpdateLeaveStatus = async (id, updates) => {
     const state = await api.updateLeaveStatus(
       id,
-      { ...updates, employeeId: employee.id, reviewerName: employee.name },
-      employee.role
+      { ...updates, employeeId: employee.id, reviewerName: employee.name }
     );
     applyServerState(state);
   };
 
   // ─── Recruitment Handlers ────────────────────────────────────────────────────
   const handleAddCandidate = async (payload) => {
-    const state = await api.addCandidate({ ...payload, addedBy: employee.name }, employee.role);
+    const state = await api.addCandidate({ ...payload, addedBy: employee.name });
     applyServerState(state);
   };
 
   const handleUpdateCandidate = async (id, updates) => {
-    const state = await api.updateCandidate(id, updates, employee.role);
+    const state = await api.updateCandidate(id, updates);
     applyServerState(state);
   };
 
   // ─── Onboarding Handlers ─────────────────────────────────────────────────────
   const handleUpdateOnboardingItem = async (id, itemId, done) => {
-    const state = await api.updateOnboarding(id, { itemId, done, completedBy: employee.name }, employee.role);
+    const state = await api.updateOnboarding(id, { itemId, done, completedBy: employee.name });
     applyServerState(state);
   };
 
   const handleLinkOnboardingEmployee = async (id, employeeId) => {
-    const state = await api.updateOnboarding(id, { employeeId }, employee.role);
+    const state = await api.updateOnboarding(id, { employeeId });
     applyServerState(state);
   };
 
   // ─── Inventory Handlers ──────────────────────────────────────────────────────
   const handleAddPurchaseOrder = async (payload) => {
-    const { purchaseOrders: updated } = await api.addPurchaseOrder(payload, employee.role);
+    const { purchaseOrders: updated } = await api.addPurchaseOrder(payload);
     setPurchaseOrders(updated);
   };
 
   const handleUpdatePurchaseOrder = async (id, updates) => {
-    const state = await api.updatePurchaseOrder(id, updates, employee.role);
+    const state = await api.updatePurchaseOrder(id, updates);
     applyServerState(state);
   };
 
@@ -418,6 +438,7 @@ export default function App() {
               attendanceHistory={myAttendance}
               allAttendance={attendanceHistory}
               quotations={quotations}
+              payrolls={payrolls}
               reports={reports}
               setActiveTab={setActiveTab}
               onCheckIn={handleCheckIn}
@@ -474,19 +495,11 @@ export default function App() {
           )}
 
           {activeTab === 'targets' && (
-            <DashboardView
+            <TargetsView
               employee={employee}
               employees={employees}
-              tasks={tasks}
-              holidays={holidays}
-              notifications={notifications}
-              attendanceHistory={myAttendance}
-              allAttendance={attendanceHistory}
               quotations={quotations}
-              reports={reports}
-              setActiveTab={setActiveTab}
-              onCheckIn={handleCheckIn}
-              onCheckOut={handleCheckOut}
+              payrolls={payrolls}
             />
           )}
 

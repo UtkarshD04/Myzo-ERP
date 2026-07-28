@@ -90,7 +90,7 @@ export async function modifyProduct(req, res) {
           balanceAfter: product.stock,
           reference: null,
           note: 'Manual stock adjustment',
-          createdBy: req.headers['x-user-role'] || null
+          createdBy: req.user.role || null
         });
       }
     }

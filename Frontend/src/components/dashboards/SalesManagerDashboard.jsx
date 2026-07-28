@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Target, Plus, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
-export default function SalesManagerDashboard({ employee, employees = [], quotations = [], scope = 'team' }) {
+export default function SalesManagerDashboard({ employee, employees = [], quotations = [], payrolls = [], scope = 'team' }) {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
@@ -32,6 +32,9 @@ export default function SalesManagerDashboard({ employee, employees = [], quotat
     ? Math.round((teamQuotations.filter(q => q.status === 'Accepted').length / decided.length) * 100)
     : 0;
 
+  const teamPayslipsThisMonth = payrolls.filter(p => p.month === currentMonthKey && teamIds.has(p.employeeId));
+  const teamCommissionPayout = teamPayslipsThisMonth.reduce((sum, p) => sum + (Number(p.commission) || 0), 0);
+
   const monthWindow = [...Array(7)].map((_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (6 - i), 1);
     return { key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, label: d.toLocaleDateString('en-US', { month: 'short' }) };
@@ -51,7 +54,8 @@ export default function SalesManagerDashboard({ employee, employees = [], quotat
       const memberQuotations = quotations.filter(q => q.salesperson === m.id);
       const accepted = memberQuotations.filter(q => q.status === 'Accepted');
       const value = accepted.reduce((s, q) => s + (q.totalAmount || 0), 0);
-      return { ...m, closedValue: value, dealCount: accepted.length };
+      const memberPayslip = teamPayslipsThisMonth.find(p => p.employeeId === m.id);
+      return { ...m, closedValue: value, dealCount: accepted.length, commission: memberPayslip?.commission || 0 };
     })
     .sort((a, b) => b.closedValue - a.closedValue);
 
@@ -83,7 +87,7 @@ export default function SalesManagerDashboard({ employee, employees = [], quotat
       </div>
 
       {/* Stats Widgets */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
+      <div className="grid grid-cols-2 xl:grid-cols-5 gap-4 sm:gap-5">
         <div className="bg-white border border-slate-100 rounded-2xl p-4 sm:p-5 shadow-sm min-w-0">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block truncate">Closed This Month</span>
           <h3 className="text-xl sm:text-2xl font-black text-slate-800 mt-1 truncate">₹{closedValue.toLocaleString()}</h3>
@@ -109,6 +113,12 @@ export default function SalesManagerDashboard({ employee, employees = [], quotat
             {winRate >= 50 ? <ArrowUpRight className="w-3.5 h-3.5 mr-0.5 text-emerald-500 shrink-0" /> : <ArrowDownRight className="w-3.5 h-3.5 mr-0.5 text-red-500 shrink-0" />}
             {decided.length} decided quotation{decided.length === 1 ? '' : 's'}
           </span>
+        </div>
+
+        <div className="bg-white border border-slate-100 rounded-2xl p-4 sm:p-5 shadow-sm min-w-0">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block truncate">Commission Payout</span>
+          <h3 className="text-xl sm:text-2xl font-black text-emerald-600 mt-1 truncate">₹{teamCommissionPayout.toLocaleString()}</h3>
+          <span className="text-[10px] text-slate-400 font-semibold block mt-2 truncate">This month, via payroll</span>
         </div>
       </div>
 
@@ -170,6 +180,9 @@ export default function SalesManagerDashboard({ employee, employees = [], quotat
                       }`}>
                         {index === 0 && dr.closedValue > 0 ? `⭐ ${dr.dealCount} deals` : `${dr.dealCount} deals`}
                       </span>
+                      {dr.commission > 0 && (
+                        <p className="text-[9px] text-emerald-600 font-semibold mt-1">+₹{dr.commission.toLocaleString()} commission</p>
+                      )}
                     </div>
                   </div>
                 ))}

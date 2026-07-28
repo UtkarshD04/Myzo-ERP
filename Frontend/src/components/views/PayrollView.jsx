@@ -31,6 +31,7 @@ export default function PayrollView({ payrolls = [], employees = [], onGenerateP
     .sort((a, b) => (a.employeeName || '').localeCompare(b.employeeName || ''));
 
   const totalNetPay = monthRows.reduce((sum, p) => sum + (Number(p.netPay) || 0), 0);
+  const totalCommission = monthRows.reduce((sum, p) => sum + (Number(p.commission) || 0), 0);
   const paidCount = monthRows.filter(p => p.status === 'Paid').length;
   const pendingCount = monthRows.length - paidCount;
 
@@ -96,7 +97,7 @@ export default function PayrollView({ payrolls = [], employees = [], onGenerateP
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center gap-2 text-slate-400">
             <Users className="w-4 h-4" />
@@ -110,6 +111,13 @@ export default function PayrollView({ payrolls = [], employees = [], onGenerateP
             <span className="text-[10px] font-black uppercase tracking-wider">Total Net Payout</span>
           </div>
           <p className="text-2xl font-black text-blue-600 mt-2">{money(totalNetPay)}</p>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center gap-2 text-slate-400">
+            <IndianRupee className="w-4 h-4" />
+            <span className="text-[10px] font-black uppercase tracking-wider">Total Commission Payout</span>
+          </div>
+          <p className="text-2xl font-black text-emerald-600 mt-2">{money(totalCommission)}</p>
         </div>
         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center gap-2 text-slate-400">
@@ -148,6 +156,7 @@ export default function PayrollView({ payrolls = [], employees = [], onGenerateP
                 <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Department</th>
                 <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Gross</th>
                 <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">LOP Days</th>
+                <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Commission</th>
                 <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Deductions</th>
                 <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Net Pay</th>
                 <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
@@ -161,6 +170,14 @@ export default function PayrollView({ payrolls = [], employees = [], onGenerateP
                   <td className="px-5 py-3.5 text-xs font-semibold text-slate-500">{p.department || '--'}</td>
                   <td className="px-5 py-3.5 text-xs font-mono font-bold text-slate-700 text-right">{money(p.grossEarnings)}</td>
                   <td className="px-5 py-3.5 text-xs font-semibold text-slate-500 text-center">{p.lopDays}</td>
+                  <td className="px-5 py-3.5 text-xs font-mono font-bold text-emerald-600 text-right">
+                    {p.commission ? `+${money(p.commission)}` : '--'}
+                    {p.commission > 0 && (
+                      <span className="block text-[9px] font-semibold text-slate-400 normal-case">
+                        {p.commissionPercent}% of {money(p.commissionSales)}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-5 py-3.5 text-xs font-mono font-bold text-red-500 text-right">-{money(p.totalDeductions)}</td>
                   <td className="px-5 py-3.5 text-xs font-mono font-black text-blue-600 text-right">{money(p.netPay)}</td>
                   <td className="px-5 py-3.5">
@@ -182,7 +199,7 @@ export default function PayrollView({ payrolls = [], employees = [], onGenerateP
 
               {monthRows.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-10 text-center text-xs text-slate-400 font-semibold">
+                  <td colSpan={9} className="px-5 py-10 text-center text-xs text-slate-400 font-semibold">
                     No payroll generated for {monthLabel(selectedMonth)} yet. Click "Generate Payroll" to run it.
                   </td>
                 </tr>

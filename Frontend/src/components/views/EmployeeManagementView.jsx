@@ -25,9 +25,19 @@ const EMPTY_FORM = {
   hraPercent: '',
   medicalAllowance: '',
   pfPercent: '',
+  commissionPercent: '',
   bankName: '',
   accountNo: '',
-  ifscCode: ''
+  ifscCode: '',
+  pan: '',
+  esiNo: '',
+  pfNo: '',
+  uanNo: '',
+  location: '',
+  fatherName: '',
+  fatherDob: '',
+  motherName: '',
+  motherDob: ''
 };
 
 function currentMonthKey() {
@@ -88,9 +98,19 @@ export default function EmployeeManagementView({ employees = [], attendanceHisto
       hraPercent: emp.hraPercent ?? '',
       medicalAllowance: emp.medicalAllowance ?? '',
       pfPercent: emp.pfPercent ?? '',
+      commissionPercent: emp.commissionPercent ?? '',
       bankName: emp.bankName || '',
       accountNo: emp.accountNo || '',
-      ifscCode: emp.ifscCode || ''
+      ifscCode: emp.ifscCode || '',
+      pan: emp.pan || '',
+      esiNo: emp.esiNo || '',
+      pfNo: emp.pfNo || '',
+      uanNo: emp.uanNo || '',
+      location: emp.location || '',
+      fatherName: emp.fatherName || '',
+      fatherDob: emp.fatherDob || '',
+      motherName: emp.motherName || '',
+      motherDob: emp.motherDob || ''
     });
     setError('');
     setShowModal(true);
@@ -107,7 +127,8 @@ export default function EmployeeManagementView({ employees = [], attendanceHisto
       basicPercent: form.basicPercent !== '' ? Number(form.basicPercent) : undefined,
       hraPercent: form.hraPercent !== '' ? Number(form.hraPercent) : undefined,
       medicalAllowance: form.medicalAllowance !== '' ? Number(form.medicalAllowance) : undefined,
-      pfPercent: form.pfPercent !== '' ? Number(form.pfPercent) : undefined
+      pfPercent: form.pfPercent !== '' ? Number(form.pfPercent) : undefined,
+      commissionPercent: form.commissionPercent !== '' ? Number(form.commissionPercent) : undefined
     };
 
     try {
@@ -649,6 +670,20 @@ export default function EmployeeManagementView({ employees = [], attendanceHisto
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Commission % of Closed Sales</label>
+              <input
+                type="number"
+                placeholder="0"
+                value={form.commissionPercent}
+                onChange={(e) => setForm({ ...form, commissionPercent: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+              />
+              <p className="text-[9px] text-slate-400 font-medium mt-1">Paid on quotations this employee closes each month; included automatically in payroll.</p>
+            </div>
+          </div>
+
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Reports To</label>
             <select
@@ -691,6 +726,100 @@ export default function EmployeeManagementView({ employees = [], attendanceHisto
                   type="text"
                   value={form.ifscCode}
                   onChange={(e) => setForm({ ...form, ifscCode: e.target.value.toUpperCase() })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-4">
+            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3">Statutory & Payslip Details</h3>
+            <p className="text-[10px] text-slate-400 font-semibold mb-3">Printed on the employee's payslip — visible/editable to Admin and HR only.</p>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">PAN</label>
+                <input
+                  type="text"
+                  value={form.pan}
+                  onChange={(e) => setForm({ ...form, pan: e.target.value.toUpperCase() })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">ESI No.</label>
+                <input
+                  type="text"
+                  value={form.esiNo}
+                  onChange={(e) => setForm({ ...form, esiNo: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">PF No.</label>
+                <input
+                  type="text"
+                  value={form.pfNo}
+                  onChange={(e) => setForm({ ...form, pfNo: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">UAN No.</label>
+                <input
+                  type="text"
+                  value={form.uanNo}
+                  onChange={(e) => setForm({ ...form, uanNo: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Location</label>
+                <input
+                  type="text"
+                  value={form.location}
+                  onChange={(e) => setForm({ ...form, location: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-4">
+            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3">Family Details (for Payslip)</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Father's Name</label>
+                <input
+                  type="text"
+                  value={form.fatherName}
+                  onChange={(e) => setForm({ ...form, fatherName: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Father's DOB</label>
+                <input
+                  type="date"
+                  value={form.fatherDob}
+                  onChange={(e) => setForm({ ...form, fatherDob: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Mother's Name</label>
+                <input
+                  type="text"
+                  value={form.motherName}
+                  onChange={(e) => setForm({ ...form, motherName: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Mother's DOB</label>
+                <input
+                  type="date"
+                  value={form.motherDob}
+                  onChange={(e) => setForm({ ...form, motherDob: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
                 />
               </div>

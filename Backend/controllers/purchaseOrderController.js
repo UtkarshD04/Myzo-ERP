@@ -7,11 +7,11 @@ export async function getPurchaseOrders(req, res) {
 }
 
 export async function addPurchaseOrder(req, res) {
-  const result = await createPurchaseOrder(req.body, req.headers['x-user-role']);
+  const result = await createPurchaseOrder(req.body, req.user.role);
   res.status(201).json(result);
 }
 
 export async function modifyPurchaseOrder(req, res) {
-  const result = await updatePurchaseOrder(req.params.id, req.body, req.headers['x-user-role']);
+  const result = await updatePurchaseOrder(req.params.id, req.body, req.user.role);
   res.json(result);
 }

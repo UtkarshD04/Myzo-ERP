@@ -12,6 +12,6 @@ export async function requestLeave(req, res) {
 }
 
 export async function modifyLeaveStatus(req, res) {
-  const result = await updateLeaveStatus(req.params.id, req.body, req.headers['x-user-role']);
+  const result = await updateLeaveStatus(req.params.id, req.body, req.user.role);
   res.json(result);
 }

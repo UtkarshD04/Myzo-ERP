@@ -75,7 +75,23 @@ body {
 .font-mono { font-family: var(--font-mono); }
 
 /* ─── Print Styles ───────────────────────────────────────────────────────────── */
+/*
+ * The app shell keeps `main` as an independently-scrolling flex child inside
+ * an `overflow-hidden` ancestor (see App.jsx), so `main { overflow: visible }`
+ * alone still gets clipped to viewport height by that ancestor — the printed
+ * page comes out blank/cut off. Hiding everything except the element tagged
+ * `.print-area` and pulling it out of the flex flow with `position: absolute`
+ * sidesteps that clipping entirely.
+ */
 @media print {
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
   .lg\:hidden, nav, aside, header, button { display: none !important; }
   main { overflow: visible !important; }
 }

@@ -17,8 +17,11 @@ import { getPurchaseOrders, addPurchaseOrder, modifyPurchaseOrder } from '../con
 import { getStockMovements } from '../controllers/stockMovementController.js';
 
 export const routes = [
+  // Only the login route is reachable without a valid session token — every
+  // other route (including bootstrap, which returns the full company
+  // dataset) requires authentication. See services/router.js.
+  { method: 'POST', path: '/api/auth/login', handler: loginEmployee, public: true },
   { method: 'GET', path: '/api/bootstrap', handler: getBootstrapData },
-  { method: 'POST', path: '/api/auth/login', handler: loginEmployee },
   { method: 'POST', path: '/api/attendance/check-in', handler: checkInEmployee },
   { method: 'POST', path: '/api/attendance/check-out', handler: checkOutEmployee },
   { method: 'GET', path: '/api/employees', handler: getEmployees },

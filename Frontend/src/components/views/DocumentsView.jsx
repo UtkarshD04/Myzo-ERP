@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Download, Printer, Shield, FolderOpen, ArrowRight } from 'lucide-react';
+import { downloadPayslipPdf, numberToIndianWords, COMPANY_INFO } from '../../utils/documentPdf';
 
 const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
@@ -7,6 +8,24 @@ function monthLabel(monthKey) {
   if (!monthKey) return '--';
   const [year, month] = monthKey.split('-').map(Number);
   return new Date(year, month - 1, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+}
+
+function InfoRow({ label, value }) {
+  return (
+    <div className="flex items-baseline gap-1.5 px-3 py-1.5">
+      <span className="font-bold text-slate-900 shrink-0">{label}:</span>
+      <span className="text-slate-900 font-semibold truncate">{value || '--'}</span>
+    </div>
+  );
+}
+
+function AmountRow({ label, value }) {
+  return (
+    <div className="flex items-center justify-between px-3 py-1.5 gap-2">
+      <span className="text-slate-900 font-semibold">{label}:</span>
+      <span className="font-bold text-slate-900">{money(value)}</span>
+    </div>
+  );
 }
 
 export default function DocumentsView({ employee, payrolls = [] }) {
@@ -23,6 +42,12 @@ export default function DocumentsView({ employee, payrolls = [] }) {
   const handlePrint = () => {
     window.print();
   };
+
+  const handleDownload = () => {
+    downloadPayslipPdf({ employee, payslip: selectedSlip, monthLabel: monthLabel(selectedSlip.month) });
+  };
+
+  const totalEarning = selectedSlip ? (Number(selectedSlip.grossEarnings) || 0) + (Number(selectedSlip.commission) || 0) : 0;
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto font-sans text-slate-800 animate-in fade-in duration-200">
@@ -75,24 +100,19 @@ export default function DocumentsView({ employee, payrolls = [] }) {
           </div>
         </div>
 
-        {/* Right column: Interactive digital payslip visualizer */}
-        <div className="lg:col-span-8 bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-6">
+        {/* Right column: payslip document, formatted to match the printed/downloaded slip exactly */}
+        <div className="print-area lg:col-span-8 bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-4">
           {!selectedSlip ? (
             <div className="py-16 text-center text-xs text-slate-400 font-semibold">
               No payslip to display yet.
             </div>
           ) : (
           <>
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <div>
-              <span className="text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">
-                {selectedSlip.status === 'Paid' ? 'Paid' : 'Verified Statement'}
-              </span>
-              <h3 className="text-base font-black text-slate-800 tracking-tight mt-2.5">
-                Salary slip: {monthLabel(selectedSlip.month)}
-              </h3>
-            </div>
-
+          {/* Toolbar (excluded from print/PDF) */}
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">
+              {selectedSlip.status === 'Paid' ? 'Paid' : 'Verified Statement'}
+            </span>
             <div className="flex items-center space-x-2">
               <button
                 onClick={handlePrint}
@@ -102,7 +122,7 @@ export default function DocumentsView({ employee, payrolls = [] }) {
                 <Printer className="w-4 h-4" />
               </button>
               <button
-                onClick={() => alert('Download PDF mock initiated.')}
+                onClick={handleDownload}
                 className="p-2 border border-slate-200 hover:border-slate-350 text-slate-500 hover:text-slate-700 bg-white rounded-xl transition-all cursor-pointer"
                 title="Download statement"
               >
@@ -111,82 +131,106 @@ export default function DocumentsView({ employee, payrolls = [] }) {
             </div>
           </div>
 
-          {/* Payslip parameters */}
-          <div className="grid grid-cols-2 gap-4 text-xs font-semibold text-slate-600 p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-            <div>
-              <span className="text-[9px] font-bold text-slate-400 block uppercase">Employee Name</span>
-              <span className="text-slate-800 font-bold block mt-0.5">{employee.name}</span>
+          {/* Payslip document */}
+          <div className="border-2 border-slate-800 text-[11px] text-slate-900 bg-white">
+            {/* Header: logo top-left, company name/address centered independent of it */}
+            <div className="relative px-4 pt-4 pb-3 text-center">
+              <img src={COMPANY_INFO.logoUrl} alt="Company logo" className="absolute left-4 top-4 h-11 w-auto object-contain" />
+              <h3 className="text-sm font-black tracking-tight">{COMPANY_INFO.name}</h3>
+              {COMPANY_INFO.addressLines.map(line => (
+                <p key={line} className="text-[10px] font-semibold">{line}</p>
+              ))}
             </div>
-            <div>
-              <span className="text-[9px] font-bold text-slate-400 block uppercase">Employee ID</span>
-              <span className="text-slate-800 font-bold block mt-0.5">{employee.id}</span>
-            </div>
-            <div>
-              <span className="text-[9px] font-bold text-slate-400 block uppercase">Designation</span>
-              <span className="text-slate-800 font-bold block mt-0.5">{employee.designation}</span>
-            </div>
-            <div>
-              <span className="text-[9px] font-bold text-slate-400 block uppercase">Department</span>
-              <span className="text-slate-800 font-bold block mt-0.5">{employee.department}</span>
-            </div>
-            <div>
-              <span className="text-[9px] font-bold text-slate-400 block uppercase">Working Days</span>
-              <span className="text-slate-800 font-bold block mt-0.5">{selectedSlip.workingDays}</span>
-            </div>
-            <div>
-              <span className="text-[9px] font-bold text-slate-400 block uppercase">Present Days (LOP Days)</span>
-              <span className="text-slate-800 font-bold block mt-0.5">{selectedSlip.presentDays} ({selectedSlip.lopDays})</span>
-            </div>
-          </div>
 
-          <div className="border border-slate-100 rounded-2xl overflow-hidden text-xs">
-            <div className="grid grid-cols-2 font-extrabold text-[10px] uppercase tracking-wider bg-slate-50 text-slate-400 p-3.5 border-b border-slate-100">
-              <span>Earnings</span>
-              <span>Deductions</span>
+            {/* Pay Slip For Month */}
+            <div className="px-4 py-2 border-t border-slate-800 font-bold text-xs">
+              Pay Slip For Month : {monthLabel(selectedSlip.month)}
             </div>
-            <div className="grid grid-cols-2 divide-x divide-slate-100 font-medium">
-              {/* Earnings */}
-              <div className="p-4 space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-semibold">Basic Pay:</span>
-                  <span className="font-bold text-slate-700">{money(selectedSlip.basicPay)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-semibold">HRA Allowance ({selectedSlip.hraPercent}%):</span>
-                  <span className="font-bold text-slate-700">{money(selectedSlip.hra)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-semibold">Medical Allowance:</span>
-                  <span className="font-bold text-slate-700">{money(selectedSlip.medical)}</span>
-                </div>
+
+            {/* Employee / statutory info grid */}
+            <div className="grid grid-cols-2 divide-x divide-slate-800 border-t border-slate-800">
+              <div>
+                <InfoRow label="Name" value={employee.name} />
+                <InfoRow label="Employee ID" value={employee.id || employee.empId} />
+                <InfoRow label="Designation" value={employee.designation} />
+                <InfoRow label="Bank Name" value={employee.bankName} />
+                <InfoRow label="Bank Account No" value={employee.accountNo} />
+                <InfoRow label="Department" value={employee.department} />
               </div>
-
-              {/* Deductions */}
-              <div className="p-4 space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-slate-500 font-semibold">Provident Fund ({selectedSlip.pfPercent}%):</span>
-                  <span className="font-bold text-slate-700">{money(selectedSlip.pf)}</span>
-                </div>
-                {!!selectedSlip.lopAmount && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 font-semibold">Loss of Pay ({selectedSlip.lopDays} days):</span>
-                    <span className="font-bold text-slate-700">{money(selectedSlip.lopAmount)}</span>
-                  </div>
-                )}
-                {!!selectedSlip.otherDeductions && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 font-semibold">Other Deductions:</span>
-                    <span className="font-bold text-slate-700">{money(selectedSlip.otherDeductions)}</span>
-                  </div>
-                )}
+              <div>
+                <InfoRow label="PAN" value={employee.pan} />
+                <InfoRow label="ESI No" value={employee.esiNo} />
+                <InfoRow label="PF No" value={employee.pfNo} />
+                <InfoRow label="UAN No" value={employee.uanNo} />
+                <InfoRow label="Location" value={employee.location} />
+                <InfoRow label="Mode of Payment" value="Bank Transfer" />
               </div>
             </div>
 
-            {/* Net Salary Row */}
-            <div className="grid grid-cols-2 bg-blue-600 text-white font-black text-sm p-4.5 border-t border-slate-100">
-              <span>NET TAKE HOME PAY</span>
-              <span className="text-right">{money(selectedSlip.netPay)}</span>
+            {/* Earnings / Deductions headers */}
+            <div className="grid grid-cols-2 divide-x divide-slate-800 border-t border-slate-800 font-extrabold text-[10px] uppercase tracking-wider">
+              <div className="flex justify-between px-3 py-2"><span>Earnings</span><span>Amount</span></div>
+              <div className="flex justify-between px-3 py-2"><span>Deductions</span><span>Amount</span></div>
             </div>
+            <div className="grid grid-cols-2 divide-x divide-slate-800 border-t border-slate-800">
+              <div>
+                <AmountRow label="Basic Salary" value={selectedSlip.basicPay} />
+                <AmountRow label="HRA" value={selectedSlip.hra} />
+                <AmountRow label="Conveyance Allowance" value={0} />
+                <AmountRow label="Medical Allowance" value={selectedSlip.medical} />
+                {!!selectedSlip.commission && <AmountRow label="Incentive" value={selectedSlip.commission} />}
+              </div>
+              <div>
+                <AmountRow label="PF" value={selectedSlip.pf} />
+                <AmountRow label="ESI" value={0} />
+                <AmountRow label="TDS" value={0} />
+                <AmountRow label="Advance" value={0} />
+                {!!selectedSlip.lopAmount && <AmountRow label={`Loss of Pay (${selectedSlip.lopDays}d)`} value={selectedSlip.lopAmount} />}
+                {!!selectedSlip.otherDeductions && <AmountRow label="Other Deductions" value={selectedSlip.otherDeductions} />}
+              </div>
+            </div>
+
+            {/* Totals */}
+            <div className="grid grid-cols-2 divide-x divide-slate-800 border-t border-slate-800 font-bold text-xs">
+              <div className="flex justify-between px-3 py-2"><span>Total Earning</span><span>{money(totalEarning)}</span></div>
+              <div className="flex justify-between px-3 py-2"><span>Total Deductions</span><span>{money(selectedSlip.totalDeductions)}</span></div>
+            </div>
+
+            {/* Net Pay (left) | Days Payable + Arrear Days (right) */}
+            <div className="grid grid-cols-2 border-t border-slate-800">
+              <div className="flex items-center gap-3 px-3 py-2.5 font-bold text-sm">
+                <span>Net Pay</span>
+                <span>{money(selectedSlip.netPay)}</span>
+              </div>
+              <div className="px-3 py-2 text-xs font-semibold space-y-1">
+                <p>Days payable: {Number(selectedSlip.presentDays || 0).toFixed(2)}</p>
+                <p>Arrear Days: 0.00</p>
+              </div>
+            </div>
+
+            {/* Amount in words */}
+            <div className="px-4 py-2 border-t border-slate-800 text-[11px] italic">
+              Indian rupee {numberToIndianWords(selectedSlip.netPay)} only
+            </div>
+
+            {/* Relation */}
+            <div className="grid grid-cols-3 gap-2 px-3 py-2 border-t border-slate-800 text-[10px] font-extrabold uppercase tracking-wider">
+              <span>Relation</span>
+              <span>Name</span>
+              <span>DOB</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 px-3 py-1 text-xs font-semibold">
+              <span>Father's Name</span>
+              <span>{employee.fatherName || '--'}</span>
+              <span>{employee.fatherDob || '--'}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 px-3 py-1 text-xs font-semibold">
+              <span>Mother's Name</span>
+              <span>{employee.motherName || '--'}</span>
+              <span>{employee.motherDob || '--'}</span>
+            </div>
+
+            <div className="px-4 py-4 text-xs font-semibold">Authorized Signatory: ______________________</div>
           </div>
 
           <div className="flex items-start space-x-2.5 p-3.5 bg-sky-50 border border-sky-100 text-sky-800 rounded-2xl text-[11px] font-semibold leading-relaxed">

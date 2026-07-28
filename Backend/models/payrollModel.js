@@ -15,6 +15,7 @@ const payrollSchema = new mongoose.Schema({
   hraPercent: { type: Number, default: 40 },
   medicalAllowance: { type: Number, default: 2000 },
   pfPercent: { type: Number, default: 12 },
+  commissionPercent: { type: Number, default: 0 },
 
   basicPay: { type: Number, default: 0 },
   hra: { type: Number, default: 0 },
@@ -25,6 +26,11 @@ const payrollSchema = new mongoose.Schema({
   presentDays: { type: Number, default: 0 },
   lopDays: { type: Number, default: 0 },
   lopAmount: { type: Number, default: 0 },
+
+  // Value of quotations this employee closed ("Accepted") during the month,
+  // and the commission earned on it at commissionPercent.
+  commissionSales: { type: Number, default: 0 },
+  commission: { type: Number, default: 0 },
 
   pf: { type: Number, default: 0 },
   otherDeductions: { type: Number, default: 0 },

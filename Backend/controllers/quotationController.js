@@ -117,6 +117,12 @@ export async function modifyQuotation(req, res) {
     updates.followUpCount = 0;
   }
 
+  if (updates.status === 'Accepted') {
+    // Marks when the deal closed, so payroll can attribute commission to the
+    // month the sale actually landed in rather than when it was first quoted.
+    updates.acceptedAt = new Date();
+  }
+
   const quotations = await updateQuotation(id, updates);
 
   if (updates.status) {

@@ -1311,7 +1311,7 @@ export default function QuotationsView({ employee, employees = [], quotations = 
           </div>
 
           {/* Main document card */}
-          <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-6 space-y-6">
+          <div className="print-area bg-white border border-slate-100 rounded-2xl shadow-sm p-6 space-y-6">
 
             {/* Header row: id, status, total */}
             <div className="flex items-start justify-between flex-wrap gap-3 border-b border-slate-50 pb-4">

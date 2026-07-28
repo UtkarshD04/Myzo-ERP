@@ -1,12 +1,26 @@
 const BASE = '/api';
+const TOKEN_KEY = 'myzo_auth_token';
+
+const getToken = () => localStorage.getItem(TOKEN_KEY);
+const setToken = (token) => localStorage.setItem(TOKEN_KEY, token);
+const clearToken = () => localStorage.removeItem(TOKEN_KEY);
 
 async function request(path, options = {}) {
+  const token = getToken();
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    },
     ...options,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || 'Request failed');
+  if (!res.ok) {
+    const error = new Error(data.message || 'Request failed');
+    error.status = res.status;
+    throw error;
+  }
   return data;
 }
 
@@ -14,10 +28,17 @@ export const api = {
   // Bootstrap & Auth
   bootstrap: () => request('/bootstrap'),
 
-  login: (email, password) => request('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email, password }),
-  }),
+  login: async (email, password) => {
+    const data = await request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    setToken(data.token);
+    return data;
+  },
+
+  logout: () => clearToken(),
+  hasSession: () => Boolean(getToken()),
 
   // Attendance
   checkIn: (employeeId, location) => request('/attendance/check-in', {
@@ -36,9 +57,8 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(payload),
   }),
-  updateEmployee: (id, updates, requesterRole) => request(`/employees/${id}`, {
+  updateEmployee: (id, updates) => request(`/employees/${id}`, {
     method: 'PATCH',
-    headers: requesterRole ? { 'X-User-Role': requesterRole } : {},
     body: JSON.stringify(updates),
   }),
   deleteEmployee: (id) => request(`/employees/${id}`, { method: 'DELETE' }),
@@ -127,12 +147,10 @@ export const api = {
   getPayrolls: () => request('/payroll'),
   generatePayroll: (month, requesterRole, generatedByName) => request('/payroll/generate', {
     method: 'POST',
-    headers: requesterRole ? { 'X-User-Role': requesterRole } : {},
     body: JSON.stringify({ month, generatedBy: requesterRole, generatedByName }),
   }),
-  updatePayroll: (id, updates, requesterRole) => request(`/payroll/${id}`, {
+  updatePayroll: (id, updates) => request(`/payroll/${id}`, {
     method: 'PATCH',
-    headers: requesterRole ? { 'X-User-Role': requesterRole } : {},
     body: JSON.stringify(updates),
   }),
 
@@ -142,43 +160,37 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(payload),
   }),
-  updateLeaveStatus: (id, updates, requesterRole) => request(`/leaves/${id}`, {
+  updateLeaveStatus: (id, updates) => request(`/leaves/${id}`, {
     method: 'PATCH',
-    headers: requesterRole ? { 'X-User-Role': requesterRole } : {},
     body: JSON.stringify(updates),
   }),
 
   // Recruitment (Candidates)
   getCandidates: () => request('/candidates'),
-  addCandidate: (payload, requesterRole) => request('/candidates', {
+  addCandidate: (payload) => request('/candidates', {
     method: 'POST',
-    headers: requesterRole ? { 'X-User-Role': requesterRole } : {},
     body: JSON.stringify(payload),
   }),
-  updateCandidate: (id, updates, requesterRole) => request(`/candidates/${id}`, {
+  updateCandidate: (id, updates) => request(`/candidates/${id}`, {
     method: 'PATCH',
-    headers: requesterRole ? { 'X-User-Role': requesterRole } : {},
     body: JSON.stringify(updates),
   }),
 
   // Onboarding
   getOnboarding: () => request('/onboarding'),
-  updateOnboarding: (id, updates, requesterRole) => request(`/onboarding/${id}`, {
+  updateOnboarding: (id, updates) => request(`/onboarding/${id}`, {
     method: 'PATCH',
-    headers: requesterRole ? { 'X-User-Role': requesterRole } : {},
     body: JSON.stringify(updates),
   }),
 
   // Inventory: Purchase Orders
   getPurchaseOrders: () => request('/purchase-orders'),
-  addPurchaseOrder: (payload, requesterRole) => request('/purchase-orders', {
+  addPurchaseOrder: (payload) => request('/purchase-orders', {
     method: 'POST',
-    headers: requesterRole ? { 'X-User-Role': requesterRole } : {},
     body: JSON.stringify(payload),
   }),
-  updatePurchaseOrder: (id, updates, requesterRole) => request(`/purchase-orders/${id}`, {
+  updatePurchaseOrder: (id, updates) => request(`/purchase-orders/${id}`, {
     method: 'PATCH',
-    headers: requesterRole ? { 'X-User-Role': requesterRole } : {},
     body: JSON.stringify(updates),
   }),
 

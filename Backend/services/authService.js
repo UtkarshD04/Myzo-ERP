@@ -2,6 +2,7 @@ import { buildId } from './timeService.js';
 import bcrypt from 'bcryptjs';
 import { Employee } from '../models/employeeModel.js';
 import { addNotification } from '../models/notificationModel.js';
+import { signToken } from './tokenService.js';
 
 export async function login({ email, password }) {
   if (!email) {
@@ -82,5 +83,6 @@ export async function login({ email, password }) {
 
   // Remove password from response
   const { password: _pw, ...safeEmployee } = normalizedEmployee;
-  return { employee: safeEmployee, notifications };
+  const token = signToken(safeEmployee);
+  return { employee: safeEmployee, notifications, token };
 }

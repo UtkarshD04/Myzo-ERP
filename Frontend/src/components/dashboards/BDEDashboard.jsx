@@ -2,7 +2,7 @@ import React from 'react';
 import { Briefcase, CheckCircle, RefreshCcw, Send, Calendar } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 
-export default function BDEDashboard({ employee, kpis = {} }) {
+export default function BDEDashboard({ employee, kpis = {}, payrolls = [] }) {
   const currentKPIs = kpis.sales || {
     dailyTarget: 3000,
     dailyValue: 1200,
@@ -11,6 +11,12 @@ export default function BDEDashboard({ employee, kpis = {} }) {
     leads: [],
     collections: 45000
   };
+
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const myPayslip = payrolls.find(p => p.employeeId === employee.id && p.month === currentMonthKey);
+  const commissionEarned = myPayslip?.commission || 0;
+  const commissionPercent = myPayslip?.commissionPercent ?? employee.commissionPercent ?? 0;
 
   const funnelData = [
     { stage: 'Discovery', count: 18 },
@@ -22,12 +28,22 @@ export default function BDEDashboard({ employee, kpis = {} }) {
   return (
     <div className="space-y-6">
       {/* Upper info banners */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5">
         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Active Pipeline Value</span>
           <h3 className="text-2xl font-black text-slate-800 mt-1">₹3,40,000</h3>
           <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[9px] font-bold mt-2 bg-blue-50 text-blue-600 border border-blue-100">
             <span>7 Clients</span>
+          </span>
+        </div>
+
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Commission Earned</span>
+          <h3 className="text-2xl font-black text-emerald-600 mt-1">₹{commissionEarned.toLocaleString()}</h3>
+          <span className="text-[10px] text-slate-400 font-semibold block mt-2">
+            {commissionPercent > 0
+              ? `${commissionPercent}% of this month's closed deals, via payroll`
+              : 'No commission rate configured yet'}
           </span>
         </div>
 
@@ -96,7 +112,7 @@ export default function BDEDashboard({ employee, kpis = {} }) {
           </div>
 
           <div className="border-t border-slate-50 pt-3.5 mt-4 text-[10px] text-slate-400 font-medium">
-            💡 Update client call details inside work reports to claim performance appraisal commissions.
+            💡 Commission is calculated automatically from your accepted quotations each month when payroll is generated.
           </div>
         </div>
       </div>

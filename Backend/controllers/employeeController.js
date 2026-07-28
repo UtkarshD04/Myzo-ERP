@@ -51,10 +51,13 @@ export async function modifyEmployee(req, res) {
   const updates = { ...req.body };
 
   // Only Admin or HR is authorized to change protected fields (identity + compensation)
-  const PROTECTED_FIELDS = ['name', 'officialEmail', 'password', 'salary', 'basicPercent', 'hraPercent', 'medicalAllowance', 'pfPercent', 'bankName', 'accountNo', 'ifscCode'];
+  const PROTECTED_FIELDS = [
+    'name', 'officialEmail', 'password', 'salary', 'basicPercent', 'hraPercent', 'medicalAllowance', 'pfPercent', 'commissionPercent',
+    'bankName', 'accountNo', 'ifscCode', 'pan', 'esiNo', 'pfNo', 'uanNo', 'location', 'fatherName', 'fatherDob', 'motherName', 'motherDob'
+  ];
   const hasProtectedChanges = PROTECTED_FIELDS.some(field => updates[field] !== undefined);
   if (hasProtectedChanges) {
-    const requesterRole = req.headers['x-user-role'];
+    const requesterRole = req.user.role;
     if (requesterRole !== 'Admin' && requesterRole !== 'HR') {
       const error = new Error('Access denied. Only Admins can modify these protected fields.');
       error.statusCode = 403;

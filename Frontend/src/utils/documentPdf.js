@@ -3,6 +3,64 @@ import autoTable from 'jspdf-autotable';
 
 const money = (n) => `Rs. ${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
+// Header details for the payslip template. Edit these to match your registered company info.
+// Exported so the on-screen payslip preview (DocumentsView) can render the same header.
+export const COMPANY_INFO = {
+  name: 'MESHO SOLUTION SOLAR PARK PVT LTD.',
+  addressLines: ['Yogi Raj Tower Near Madhurima Sweets, Vibhuti Khand,', 'Gomti Nagar Lucknow, U.P'],
+  logoUrl: '/logo.jpeg',
+  logoAspect: 1600 / 872
+};
+
+function loadImageDataUrl(url) {
+  return fetch(url)
+    .then(res => res.blob())
+    .then(blob => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    }));
+}
+
+const ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+  'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+const TENS = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+function twoDigitWords(n) {
+  if (n < 20) return ONES[n];
+  const tens = Math.floor(n / 10);
+  const ones = n % 10;
+  return TENS[tens] + (ones ? ` ${ONES[ones]}` : '');
+}
+
+function threeDigitWords(n) {
+  const hundred = Math.floor(n / 100);
+  const rest = n % 100;
+  return (hundred ? `${ONES[hundred]} Hundred${rest ? ' ' : ''}` : '') + (rest ? twoDigitWords(rest) : '');
+}
+
+// Indian numbering (crore/lakh/thousand groups), for the "amount in words" line.
+export function numberToIndianWords(amount) {
+  let num = Math.round(Number(amount) || 0);
+  if (num === 0) return 'Zero';
+
+  const hundred = num % 1000;
+  num = Math.floor(num / 1000);
+  const thousand = num % 100;
+  num = Math.floor(num / 100);
+  const lakh = num % 100;
+  num = Math.floor(num / 100);
+  const crore = num;
+
+  const parts = [];
+  if (crore) parts.push(`${twoDigitWords(crore)} Crore`);
+  if (lakh) parts.push(`${twoDigitWords(lakh)} Lakh`);
+  if (thousand) parts.push(`${twoDigitWords(thousand)} Thousand`);
+  if (hundred) parts.push(threeDigitWords(hundred));
+  return parts.join(' ');
+}
+
 /**
  * Builds and downloads a PDF for a quotation or invoice. Both documents share
  * the same shape (customer/items/totals) so one generator covers both, keyed
@@ -255,4 +313,209 @@ export function downloadSalaryDisbursementPdf({ monthLabel, rows = [], employees
   pdf.text('Date: ______________________', col3, y);
 
   pdf.save(`Salary-Disbursement-${monthLabel.replace(/\s+/g, '-')}.pdf`);
+}
+
+/**
+ * Builds and downloads an individual employee's monthly payslip, formatted
+ * like the company's standard printed pay slip (header, employee/bank
+ * details grid, Earnings vs Deductions table, net pay in words).
+ */
+export async function downloadPayslipPdf({ employee = {}, payslip, monthLabel }) {
+  if (!payslip) return;
+
+  const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const margin = 40;
+  const boxLeft = margin;
+  const boxRight = pageWidth - margin;
+  const boxWidth = boxRight - boxLeft;
+  const colMid = boxLeft + boxWidth / 2;
+  const ink = [20, 20, 20];
+  const lineColor = [60, 60, 60];
+
+  let logoDataUrl = null;
+  try {
+    logoDataUrl = await loadImageDataUrl(COMPANY_INFO.logoUrl);
+  } catch {
+    logoDataUrl = null;
+  }
+
+  // Logo sits top-left on its own; the company name/address are centered on
+  // the full page width independent of it, matching the reference letterhead.
+  const logoWidth = 80;
+  const logoHeight = logoWidth / COMPANY_INFO.logoAspect;
+  const logoTop = 20;
+  if (logoDataUrl) {
+    pdf.addImage(logoDataUrl, 'JPEG', boxLeft, logoTop, logoWidth, logoHeight);
+  }
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(13);
+  pdf.setTextColor(...ink);
+  pdf.text(COMPANY_INFO.name, pageWidth / 2, 34, { align: 'center' });
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  pdf.setTextColor(...ink);
+  let headerY = 50;
+  COMPANY_INFO.addressLines.forEach(line => {
+    pdf.text(line, pageWidth / 2, headerY, { align: 'center' });
+    headerY += 13;
+  });
+
+  const boxTop = Math.max(headerY, logoTop + logoHeight) + 14;
+  pdf.setDrawColor(...lineColor);
+  pdf.setLineWidth(0.75);
+
+  // "Pay Slip For Month" bar
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(10);
+  pdf.setTextColor(...ink);
+  pdf.text(`Pay Slip For Month : ${monthLabel}`, boxLeft + 8, boxTop + 14);
+  let sectionY = boxTop + 20;
+  pdf.line(boxLeft, sectionY, boxRight, sectionY);
+
+  // Employee / statutory info grid — plain (no per-row lines), just the
+  // section separators drawn manually below.
+  const infoStartY = sectionY;
+  const infoRows = [
+    ['Name', employee.name || '--', 'PAN', employee.pan || '--'],
+    ['Employee ID', employee.id || employee.empId || '--', 'ESI No', employee.esiNo || '--'],
+    ['Designation', employee.designation || '--', 'PF No', employee.pfNo || '--'],
+    ['Bank Name', employee.bankName || '--', 'UAN No', employee.uanNo || '--'],
+    ['Bank Account No', employee.accountNo || '--', 'Location', employee.location || '--'],
+    ['Department', employee.department || '--', 'Mode of Payment', 'Bank Transfer']
+  ];
+  autoTable(pdf, {
+    startY: infoStartY,
+    margin: { left: boxLeft, right: margin },
+    body: infoRows,
+    theme: 'plain',
+    styles: { font: 'helvetica', fontSize: 8.5, cellPadding: { top: 4.5, bottom: 4.5, left: 8, right: 4 }, textColor: ink },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 110 },
+      1: { cellWidth: boxWidth / 2 - 110 },
+      2: { fontStyle: 'bold', cellWidth: 110 },
+      3: { cellWidth: boxWidth / 2 - 110 }
+    }
+  });
+  sectionY = pdf.lastAutoTable.finalY;
+  pdf.line(boxLeft, sectionY, boxRight, sectionY);
+
+  // Earnings / Deductions header
+  autoTable(pdf, {
+    startY: sectionY,
+    margin: { left: boxLeft, right: margin },
+    body: [['Earnings', 'Amount', 'Deductions', 'Amount']],
+    theme: 'plain',
+    styles: { font: 'helvetica', fontSize: 9, fontStyle: 'bold', cellPadding: { top: 5, bottom: 5, left: 8, right: 8 }, textColor: ink },
+    columnStyles: { 1: { halign: 'right' }, 3: { halign: 'right' } }
+  });
+  sectionY = pdf.lastAutoTable.finalY;
+  pdf.line(boxLeft, sectionY, boxRight, sectionY);
+
+  // Earnings / Deductions body
+  const earnings = [
+    ['Basic Salary', money(payslip.basicPay)],
+    ['HRA', money(payslip.hra)],
+    ['Conveyance Allowance', money(0)],
+    ['Medical Allowance', money(payslip.medical)],
+    ['Incentive', money(payslip.commission)]
+  ];
+  const deductions = [
+    ['PF', money(payslip.pf)],
+    ['ESI', money(0)],
+    ['TDS', money(0)],
+    ['Advance', money(0)]
+  ];
+  if (payslip.lopAmount) deductions.push([`Loss of Pay (${payslip.lopDays}d)`, money(payslip.lopAmount)]);
+  if (payslip.otherDeductions) deductions.push(['Other Deductions', money(payslip.otherDeductions)]);
+
+  const rowCount = Math.max(earnings.length, deductions.length);
+  const earnDeductBody = Array.from({ length: rowCount }, (_, i) => [
+    earnings[i]?.[0] || '', earnings[i]?.[1] || '',
+    deductions[i]?.[0] || '', deductions[i]?.[1] || ''
+  ]);
+  autoTable(pdf, {
+    startY: sectionY,
+    margin: { left: boxLeft, right: margin },
+    body: earnDeductBody,
+    theme: 'plain',
+    styles: { font: 'helvetica', fontSize: 9, cellPadding: { top: 4.5, bottom: 4.5, left: 8, right: 8 }, textColor: ink },
+    columnStyles: { 1: { halign: 'right' }, 3: { halign: 'right' } }
+  });
+  sectionY = pdf.lastAutoTable.finalY;
+  pdf.line(boxLeft, sectionY, boxRight, sectionY);
+
+  // Totals
+  const totalEarning = (Number(payslip.grossEarnings) || 0) + (Number(payslip.commission) || 0);
+  autoTable(pdf, {
+    startY: sectionY,
+    margin: { left: boxLeft, right: margin },
+    body: [['Total Earning', money(totalEarning), 'Total Deductions', money(payslip.totalDeductions)]],
+    theme: 'plain',
+    styles: { font: 'helvetica', fontSize: 9.5, fontStyle: 'bold', cellPadding: { top: 5, bottom: 5, left: 8, right: 8 }, textColor: ink },
+    columnStyles: { 1: { halign: 'right' }, 3: { halign: 'right' } }
+  });
+  sectionY = pdf.lastAutoTable.finalY;
+  pdf.line(boxLeft, sectionY, boxRight, sectionY);
+
+  // Single vertical divider spanning the two-column section (info grid
+  // through totals) only — matches the reference, which doesn't carry the
+  // divider through the Net Pay / words / relation rows below.
+  pdf.line(colMid, infoStartY, colMid, sectionY);
+
+  // Net Pay (left) | Days Payable + Arrear Days (right)
+  const netPayRowTop = sectionY;
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(11);
+  pdf.setTextColor(...ink);
+  pdf.text('Net Pay', boxLeft + 8, netPayRowTop + 16);
+  pdf.text(money(payslip.netPay), boxLeft + 90, netPayRowTop + 16);
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8.5);
+  pdf.setTextColor(...ink);
+  pdf.text(`Days payable: ${Number(payslip.presentDays || 0).toFixed(2)}`, colMid + 8, netPayRowTop + 13);
+  pdf.text('Arrear Days: 0.00', colMid + 8, netPayRowTop + 26);
+
+  sectionY = netPayRowTop + 34;
+  pdf.line(boxLeft, sectionY, boxRight, sectionY);
+
+  // Amount in words
+  pdf.setFont('helvetica', 'italic');
+  pdf.setFontSize(9);
+  pdf.setTextColor(...ink);
+  pdf.text(`Indian rupee ${numberToIndianWords(payslip.netPay)} only`, boxLeft + 8, sectionY + 16);
+  sectionY += 24;
+  pdf.line(boxLeft, sectionY, boxRight, sectionY);
+
+  // Relation (plain 3-column layout, no internal lines)
+  autoTable(pdf, {
+    startY: sectionY,
+    margin: { left: boxLeft, right: margin },
+    head: [['Relation', 'Name', 'DOB']],
+    body: [
+      ["Father's Name", employee.fatherName || '--', employee.fatherDob || '--'],
+      ["Mother's Name", employee.motherName || '--', employee.motherDob || '--']
+    ],
+    theme: 'plain',
+    styles: { font: 'helvetica', fontSize: 8.5, cellPadding: { top: 4.5, bottom: 4.5, left: 8, right: 8 }, textColor: ink },
+    headStyles: { fontStyle: 'bold' }
+  });
+  sectionY = pdf.lastAutoTable.finalY;
+
+  // Signatory
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  pdf.setTextColor(...ink);
+  const signatoryY = sectionY + 26;
+  pdf.text('Authorized Signatory: ______________________', boxLeft + 8, signatoryY);
+  const boxBottom = signatoryY + 14;
+
+  // Outer border around the whole form
+  pdf.setLineWidth(1);
+  pdf.rect(boxLeft, boxTop, boxWidth, boxBottom - boxTop);
+
+  pdf.save(`Payslip-${(employee.name || 'Employee').replace(/\s+/g, '-')}-${monthLabel.replace(/\s+/g, '-')}.pdf`);
 }

@@ -1,5 +1,6 @@
 import { findAllEmployees } from '../models/employeeModel.js';
 import { Attendance } from '../models/attendanceModel.js';
+import { Quotation } from '../models/quotationModel.js';
 import {
   findAllPayrolls,
   upsertPayrollForMonth,
@@ -8,7 +9,7 @@ import {
 import { buildId } from '../services/timeService.js';
 
 function requireAdminOrHR(req) {
-  const role = req.headers['x-user-role'];
+  const role = req.user.role;
   if (role !== 'Admin' && role !== 'HR') {
     const error = new Error('Access denied. Only Admins or HR can process payroll.');
     error.statusCode = 403;
@@ -25,6 +26,14 @@ function workingDaysInMonth(month) {
     if (!isSunday) workingDays++;
   }
   return workingDays;
+}
+
+function monthDateRange(month) {
+  const [year, monthNum] = month.split('-').map(Number);
+  return {
+    start: new Date(year, monthNum - 1, 1),
+    end: new Date(year, monthNum, 1)
+  };
 }
 
 export async function getPayrolls(req, res) {
@@ -44,6 +53,7 @@ export async function generatePayroll(req, res) {
 
   const employees = (await findAllEmployees()).filter(e => e.employmentStatus !== 'Inactive');
   const workingDays = workingDaysInMonth(month);
+  const { start: monthStart, end: monthEnd } = monthDateRange(month);
 
   const existing = await findAllPayrolls();
   const paidKeys = new Set(
@@ -58,6 +68,7 @@ export async function generatePayroll(req, res) {
     const hraPercent = employee.hraPercent ?? 40;
     const medicalAllowance = employee.medicalAllowance ?? 2000;
     const pfPercent = employee.pfPercent ?? 12;
+    const commissionPercent = employee.commissionPercent ?? 0;
 
     const basicPay = Math.round(salary * basicPercent / 100);
     const hra = Math.round(basicPay * hraPercent / 100);
@@ -72,10 +83,21 @@ export async function generatePayroll(req, res) {
     const perDayGross = workingDays > 0 ? grossEarnings / workingDays : 0;
     const lopAmount = Math.round(perDayGross * lopDays);
 
+    // Commission is earned on quotations this employee closed ("Accepted")
+    // during the month, attributed by acceptedAt rather than quoteDate so a
+    // deal counts towards the month it actually closed in.
+    const acceptedQuotations = await Quotation.find({
+      salesperson: employee.id,
+      status: 'Accepted',
+      acceptedAt: { $gte: monthStart, $lt: monthEnd }
+    }).lean();
+    const commissionSales = acceptedQuotations.reduce((sum, q) => sum + (Number(q.totalAmount) || 0), 0);
+    const commission = Math.round(commissionSales * commissionPercent / 100);
+
     const pf = Math.round(basicPay * pfPercent / 100);
     const otherDeductions = 0;
     const totalDeductions = lopAmount + pf + otherDeductions;
-    const netPay = grossEarnings - totalDeductions;
+    const netPay = grossEarnings + commission - totalDeductions;
 
     await upsertPayrollForMonth(employee.id, month, {
       id: buildId('PAY'),
@@ -87,6 +109,7 @@ export async function generatePayroll(req, res) {
       hraPercent,
       medicalAllowance,
       pfPercent,
+      commissionPercent,
       basicPay,
       hra,
       medical,
@@ -95,6 +118,8 @@ export async function generatePayroll(req, res) {
       presentDays,
       lopDays,
       lopAmount,
+      commissionSales,
+      commission,
       pf,
       otherDeductions,
       totalDeductions,

@@ -26,11 +26,23 @@ const employeeSchema = new mongoose.Schema({
   bankName: String,
   accountNo: String,
   ifscCode: String,
+  pan: String,
+  esiNo: String,
+  pfNo: String,
+  uanNo: String,
+  location: String,
+  fatherName: String,
+  fatherDob: String,
+  motherName: String,
+  motherDob: String,
   salary: Number,
   basicPercent: { type: Number, default: 50 },
   hraPercent: { type: Number, default: 40 },
   medicalAllowance: { type: Number, default: 2000 },
   pfPercent: { type: Number, default: 12 },
+  // % of the total value of quotations this employee closed (status
+  // "Accepted") in a given month, paid out as sales commission via payroll.
+  commissionPercent: { type: Number, default: 0 },
   password: { type: String, default: 'password123' }
 }, { timestamps: true });
 

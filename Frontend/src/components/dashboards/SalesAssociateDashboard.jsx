@@ -2,12 +2,15 @@ import React from 'react';
 import { TrendingUp, DollarSign, Target, Award, ListChecks } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 
-export default function SalesAssociateDashboard({ employee, quotations = [] }) {
+export default function SalesAssociateDashboard({ employee, quotations = [], payrolls = [] }) {
   const myQuotations = quotations.filter(q => q.salesperson === employee.id);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const now = new Date();
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const myPayslip = payrolls.find(p => p.employeeId === employee.id && p.month === currentMonthKey);
+  const commissionEarned = myPayslip?.commission || 0;
+  const commissionPercent = myPayslip?.commissionPercent ?? employee.commissionPercent ?? 0;
   const inMonth = (q) => (q.createdAt || q.quoteDate || '').slice(0, 7) === currentMonthKey;
   const inToday = (q) => (q.createdAt || q.quoteDate || '').slice(0, 10) === todayStr;
 
@@ -78,7 +81,7 @@ export default function SalesAssociateDashboard({ employee, quotations = [] }) {
       </div>
 
       {/* KPI Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Today's Revenue</span>
           <h3 className="text-2xl font-black text-slate-800 mt-1">₹{currentKPIs.dailyValue.toLocaleString()}</h3>
@@ -98,6 +101,16 @@ export default function SalesAssociateDashboard({ employee, quotations = [] }) {
           </div>
           <span className="text-[10px] text-slate-400 font-semibold block mt-1.5">
             {collectionPct}% collections efficiency
+          </span>
+        </div>
+
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Commission Earned</span>
+          <h3 className="text-2xl font-black text-emerald-600 mt-1">₹{commissionEarned.toLocaleString()}</h3>
+          <span className="text-[10px] text-slate-400 font-semibold block mt-2">
+            {commissionPercent > 0
+              ? `${commissionPercent}% of this month's closed deals, via payroll`
+              : 'No commission rate configured yet'}
           </span>
         </div>
 

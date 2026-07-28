@@ -1,6 +1,7 @@
 import { parse } from 'node:url';
 import { routes } from '../routes/index.js';
 import { handleError, notFound } from '../middleware/errorHandler.js';
+import { authenticate } from '../middleware/auth.js';
 
 function compilePath(routePath) {
   const keys = [];
@@ -62,9 +63,9 @@ const preparedRoutes = routes.map((route) => ({
 export async function requestHandler(req, rawRes) {
   const res = createResponse(rawRes);
 
-  rawRes.setHeader('Access-Control-Allow-Origin', '*');
+  rawRes.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || '*');
   rawRes.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
-  rawRes.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  rawRes.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') {
     rawRes.statusCode = 204;
@@ -86,6 +87,9 @@ export async function requestHandler(req, rawRes) {
     const match = pathname.match(route.regex);
     req.params = Object.fromEntries(route.keys.map((key, index) => [key, match[index + 1]]));
     req.body = ['POST', 'PUT', 'PATCH'].includes(req.method) ? await readJsonBody(req) : {};
+    if (!route.public) {
+      authenticate(req);
+    }
     await route.handler(req, res);
   } catch (error) {
     handleError(error, req, res);

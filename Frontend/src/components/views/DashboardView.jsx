@@ -15,6 +15,7 @@ export default function DashboardView({
   attendanceHistory,
   allAttendance,
   quotations = [],
+  payrolls = [],
   reports,
   setActiveTab,
   onCheckIn,
@@ -57,7 +58,7 @@ export default function DashboardView({
         <div className="space-y-6">
           <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
             <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-4">Sales Team Overview</h4>
-            <SalesManagerDashboard employee={employee} employees={employees} quotations={quotations} scope="company" />
+            <SalesManagerDashboard employee={employee} employees={employees} quotations={quotations} payrolls={payrolls} scope="company" />
           </div>
           <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
             <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-4">HR Overview</h4>
@@ -67,9 +68,9 @@ export default function DashboardView({
       );
     }
     if (isHR) return <HRDashboard employee={employee} employees={employees} attendanceHistory={allAttendance || []} />;
-    if (isSalesManager) return <SalesManagerDashboard employee={employee} employees={employees} quotations={quotations} />;
-    if (isBDE) return <BDEDashboard employee={employee} kpis={currentKPIs} />;
-    if (isSalesAssociate) return <SalesAssociateDashboard employee={employee} quotations={quotations} />;
+    if (isSalesManager) return <SalesManagerDashboard employee={employee} employees={employees} quotations={quotations} payrolls={payrolls} />;
+    if (isBDE) return <BDEDashboard employee={employee} kpis={currentKPIs} payrolls={payrolls} />;
+    if (isSalesAssociate) return <SalesAssociateDashboard employee={employee} quotations={quotations} payrolls={payrolls} />;
     return <GeneralDashboard employee={employee} kpis={currentKPIs} />;
   };
 
