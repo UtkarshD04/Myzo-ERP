@@ -49,6 +49,28 @@ const employeeSchema = new mongoose.Schema({
 export { employeeSchema };
 export const Employee = mongoose.model('Employee', employeeSchema);
 
+// Compensation and personal-document fields: only Admin/HR (or the employee
+// viewing their own record) should ever see these for OTHER employees.
+export const SENSITIVE_EMPLOYEE_FIELDS = [
+  'bankName', 'accountNo', 'ifscCode', 'pan', 'esiNo', 'pfNo', 'uanNo',
+  'fatherName', 'fatherDob', 'motherName', 'motherDob',
+  'salary', 'basicPercent', 'hraPercent', 'medicalAllowance', 'pfPercent', 'commissionPercent'
+];
+
+export function stripSensitiveEmployeeFields(employee) {
+  const safe = { ...employee };
+  for (const field of SENSITIVE_EMPLOYEE_FIELDS) delete safe[field];
+  return safe;
+}
+
+// Returns `employee` as `viewer` is allowed to see it: full record for
+// Admin/HR or for the viewer's own profile, sensitive fields stripped otherwise.
+export function sanitizeEmployeeForViewer(employee, viewer) {
+  const isPrivileged = viewer.role === 'Admin' || viewer.role === 'HR';
+  const isSelf = employee.id === viewer.id || employee.officialEmail === viewer.email;
+  return (isPrivileged || isSelf) ? employee : stripSensitiveEmployeeFields(employee);
+}
+
 export async function findAllEmployees() {
   return Employee.find({}, { password: 0 }).lean();
 }

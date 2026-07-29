@@ -1,5 +1,6 @@
 import React from 'react';
-import { Clock, MapPin, Activity, HelpCircle, AlertTriangle } from 'lucide-react';
+import { Clock, MapPin, Activity, HelpCircle, AlertTriangle, Download } from 'lucide-react';
+import { exportToCsv } from '../../utils/exportCsv';
 
 export default function AttendanceView({
   employee,
@@ -16,6 +17,18 @@ export default function AttendanceView({
   const currentLocation = todayRecord?.checkOutLocation || todayRecord?.checkInLocation;
 
   const visibleHistory = myAttendance;
+
+  const handleExport = () => {
+    exportToCsv(`Attendance-${employee.name}`, [
+      { label: 'Date', value: 'date' },
+      { label: 'Check-In', value: (r) => r.checkIn || '' },
+      { label: 'Check-Out', value: (r) => r.checkOut || '' },
+      { label: 'Working Hours', value: (r) => r.workingHours || 0 },
+      { label: 'Overtime', value: (r) => r.overtime || 0 },
+      { label: 'Location', value: (r) => r.checkInLocation?.placeName || r.checkOutLocation?.placeName || '' },
+      { label: 'Status', value: 'status' }
+    ], visibleHistory);
+  };
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -81,6 +94,15 @@ export default function AttendanceView({
         <div className="lg:col-span-8 bg-white border border-slate-100 rounded-2xl p-6 shadow-sm flex flex-col">
           <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
             <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Historical Logs</h3>
+            {visibleHistory.length > 0 && (
+              <button
+                onClick={handleExport}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 text-slate-600 font-bold rounded-lg text-[11px] cursor-pointer transition-all"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export CSV
+              </button>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">

@@ -63,11 +63,6 @@ export const api = {
   }),
   deleteEmployee: (id) => request(`/employees/${id}`, { method: 'DELETE' }),
 
-  // Notifications
-  markAllNotificationsRead: () => request('/notifications/read-all', { method: 'PATCH' }),
-  markNotificationRead: (id) => request(`/notifications/${id}/read`, { method: 'PATCH' }),
-  deleteNotification: (id) => request(`/notifications/${id}`, { method: 'DELETE' }),
-
   // Tasks
   getTasks: () => request('/tasks'),
   addTask: (payload) => request('/tasks', {

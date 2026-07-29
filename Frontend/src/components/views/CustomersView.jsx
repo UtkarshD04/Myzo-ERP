@@ -23,7 +23,11 @@ const EMPTY_FORM = {
 // Older records may still carry the pre-rename 'Lead' value — treat it as 'New'.
 const normalizeStage = (stage) => (stage === 'Lead' ? 'New' : stage) || 'New';
 
-export default function CustomersView({ customers = [], quotations = [], onAddCustomer, onUpdateCustomer, onSetCustomerBlocked, onDeleteCustomer }) {
+export default function CustomersView({ employee, customers = [], quotations = [], onAddCustomer, onUpdateCustomer, onSetCustomerBlocked, onDeleteCustomer }) {
+  // Mirrors the backend's CUSTOMER_DELETE_ROLES gate (customerController.js)
+  // so the button isn't shown for a request that would just 403.
+  const canDeleteCustomer = ['Admin', 'Manager'].includes(employee?.role);
+
   const [view, setView] = useState('directory');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -175,8 +179,10 @@ export default function CustomersView({ customers = [], quotations = [], onAddCu
               <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Phone</label>
               <input
                 type="text"
+                inputMode="numeric"
+                maxLength={10}
                 value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
               />
             </div>
@@ -480,13 +486,15 @@ export default function CustomersView({ customers = [], quotations = [], onAddCu
                           ? <UserCheck2 className="w-3.5 h-3.5" />
                           : <UserX className="w-3.5 h-3.5" />}
                       </button>
-                      <button
-                        onClick={() => setDeleteTarget(c)}
-                        title="Delete customer"
-                        className="p-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 cursor-pointer transition-all"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {canDeleteCustomer && (
+                        <button
+                          onClick={() => setDeleteTarget(c)}
+                          title="Delete customer"
+                          className="p-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 cursor-pointer transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

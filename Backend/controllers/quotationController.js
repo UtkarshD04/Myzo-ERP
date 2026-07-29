@@ -3,6 +3,11 @@ import { syncLeadStageForQuotationStatus } from '../models/customerModel.js';
 import { buildId } from '../services/timeService.js';
 import { sendQuotationEmail, sendQuotationFollowUpEmail } from '../services/mailService.js';
 import { addNotification } from '../models/notificationModel.js';
+import { requireOwnerOrRole } from '../middleware/auth.js';
+
+// A quotation belongs to the salesperson who created it; only they (or a
+// Manager/Admin stepping in on their behalf) may edit or convert it.
+const QUOTATION_OVERRIDE_ROLES = ['Admin', 'Manager'];
 
 function computeTotals({ items = [], discountPercent = 0, gstMode = 'split', cgstRate = 0, sgstRate = 0, igstRate = 0, taxType = 'None', taxRate = 0, adjustment = 0 }) {
   const computedItems = items.map(item => {
@@ -104,6 +109,14 @@ export async function addQuotation(req, res) {
 export async function modifyQuotation(req, res) {
   const { id } = req.params;
   const updates = { ...req.body };
+
+  const existing = await findQuotationById(id);
+  if (!existing) {
+    const error = new Error('Quotation not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+  requireOwnerOrRole(req, existing.salesperson, ...QUOTATION_OVERRIDE_ROLES);
 
   if (Array.isArray(updates.items)) {
     Object.assign(updates, computeTotals(updates));

@@ -34,11 +34,14 @@ export default function SalesAssociateDashboard({ employee, quotations = [], pay
     value: q.totalAmount
   }));
 
+  // Color encodes the role (target vs. actual), not each bar individually —
+  // every "Target" bar shares the neutral baseline hue, every "Sold" bar
+  // shares the accent, so the daily/monthly pairing reads at a glance.
   const chartData = [
-    { name: 'Daily Target', Value: dailyTarget, color: '#3B82F6' },
-    { name: 'Daily Sold', Value: dailyValue, color: '#10B981' },
-    { name: 'Monthly Target (20x)', Value: monthlyTarget, color: '#6366F1' },
-    { name: 'Monthly Sold', Value: monthlyValue, color: '#8B5CF6' }
+    { name: 'Daily Target', Value: dailyTarget, color: '#c3c2b7' },
+    { name: 'Daily Sold', Value: dailyValue, color: '#2a78d6' },
+    { name: 'Monthly Target (20x)', Value: monthlyTarget, color: '#c3c2b7' },
+    { name: 'Monthly Sold', Value: monthlyValue, color: '#2a78d6' }
   ];
 
   return (

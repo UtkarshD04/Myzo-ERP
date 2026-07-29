@@ -39,3 +39,9 @@ export async function updatePurchaseOrderById(id, updates) {
   await PurchaseOrder.findOneAndUpdate({ id }, updates);
   return findAllPurchaseOrders();
 }
+
+// Same tier as create/update (purchaseOrderService.INVENTORY_ROLES) — supplier
+// pricing shouldn't be visible to roles that can't act on it anyway.
+export function filterPurchaseOrdersForViewer(purchaseOrders, viewer) {
+  return (viewer.role === 'Admin' || viewer.role === 'Manager') ? purchaseOrders : [];
+}

@@ -1,8 +1,13 @@
-import { createInvoice, findAllInvoices, updateInvoice } from '../models/invoiceModel.js';
+import { createInvoice, findAllInvoices, findInvoiceById, updateInvoice } from '../models/invoiceModel.js';
 import { findQuotationById, updateQuotation } from '../models/quotationModel.js';
 import { findProductById, adjustProductStock, findAllProducts, findAllProductsForManagement } from '../models/productModel.js';
 import { createStockMovement } from '../models/stockMovementModel.js';
 import { buildId, getTodayDate } from '../services/timeService.js';
+import { requireOwnerOrRole } from '../middleware/auth.js';
+
+// Same ownership tier as quotations: the invoice's own salesperson, or a
+// Manager/Admin acting on their behalf.
+const INVOICE_OVERRIDE_ROLES = ['Admin', 'Manager'];
 
 function addDays(dateStr, days) {
   const base = dateStr ? new Date(dateStr) : new Date();
@@ -30,6 +35,8 @@ export async function convertQuotationToInvoice(req, res) {
     error.statusCode = 409;
     throw error;
   }
+
+  requireOwnerOrRole(req, quotation.salesperson, ...INVOICE_OVERRIDE_ROLES);
 
   // Only items linked to a catalog product participate in stock tracking —
   // free-text/custom line items (no productId) skip validation entirely.
@@ -92,6 +99,15 @@ export async function convertQuotationToInvoice(req, res) {
 
 export async function modifyInvoice(req, res) {
   const { id } = req.params;
+
+  const existing = await findInvoiceById(id);
+  if (!existing) {
+    const error = new Error('Invoice not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+  requireOwnerOrRole(req, existing.salesperson, ...INVOICE_OVERRIDE_ROLES);
+
   const invoices = await updateInvoice(id, req.body);
   res.json({ invoices });
 }

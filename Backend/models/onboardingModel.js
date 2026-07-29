@@ -35,3 +35,9 @@ export async function updateOnboardingById(id, updates) {
   await Onboarding.findOneAndUpdate({ id }, updates);
   return findAllOnboarding();
 }
+
+// HR-only, same as candidates — onboarding checklists aren't currently a
+// self-service feature for the new hire (no employee-facing nav for it).
+export function filterOnboardingForViewer(onboarding, viewer) {
+  return (viewer.role === 'Admin' || viewer.role === 'HR') ? onboarding : [];
+}

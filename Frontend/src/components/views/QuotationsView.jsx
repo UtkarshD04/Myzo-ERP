@@ -806,7 +806,6 @@ export default function QuotationsView({ employee, employees = [], quotations = 
                         <th className="py-2 pr-3 font-extrabold">Product</th>
                         <th className="py-2 pr-3 font-extrabold text-center w-20">Qty</th>
                         <th className="py-2 pr-3 font-extrabold text-right w-28">Rate</th>
-                        <th className="py-2 pr-3 font-extrabold text-right w-28">Discount</th>
                         <th className="py-2 pr-3 font-extrabold text-right w-28">Amount</th>
                         <th className="py-2 w-8"></th>
                       </tr>
@@ -841,15 +840,6 @@ export default function QuotationsView({ employee, employees = [], quotations = 
                               min="0"
                               value={item.unitPrice}
                               onChange={(e) => updateItem(index, { unitPrice: e.target.value })}
-                              className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-800 text-right focus:outline-none focus:border-blue-500"
-                            />
-                          </td>
-                          <td className="py-2.5 pr-3">
-                            <input
-                              type="number"
-                              min="0"
-                              value={item.discount}
-                              onChange={(e) => updateItem(index, { discount: e.target.value })}
                               className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-800 text-right focus:outline-none focus:border-blue-500"
                             />
                           </td>

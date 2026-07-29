@@ -9,7 +9,11 @@ import { addNotification } from '../models/notificationModel.js';
 import { buildId } from './timeService.js';
 import { sendLeaveStatusEmail } from './mailService.js';
 
-const APPROVER_ROLES = ['Admin', 'HR', 'Manager'];
+const ESCALATED_ROLES = ['Manager', 'HR'];
+
+function requiredApproverRole(leave) {
+  return ESCALATED_ROLES.includes(leave.employeeRole) ? 'Admin' : 'HR';
+}
 
 function countLeaveDays(startDate, endDate) {
   const start = new Date(startDate);
@@ -52,6 +56,7 @@ export async function createLeaveRequest({ employeeId, leaveType, startDate, end
     id: buildId('LVE'),
     employeeId,
     employeeName: emp?.name || null,
+    employeeRole: emp?.role || null,
     department: emp?.department || null,
     designation: emp?.designation || null,
     leaveType: leaveType || 'Casual',
@@ -75,7 +80,7 @@ export async function createLeaveRequest({ employeeId, leaveType, startDate, end
   return { notifications, leaves };
 }
 
-export async function updateLeaveStatus(id, { status, reviewComments, reviewerName, employeeId } = {}, requesterRole) {
+export async function updateLeaveStatus(id, { status, reviewComments, reviewerName } = {}, requesterRole, requesterId) {
   const leave = await Leave.findOne({ id }).lean();
   if (!leave) {
     const error = new Error('Leave request not found.');
@@ -96,15 +101,21 @@ export async function updateLeaveStatus(id, { status, reviewComments, reviewerNa
   }
 
   if (status === 'Cancelled') {
-    if (employeeId !== leave.employeeId) {
+    // requesterId comes from the verified JWT (req.user.id), never from the
+    // request body — otherwise any employee could cancel anyone's leave by
+    // just passing that employee's id.
+    if (requesterId !== leave.employeeId) {
       const error = new Error('Only the requester can cancel their own leave request.');
       error.statusCode = 403;
       throw error;
     }
-  } else if (!APPROVER_ROLES.includes(requesterRole)) {
-    const error = new Error('Access denied. Only Admin, HR or Manager can approve/reject leave requests.');
-    error.statusCode = 403;
-    throw error;
+  } else {
+    const required = requiredApproverRole(leave);
+    if (requesterRole !== required) {
+      const error = new Error(`Access denied. Only ${required} can approve/reject this leave request.`);
+      error.statusCode = 403;
+      throw error;
+    }
   }
 
   const leaves = await updateLeaveById(id, {

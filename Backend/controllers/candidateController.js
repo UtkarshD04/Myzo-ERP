@@ -1,7 +1,9 @@
 import { findAllCandidates } from '../models/candidateModel.js';
 import { createCandidate, updateCandidate } from '../services/recruitmentService.js';
+import { requireRole } from '../middleware/auth.js';
 
 export async function getCandidates(req, res) {
+  requireRole(req, 'Admin', 'HR');
   const candidates = await findAllCandidates();
   res.json({ candidates });
 }

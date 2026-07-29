@@ -52,6 +52,10 @@ export async function findAllInvoices() {
   return Invoice.find({}).sort({ createdAt: -1 }).lean();
 }
 
+export async function findInvoiceById(id) {
+  return Invoice.findOne({ id }).lean();
+}
+
 export async function createInvoice(invoice) {
   await Invoice.create(invoice);
   return findAllInvoices();

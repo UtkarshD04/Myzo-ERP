@@ -4,7 +4,8 @@ import { Quotation } from '../models/quotationModel.js';
 import {
   findAllPayrolls,
   upsertPayrollForMonth,
-  updatePayrollById
+  updatePayrollById,
+  filterPayrollsForViewer
 } from '../models/payrollModel.js';
 import { buildId } from '../services/timeService.js';
 
@@ -37,7 +38,7 @@ function monthDateRange(month) {
 }
 
 export async function getPayrolls(req, res) {
-  const payrolls = await findAllPayrolls();
+  const payrolls = filterPayrollsForViewer(await findAllPayrolls(), req.user);
   res.json({ payrolls });
 }
 

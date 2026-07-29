@@ -13,7 +13,6 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck,
   Package,
   Receipt,
   Wallet,
@@ -29,8 +28,7 @@ export default function Sidebar({
   setActiveTab,
   collapsed,
   setCollapsed,
-  employee,
-  unreadNotifications = 0
+  employee
 }) {
   const role = employee.role?.toLowerCase() || '';
   const dept = employee.department?.toLowerCase() || '';
@@ -85,15 +83,16 @@ export default function Sidebar({
     >
       {/* Brand logo & collapse trigger */}
       <div>
-        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800/80">
-          <div className="flex items-center space-x-2.5 min-w-0">
-            <div className="p-2 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl shadow-lg shrink-0">
-              <ShieldCheck className="w-5 h-5 text-white" />
-            </div>
-            {!collapsed && (
-              <span className="font-extrabold text-sm tracking-tight text-white truncate">
-                MYZO <span className="text-blue-500 font-medium">ERP</span>
-              </span>
+        <div className={`h-16 flex items-center justify-between border-b border-slate-800/80 ${collapsed ? 'px-3' : 'px-4'}`}>
+          <div className="flex items-center min-w-0">
+            {collapsed ? (
+              <div className="w-10 h-10 rounded-xl overflow-hidden bg-white shrink-0">
+                <img src="/logo.png" alt="Myzo" className="w-full h-full object-cover object-left" />
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl px-3 py-2 shadow-lg">
+                <img src="/logo.png" alt="Myzo" className="h-6 w-auto" />
+              </div>
             )}
           </div>
 

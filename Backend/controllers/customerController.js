@@ -1,4 +1,9 @@
 import { createCustomer, deleteCustomerById, findAllCustomers, updateCustomerById, LEAD_STATUSES } from '../models/customerModel.js';
+import { requireRole } from '../middleware/auth.js';
+
+// Deleting a customer is destructive (wipes CRM history), so it's reserved
+// for Admin/Manager — same elevated tier as product/inventory mutations.
+const CUSTOMER_DELETE_ROLES = ['Admin', 'Manager'];
 
 export async function getCustomers(req, res) {
   const customers = await findAllCustomers();
@@ -92,6 +97,8 @@ export async function modifyCustomer(req, res) {
 }
 
 export async function removeCustomer(req, res) {
+  requireRole(req, ...CUSTOMER_DELETE_ROLES);
+
   const { id } = req.params;
   const customers = await deleteCustomerById(id);
   if (!customers) {

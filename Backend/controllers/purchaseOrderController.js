@@ -1,7 +1,9 @@
 import { findAllPurchaseOrders } from '../models/purchaseOrderModel.js';
 import { createPurchaseOrder, updatePurchaseOrder } from '../services/purchaseOrderService.js';
+import { requireRole } from '../middleware/auth.js';
 
 export async function getPurchaseOrders(req, res) {
+  requireRole(req, 'Admin', 'Manager');
   const purchaseOrders = await findAllPurchaseOrders();
   res.json({ purchaseOrders });
 }

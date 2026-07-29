@@ -22,3 +22,8 @@ export async function findAllStockMovements() {
 export async function createStockMovement(record) {
   return StockMovement.create(record);
 }
+
+// Same tier as products/purchase-orders (Admin/Manager).
+export function filterStockMovementsForViewer(stockMovements, viewer) {
+  return (viewer.role === 'Admin' || viewer.role === 'Manager') ? stockMovements : [];
+}

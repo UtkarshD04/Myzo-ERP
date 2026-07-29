@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Megaphone, Check } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 
 export default function HRDashboard({ employee, employees = [], attendanceHistory = [] }) {
   const [broadcastTitle, setBroadcastTitle] = useState('');
@@ -79,11 +79,7 @@ export default function HRDashboard({ employee, employees = [], attendanceHistor
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94A3B8', fontWeight: 600 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} allowDecimals={false} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={{ background: '#1E293B', borderRadius: '12px', border: 'none', color: '#fff', fontSize: '11px' }} />
-                <Bar dataKey="count" radius={[8, 8, 0, 0]} maxBarSize={40}>
-                  {deptChartData.map((_, i) => (
-                    <Cell key={i} fill={['#3B82F6', '#10B981', '#6366F1', '#F59E0B', '#EC4899', '#14B8A6'][i % 6]} />
-                  ))}
-                </Bar>
+                <Bar dataKey="count" fill="#2a78d6" radius={[8, 8, 0, 0]} maxBarSize={40} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -133,8 +129,9 @@ export default function HRDashboard({ employee, employees = [], attendanceHistor
             </form>
           </div>
 
-          <div className="text-[10px] text-slate-400 border-t border-slate-50 pt-3 mt-4">
-            📢 Sent alerts immediately pop up in notifications lists of all active employee accounts.
+          <div className="flex items-start gap-1.5 text-[10px] text-slate-400 border-t border-slate-50 pt-3 mt-4">
+            <Megaphone className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-px" />
+            <span>Sent alerts immediately pop up in notifications lists of all active employee accounts.</span>
           </div>
         </div>
       </div>

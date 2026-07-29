@@ -8,6 +8,12 @@ import {
 } from '../models/productModel.js';
 import { createStockMovement } from '../models/stockMovementModel.js';
 import { buildId } from '../services/timeService.js';
+import { requireRole } from '../middleware/auth.js';
+
+// Catalog and stock mutations are reserved for the same tier that already
+// controls Purchase Orders (see purchaseOrderService.INVENTORY_ROLES) —
+// otherwise anyone could add products or hand-edit stock counts.
+const PRODUCT_MUTATION_ROLES = ['Admin', 'Manager'];
 
 export async function getProducts(req, res) {
   const products = await findAllProducts();
@@ -20,6 +26,8 @@ export async function getManageProducts(req, res) {
 }
 
 export async function addProduct(req, res) {
+  requireRole(req, ...PRODUCT_MUTATION_ROLES);
+
   const { series, model, stock } = req.body;
 
   if (!series || !model) {
@@ -58,6 +66,8 @@ export async function addProduct(req, res) {
 }
 
 export async function modifyProduct(req, res) {
+  requireRole(req, ...PRODUCT_MUTATION_ROLES);
+
   const { id } = req.params;
   const updates = { ...req.body };
   if (updates.discount !== undefined) updates.discount = Number(updates.discount) || 0;
@@ -108,6 +118,8 @@ export async function modifyProduct(req, res) {
 }
 
 export async function removeProduct(req, res) {
+  requireRole(req, ...PRODUCT_MUTATION_ROLES);
+
   const { id } = req.params;
   const product = await deleteProductById(id);
   if (!product) {

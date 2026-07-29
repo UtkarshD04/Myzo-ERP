@@ -80,7 +80,7 @@ export default function BDEDashboard({ employee, kpis = {}, payrolls = [] }) {
                 <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94A3B8' }} />
                 <YAxis dataKey="stage" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748B', fontWeight: 600 }} />
                 <Tooltip contentStyle={{ background: '#1E293B', borderRadius: '12px', border: 'none', color: '#fff', fontSize: '11px' }} />
-                <Bar dataKey="count" fill="#4F46E5" radius={[0, 6, 6, 0]} maxBarSize={20} />
+                <Bar dataKey="count" fill="#2a78d6" radius={[0, 6, 6, 0]} maxBarSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </div>

@@ -8,8 +8,8 @@ const money = (n) => `Rs. ${Number(n || 0).toLocaleString('en-IN', { maximumFrac
 export const COMPANY_INFO = {
   name: 'MESHO SOLUTION SOLAR PARK PVT LTD.',
   addressLines: ['Yogi Raj Tower Near Madhurima Sweets, Vibhuti Khand,', 'Gomti Nagar Lucknow, U.P'],
-  logoUrl: '/logo.jpeg',
-  logoAspect: 1600 / 872
+  logoUrl: '/logo.png',
+  logoAspect: 677 / 369
 };
 
 function loadImageDataUrl(url) {
@@ -346,7 +346,7 @@ export async function downloadPayslipPdf({ employee = {}, payslip, monthLabel })
   const logoHeight = logoWidth / COMPANY_INFO.logoAspect;
   const logoTop = 20;
   if (logoDataUrl) {
-    pdf.addImage(logoDataUrl, 'JPEG', boxLeft, logoTop, logoWidth, logoHeight);
+    pdf.addImage(logoDataUrl, 'PNG', boxLeft, logoTop, logoWidth, logoHeight);
   }
 
   pdf.setFont('helvetica', 'bold');

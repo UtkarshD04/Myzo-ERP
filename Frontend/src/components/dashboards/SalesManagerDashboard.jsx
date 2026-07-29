@@ -133,16 +133,16 @@ export default function SalesManagerDashboard({ employee, employees = [], quotat
                 <YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={{ background: '#1E293B', borderRadius: '12px', border: 'none', color: '#fff', fontSize: '11px' }} />
                 <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '10px', fontWeight: 'bold' }} />
-                <Area type="monotone" dataKey="Quoted" stroke="#6366F1" fillOpacity={0.1} fill="url(#colorSales)" strokeWidth={2.5} />
-                <Area type="monotone" dataKey="Closed" stroke="#10B981" fillOpacity={0.1} fill="url(#colorCol)" strokeWidth={2.5} />
+                <Area type="monotone" dataKey="Quoted" stroke="#2a78d6" fillOpacity={0.1} fill="url(#colorSales)" strokeWidth={2.5} />
+                <Area type="monotone" dataKey="Closed" stroke="#0ca30c" fillOpacity={0.1} fill="url(#colorCol)" strokeWidth={2.5} />
                 <defs>
                   <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366F1" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#6366F1" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#2a78d6" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#2a78d6" stopOpacity={0}/>
                   </linearGradient>
                   <linearGradient id="colorCol" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#0ca30c" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#0ca30c" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
               </AreaChart>

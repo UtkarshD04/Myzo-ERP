@@ -67,3 +67,11 @@ export async function updatePayrollById(id, updates) {
   await Payroll.findOneAndUpdate({ id }, updates);
   return findAllPayrolls();
 }
+
+// Every field on a payroll record is compensation data (unlike the employee
+// record's mix of general + sensitive fields), so there's no partial view —
+// Admin/HR see all records, everyone else only their own (for Payslips & Docs).
+export function filterPayrollsForViewer(payrolls, viewer) {
+  if (viewer.role === 'Admin' || viewer.role === 'HR') return payrolls;
+  return payrolls.filter(p => p.employeeId === viewer.id);
+}

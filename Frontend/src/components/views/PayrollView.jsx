@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Wallet, Users, IndianRupee, CheckCircle2, Clock, PlayCircle, FileText } from 'lucide-react';
+import { Wallet, Users, IndianRupee, CheckCircle2, Clock, PlayCircle, FileText, Download } from 'lucide-react';
 import { downloadSalaryDisbursementPdf } from '../../utils/documentPdf';
+import { exportToCsv } from '../../utils/exportCsv';
 
 const STATUS_STYLES = {
   Generated: 'bg-amber-50 text-amber-600 border-amber-100',
@@ -49,6 +50,19 @@ export default function PayrollView({ payrolls = [], employees = [], onGenerateP
 
   const handleDownloadDisbursementLetter = () => {
     downloadSalaryDisbursementPdf({ monthLabel: monthLabel(selectedMonth), rows: monthRows, employees });
+  };
+
+  const handleExport = () => {
+    exportToCsv(`Payroll-${monthLabel(selectedMonth)}`, [
+      { label: 'Employee', value: 'employeeName' },
+      { label: 'Department', value: (p) => p.department || '' },
+      { label: 'Gross Earnings', value: (p) => p.grossEarnings || 0 },
+      { label: 'LOP Days', value: (p) => p.lopDays || 0 },
+      { label: 'Commission', value: (p) => p.commission || 0 },
+      { label: 'Total Deductions', value: (p) => p.totalDeductions || 0 },
+      { label: 'Net Pay', value: (p) => p.netPay || 0 },
+      { label: 'Status', value: 'status' }
+    ], monthRows);
   };
 
   const handleMarkPaid = async (payroll) => {
@@ -139,13 +153,22 @@ export default function PayrollView({ payrolls = [], employees = [], onGenerateP
             <span className="text-xs font-bold text-slate-600">{monthLabel(selectedMonth)}</span>
           </div>
           {monthRows.length > 0 && (
-            <button
-              onClick={handleDownloadDisbursementLetter}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 text-slate-600 font-bold rounded-lg text-[11px] cursor-pointer transition-all"
-            >
-              <FileText className="w-3.5 h-3.5" />
-              Salary Disbursement Letter
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExport}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 text-slate-600 font-bold rounded-lg text-[11px] cursor-pointer transition-all"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export CSV
+              </button>
+              <button
+                onClick={handleDownloadDisbursementLetter}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 text-slate-600 font-bold rounded-lg text-[11px] cursor-pointer transition-all"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                Salary Disbursement Letter
+              </button>
+            </div>
           )}
         </div>
         <div className="overflow-x-auto">

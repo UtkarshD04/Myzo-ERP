@@ -20,6 +20,10 @@ export async function findAllReports() {
   return Report.find({}).sort({ createdAt: -1 }).lean();
 }
 
+export async function findReportById(id) {
+  return Report.findOne({ id }).lean();
+}
+
 export async function createReport(report) {
   await Report.create(report);
   return findAllReports();
@@ -28,4 +32,15 @@ export async function createReport(report) {
 export async function updateReport(reportId, updates) {
   await Report.findOneAndUpdate({ id: reportId }, updates);
   return findAllReports();
+}
+
+// Mirrors WorkReportView's client-side myReports/teamReports split: Admin
+// sees everything, everyone else sees their own logs plus their direct
+// reports' (org-chart based via employee.reportsTo, not a fixed role list).
+export function filterReportsForViewer(reports, viewer, employees = []) {
+  if (viewer.role === 'Admin') return reports;
+  const employeeById = new Map(employees.map(e => [e.id, e]));
+  return reports.filter(r =>
+    r.employeeId === viewer.id || employeeById.get(r.employeeId)?.reportsTo === viewer.id
+  );
 }

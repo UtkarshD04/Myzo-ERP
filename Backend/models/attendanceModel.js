@@ -41,3 +41,12 @@ export async function updateAttendanceRecord(employeeId, date, updater) {
   const updated = updater(record);
   return Attendance.findOneAndUpdate({ employeeId, date }, updated, { returnDocument: 'after' }).lean();
 }
+
+// Attendance includes GPS check-in/out coordinates — Admin/HR/Manager get
+// company-wide visibility (matches HRDashboard's "who's in today" widget),
+// everyone else only ever needs their own (AttendanceView already only
+// renders `myAttendance`, filtered client-side by employee.id).
+export function filterAttendanceForViewer(records, viewer) {
+  if (['Admin', 'HR', 'Manager'].includes(viewer.role)) return records;
+  return records.filter(r => r.employeeId === viewer.id);
+}

@@ -39,3 +39,10 @@ export async function updateCandidateById(id, updates) {
   await Candidate.findOneAndUpdate({ id }, updates);
   return findAllCandidates();
 }
+
+// Recruitment data (offer salary, interview notes, rejection reasons) is
+// HR-only — there's no "own record" concept for a regular employee here,
+// unlike payroll/leave/attendance.
+export function filterCandidatesForViewer(candidates, viewer) {
+  return (viewer.role === 'Admin' || viewer.role === 'HR') ? candidates : [];
+}

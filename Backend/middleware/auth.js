@@ -29,3 +29,13 @@ export function requireRole(req, ...allowedRoles) {
     throw error;
   }
 }
+
+// For resources owned by whoever created them (quotations, invoices): lets
+// the owner (matched by server-trusted req.user.id) manage their own record,
+// or an elevated role manage anyone's.
+export function requireOwnerOrRole(req, ownerId, ...allowedRoles) {
+  if (req.user && (req.user.id === ownerId || allowedRoles.includes(req.user.role))) return;
+  const error = new Error('Access denied. You do not have permission to perform this action.');
+  error.statusCode = 403;
+  throw error;
+}

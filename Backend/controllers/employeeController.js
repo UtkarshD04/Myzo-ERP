@@ -1,15 +1,22 @@
 import bcrypt from 'bcryptjs';
-import { findAllEmployees, createEmployee, updateEmployeeById, deleteEmployeeById } from '../models/employeeModel.js';
+import { findAllEmployees, createEmployee, updateEmployeeById, deleteEmployeeById, sanitizeEmployeeForViewer } from '../models/employeeModel.js';
 import { buildId } from '../services/timeService.js';
 
 const REQUIRED_FIELDS = ['name', 'officialEmail', 'department', 'designation', 'role'];
 
 export async function getEmployees(req, res) {
   const employees = await findAllEmployees();
-  res.json({ employees });
+  res.json({ employees: employees.map(e => sanitizeEmployeeForViewer(e, req.user)) });
 }
 
 export async function addEmployee(req, res) {
+  const requesterRole = req.user.role;
+  if (requesterRole !== 'Admin' && requesterRole !== 'HR') {
+    const error = new Error('Access denied. Only Admins or HR can add employees.');
+    error.statusCode = 403;
+    throw error;
+  }
+
   const missing = REQUIRED_FIELDS.filter(field => !req.body[field]);
   if (missing.length) {
     const error = new Error(`Missing required field(s): ${missing.join(', ')}`);
@@ -52,7 +59,7 @@ export async function modifyEmployee(req, res) {
 
   // Only Admin or HR is authorized to change protected fields (identity + compensation)
   const PROTECTED_FIELDS = [
-    'name', 'officialEmail', 'password', 'salary', 'basicPercent', 'hraPercent', 'medicalAllowance', 'pfPercent', 'commissionPercent',
+    'name', 'officialEmail', 'password', 'role', 'department', 'employmentStatus', 'salary', 'basicPercent', 'hraPercent', 'medicalAllowance', 'pfPercent', 'commissionPercent',
     'bankName', 'accountNo', 'ifscCode', 'pan', 'esiNo', 'pfNo', 'uanNo', 'location', 'fatherName', 'fatherDob', 'motherName', 'motherDob'
   ];
   const hasProtectedChanges = PROTECTED_FIELDS.some(field => updates[field] !== undefined);
@@ -85,6 +92,13 @@ export async function modifyEmployee(req, res) {
 }
 
 export async function removeEmployee(req, res) {
+  const requesterRole = req.user.role;
+  if (requesterRole !== 'Admin' && requesterRole !== 'HR') {
+    const error = new Error('Access denied. Only Admins or HR can delete employees.');
+    error.statusCode = 403;
+    throw error;
+  }
+
   const { id } = req.params;
   const employee = await deleteEmployeeById(id);
   if (!employee) {

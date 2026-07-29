@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Package, Pencil, Trash2, AlertTriangle, ArrowLeft, Eye, EyeOff, X, Save } from 'lucide-react';
+import { Plus, Search, Package, Pencil, Trash2, AlertTriangle, ArrowLeft, Eye, EyeOff, X, Save, Boxes, Percent, ImagePlus, ImageOff } from 'lucide-react';
 
 const EMPTY_FORM = {
   series: '',
@@ -13,8 +13,22 @@ const EMPTY_FORM = {
   lowStockThreshold: 5,
   discount: 0,
   status: 'Active',
-  isPublished: true
+  isPublished: true,
+  image: null
 };
+
+// There's no file-storage backend (S3/Cloudinary) here — images are stored
+// as base64 data URLs directly on the product document, so keep them small.
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+
+function readImageAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function ProductsManagementView({ products = [], onAddProduct, onUpdateProduct, onDeleteProduct }) {
   const [search, setSearch] = useState('');
@@ -37,6 +51,11 @@ export default function ProductsManagementView({ products = [], onAddProduct, on
       p.type?.toLowerCase().includes(q)
     );
   });
+
+  const isLowStock = (p) => Number(p.stock ?? 0) <= (p.lowStockThreshold ?? 5);
+  const publishedCount = products.filter(p => p.isPublished).length;
+  const lowStockCount = products.filter(isLowStock).length;
+  const totalUnits = products.reduce((sum, p) => sum + (Number(p.stock) || 0), 0);
 
   const openAddForm = () => {
     setEditingId(null);
@@ -61,12 +80,32 @@ export default function ProductsManagementView({ products = [], onAddProduct, on
       lowStockThreshold: p.lowStockThreshold ?? 5,
       discount: p.discount ?? 0,
       status: p.status || 'Active',
-      isPublished: p.isPublished !== false
+      isPublished: p.isPublished !== false,
+      image: p.image || null
     });
     setSpecs(p.specs?.length ? p.specs : ['']);
     setUseCases(p.useCases?.length ? p.useCases : ['']);
     setError('');
     setShowForm(true);
+  };
+
+  const handleImageChange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please choose an image file.');
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setError('Image is too large — please choose one under 2MB.');
+      return;
+    }
+
+    setError('');
+    const dataUrl = await readImageAsDataUrl(file);
+    setForm(prev => ({ ...prev, image: dataUrl }));
   };
 
   const handleSubmit = async (e) => {
@@ -172,6 +211,40 @@ export default function ProductsManagementView({ products = [], onAddProduct, on
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500 disabled:text-slate-400"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Product Image</label>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-16 h-16 rounded-xl shrink-0 flex items-center justify-center overflow-hidden border border-slate-200"
+                      style={form.image ? undefined : { background: `linear-gradient(135deg, ${form.color}, ${form.color}99)` }}
+                    >
+                      {form.image ? (
+                        <img src={form.image} alt="Product preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <Package className="w-6 h-6 text-white/90" />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-600 hover:border-blue-300 hover:text-blue-600 cursor-pointer transition-all flex items-center gap-1.5">
+                        <ImagePlus className="w-3.5 h-3.5" />
+                        {form.image ? 'Change Image' : 'Upload Image'}
+                        <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                      </label>
+                      {form.image && (
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, image: null })}
+                          className="p-2 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 cursor-pointer transition-all"
+                          title="Remove image"
+                        >
+                          <ImageOff className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1.5">Optional — falls back to a color swatch if not set. Max 2MB.</p>
                 </div>
 
                 <div>
@@ -406,6 +479,38 @@ export default function ProductsManagementView({ products = [], onAddProduct, on
         </button>
       </div>
 
+      {/* Overview stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center gap-2 text-slate-400">
+            <Package className="w-4 h-4" />
+            <span className="text-[10px] font-black uppercase tracking-wider">Total Products</span>
+          </div>
+          <p className="text-2xl font-black text-slate-800 mt-2">{products.length}</p>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center gap-2 text-slate-400">
+            <Eye className="w-4 h-4" />
+            <span className="text-[10px] font-black uppercase tracking-wider">Published</span>
+          </div>
+          <p className="text-2xl font-black text-blue-600 mt-2">{publishedCount}</p>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center gap-2 text-slate-400">
+            <Boxes className="w-4 h-4" />
+            <span className="text-[10px] font-black uppercase tracking-wider">Units In Stock</span>
+          </div>
+          <p className="text-2xl font-black text-slate-800 mt-2">{totalUnits}</p>
+        </div>
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center gap-2 text-slate-400">
+            <AlertTriangle className="w-4 h-4" />
+            <span className="text-[10px] font-black uppercase tracking-wider">Low Stock</span>
+          </div>
+          <p className={`text-2xl font-black mt-2 ${lowStockCount > 0 ? 'text-red-600' : 'text-slate-800'}`}>{lowStockCount}</p>
+        </div>
+      </div>
+
       {/* Search */}
       <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex items-center space-x-2.5">
         <Search className="w-4 h-4 text-slate-400 shrink-0" />
@@ -418,102 +523,125 @@ export default function ProductsManagementView({ products = [], onAddProduct, on
         />
       </div>
 
-      {/* Table */}
-      <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/60">
-                <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Product</th>
-                <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
-                <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Stock</th>
-                <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Discount</th>
-                <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Catalog</th>
-                <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {filtered.map(p => (
-                <tr key={p._id} className="hover:bg-slate-50/60 transition-colors">
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center space-x-3 min-w-0">
-                      <div
-                        className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center text-white"
-                        style={{ backgroundColor: p.color || '#2563eb' }}
-                      >
-                        <Package className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-xs text-slate-800 truncate">{p.series} {p.model}</p>
-                        <p className="text-[10px] text-slate-400 truncate">{p.tagline || '--'}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5 text-xs font-semibold text-slate-600">{p.type || '--'}</td>
-                  <td className="px-5 py-3.5 text-xs font-semibold">
-                    <span className={Number(p.stock ?? 0) <= (p.lowStockThreshold ?? 5) ? 'text-red-600 font-bold' : 'text-slate-600'}>
-                      {p.stock ?? 0}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 text-xs font-semibold text-slate-600">{p.discount ? `${p.discount}%` : '--'}</td>
-                  <td className="px-5 py-3.5">
-                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border ${
-                      p.status === 'Inactive'
-                        ? 'bg-red-50 text-red-600 border-red-100'
-                        : 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                    }`}>
-                      {p.status || 'Active'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border ${
-                      p.isPublished
-                        ? 'bg-blue-50 text-blue-600 border-blue-100'
-                        : 'bg-slate-50 text-slate-500 border-slate-100'
-                    }`}>
-                      {p.isPublished ? 'Published' : 'Draft'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center justify-end space-x-2">
-                      <button
-                        onClick={() => togglePublish(p)}
-                        title={p.isPublished ? 'Unpublish from catalog' : 'Publish to catalog'}
-                        className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer transition-all"
-                      >
-                        {p.isPublished ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
-                      <button
-                        onClick={() => openEditForm(p)}
-                        title="Edit product"
-                        className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer transition-all"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(p)}
-                        title="Delete product"
-                        className="p-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 cursor-pointer transition-all"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-xs text-slate-400 font-semibold">
-                    No products match this search.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+      {/* Catalog grid */}
+      {filtered.length === 0 ? (
+        <div className="bg-white border border-slate-100 rounded-2xl p-10 shadow-sm text-center text-xs text-slate-400 font-semibold">
+          No products match this search.
         </div>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          {filtered.map(p => {
+            const lowStock = isLowStock(p);
+            const visibleSpecs = (p.specs || []).slice(0, 3);
+            const extraSpecs = (p.specs || []).length - visibleSpecs.length;
+
+            return (
+              <div
+                key={p._id}
+                className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-lg hover:border-blue-200 transition-all flex flex-col"
+              >
+                {/* Banner */}
+                <div
+                  className="h-28 flex items-center justify-center relative shrink-0"
+                  style={p.image ? undefined : { background: `linear-gradient(135deg, ${p.color || '#2563eb'}, ${p.color || '#2563eb'}99)` }}
+                >
+                  {p.image ? (
+                    <img src={p.image} alt={`${p.series} ${p.model}`} className="w-full h-full object-cover" />
+                  ) : (
+                    <Package className="w-9 h-9 text-white/90" />
+                  )}
+                  {p.badge && (
+                    <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide bg-white/90 text-slate-700 shadow-sm">
+                      {p.badge}
+                    </span>
+                  )}
+                  <span className={`absolute top-2.5 right-2.5 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide shadow-sm ${
+                    p.isPublished ? 'bg-blue-600 text-white' : 'bg-white/90 text-slate-500'
+                  }`}>
+                    {p.isPublished ? 'Published' : 'Draft'}
+                  </span>
+                </div>
+
+                {/* Body */}
+                <div className="p-4 space-y-3 flex-1 flex flex-col">
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-bold text-sm text-slate-800 leading-snug">{p.series} {p.model}</h3>
+                      <span className={`shrink-0 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border ${
+                        p.status === 'Inactive'
+                          ? 'bg-red-50 text-red-600 border-red-100'
+                          : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                      }`}>
+                        {p.status || 'Active'}
+                      </span>
+                    </div>
+                    {p.tagline && <p className="text-[11px] text-slate-400 mt-0.5">{p.tagline}</p>}
+                    {p.type && (
+                      <span className="inline-block mt-1.5 text-[9px] font-bold uppercase tracking-wide text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                        {p.type}
+                      </span>
+                    )}
+                  </div>
+
+                  {visibleSpecs.length > 0 && (
+                    <ul className="space-y-1">
+                      {visibleSpecs.map((s, i) => (
+                        <li key={i} className="text-[10.5px] text-slate-500 font-medium flex items-start gap-1.5">
+                          <span className="w-1 h-1 rounded-full bg-slate-300 mt-1.5 shrink-0" />
+                          <span className="truncate">{s}</span>
+                        </li>
+                      ))}
+                      {extraSpecs > 0 && (
+                        <li className="text-[10px] text-slate-400 font-semibold pl-2.5">+{extraSpecs} more spec{extraSpecs > 1 ? 's' : ''}</li>
+                      )}
+                    </ul>
+                  )}
+
+                  <div className="mt-auto pt-3 border-t border-slate-50 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <Boxes className={`w-3.5 h-3.5 shrink-0 ${lowStock ? 'text-red-500' : 'text-slate-400'}`} />
+                      <span className={`text-xs font-bold ${lowStock ? 'text-red-600' : 'text-slate-700'}`}>
+                        {p.stock ?? 0} <span className="font-medium text-slate-400">in stock</span>
+                      </span>
+                    </div>
+                    {p.discount > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Percent className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span className="text-xs font-bold text-emerald-600">{p.discount}% off</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => togglePublish(p)}
+                      title={p.isPublished ? 'Unpublish from catalog' : 'Publish to catalog'}
+                      className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer transition-all"
+                    >
+                      {p.isPublished ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                      onClick={() => openEditForm(p)}
+                      title="Edit product"
+                      className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer transition-all"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget(p)}
+                      title="Delete product"
+                      className="p-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 cursor-pointer transition-all"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteTarget && (

@@ -16,7 +16,6 @@ import WorkReportView from './components/views/WorkReportView';
 import DocumentsView from './components/views/DocumentsView';
 import ProfileView from './components/views/ProfileView';
 import SettingsView from './components/views/SettingsView';
-import NotificationsView from './components/views/NotificationsView';
 import EmployeeManagementView from './components/views/EmployeeManagementView';
 import QuotationsView from './components/views/QuotationsView';
 import CustomersView from './components/views/CustomersView';
@@ -38,7 +37,6 @@ export default function App() {
   const [employees, setEmployees] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [holidays, setHolidays] = useState([]);
-  const [notifications, setNotifications] = useState([]);
   const [attendanceHistory, setAttendanceHistory] = useState([]);
   const [reports, setReports] = useState([]);
   const [products, setProducts] = useState([]);
@@ -64,7 +62,6 @@ export default function App() {
     if (state.employees)    setEmployees(state.employees);
     if (state.tasks)        setTasks(state.tasks);
     if (state.holidays)     setHolidays(state.holidays);
-    if (state.notifications) setNotifications(state.notifications);
     if (state.attendance)   setAttendanceHistory(state.attendance);
     if (state.reports)      setReports(state.reports);
     if (state.products)     setProducts(state.products);
@@ -133,10 +130,9 @@ export default function App() {
   const handleLoginSuccess = async ({ employeeId: email, password }) => {
     // login() only returns the caller's own identity; the rest of the app's
     // data is fetched via the now-authenticated bootstrap call that follows.
-    const { employee: loggedInEmployee, notifications } = await api.login(email, password);
+    const { employee: loggedInEmployee } = await api.login(email, password);
     const state = await api.bootstrap();
     applyServerState(state);
-    if (notifications) setNotifications(notifications);
     setEmployee(loggedInEmployee);
     setActiveTab('dashboard');
   };
@@ -201,22 +197,6 @@ export default function App() {
     }
   };
 
-  // ─── Notification Handlers ───────────────────────────────────────────────────
-  const markAllNotificationsAsRead = async () => {
-    const state = await api.markAllNotificationsRead();
-    applyServerState(state);
-  };
-
-  const markNotificationAsRead = async (id) => {
-    const state = await api.markNotificationRead(id);
-    applyServerState(state);
-  };
-
-  const deleteNotification = async (id) => {
-    const state = await api.deleteNotification(id);
-    applyServerState(state);
-  };
-
   // ─── Employee Management Handlers ───────────────────────────────────────────
   const handleAddEmployee = async (payload) => {
     const { employee: created } = await api.addEmployee(payload);
@@ -258,7 +238,6 @@ export default function App() {
   const handleSendQuotationFollowUp = async (id) => {
     const response = await api.sendQuotationFollowUp(id);
     setQuotations(response.quotations);
-    if (response.notifications) setNotifications(response.notifications);
     return response;
   };
 
@@ -380,7 +359,6 @@ export default function App() {
     return <LoginScreen employees={employees} onLoginSuccess={handleLoginSuccess} />;
   }
 
-  const unreadCount = notifications.filter(n => !n.read).length;
   const myAttendance = attendanceHistory.filter(a => a.employeeId === employee.id);
 
   // ─── Main Layout ─────────────────────────────────────────────────────────────
@@ -408,7 +386,6 @@ export default function App() {
           collapsed={sidebarCollapsed}
           setCollapsed={setSidebarCollapsed}
           employee={employee}
-          unreadNotifications={unreadCount}
         />
       </div>
 
@@ -418,9 +395,7 @@ export default function App() {
         {/* Top Navbar */}
         <Navbar
           employee={employee}
-          notifications={notifications}
           attendanceHistory={myAttendance}
-          markAllNotificationsAsRead={markAllNotificationsAsRead}
           onLogout={handleLogout}
           onMenuClick={() => setMobileSidebarOpen(true)}
         />
@@ -434,7 +409,6 @@ export default function App() {
               employees={employees}
               tasks={tasks}
               holidays={holidays}
-              notifications={notifications}
               attendanceHistory={myAttendance}
               allAttendance={attendanceHistory}
               quotations={quotations}
@@ -535,15 +509,6 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'notifications' && (
-            <NotificationsView
-              notifications={notifications}
-              markAllNotificationsAsRead={markAllNotificationsAsRead}
-              markNotificationAsRead={markNotificationAsRead}
-              deleteNotification={deleteNotification}
-            />
-          )}
-
           {activeTab === 'employees' && (
             <EmployeeManagementView
               employees={employees}
@@ -629,7 +594,6 @@ export default function App() {
             { id: 'dashboard', icon: '⊞', label: 'Home' },
             { id: 'attendance', icon: '⏱', label: 'Attend' },
             { id: 'tasks', icon: '✓', label: 'Tasks' },
-            { id: 'notifications', icon: '🔔', label: 'Alerts', badge: unreadCount },
             { id: 'profile', icon: '👤', label: 'Profile' },
           ].map(item => (
             <button

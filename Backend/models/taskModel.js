@@ -26,6 +26,10 @@ export async function findAllTasks() {
   return Task.find({}).sort({ createdAt: -1 }).lean();
 }
 
+export async function findTaskById(id) {
+  return Task.findOne({ id }).lean();
+}
+
 export async function createTask(task) {
   await Task.create(task);
   return findAllTasks();
@@ -34,4 +38,11 @@ export async function createTask(task) {
 export async function updateTask(taskId, updates) {
   await Task.findOneAndUpdate({ id: taskId }, updates);
   return findAllTasks();
+}
+
+// Mirrors TasksView's client-side visibleTasks filter: senior roles see
+// everything, everyone else sees only tasks they're assigned to or assigned.
+export function filterTasksForViewer(tasks, viewer) {
+  if (['Manager', 'Admin', 'HR'].includes(viewer.role)) return tasks;
+  return tasks.filter(t => t.assignedTo === viewer.id || t.assignedBy === viewer.id);
 }

@@ -2,7 +2,12 @@ import React, { useState, useMemo } from 'react';
 import { CalendarDays, Plus, Check, X, Ban, Info, ArrowLeft } from 'lucide-react';
 
 const LEAVE_TYPES = ['Casual', 'Sick', 'Earned', 'Unpaid'];
-const APPROVER_ROLES = ['Admin', 'HR', 'Manager'];
+const APPROVER_ROLES = ['HR', 'Admin'];
+const ESCALATED_ROLES = ['Manager', 'HR'];
+
+function requiredApproverRole(leave) {
+  return ESCALATED_ROLES.includes(leave.employeeRole) ? 'Admin' : 'HR';
+}
 
 function countLeaveDays(startDate, endDate) {
   if (!startDate || !endDate) return 0;
@@ -48,8 +53,11 @@ export default function LeaveManagementView({
   );
 
   const pendingApprovals = useMemo(
-    () => leaves.filter(l => l.status === 'Pending' && l.employeeId !== employee.id).slice().reverse(),
-    [leaves, employee.id]
+    () => leaves
+      .filter(l => l.status === 'Pending' && l.employeeId !== employee.id && requiredApproverRole(l) === employee.role)
+      .slice()
+      .reverse(),
+    [leaves, employee.id, employee.role]
   );
 
   const teamHistory = useMemo(
@@ -98,8 +106,10 @@ export default function LeaveManagementView({
   };
 
   if (showAddModal) {
+    const recentLeaves = myLeaves.slice(0, 5);
+
     return (
-      <div className="p-4 md:p-6 space-y-6 max-w-2xl mx-auto font-sans text-slate-800 animate-in fade-in duration-200">
+      <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto font-sans text-slate-800 animate-in fade-in duration-200">
         <button
           onClick={() => { setShowAddModal(false); resetForm(); }}
           className="flex items-center space-x-2 text-xs font-bold text-slate-500 hover:text-blue-600 cursor-pointer transition-all"
@@ -115,80 +125,111 @@ export default function LeaveManagementView({
           </h2>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-4">
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Leave Type</label>
-            <select
-              value={leaveType}
-              onChange={(e) => setLeaveType(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
-            >
-              {LEAVE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <form onSubmit={handleSubmit} className="lg:col-span-2 bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-5">
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Start Date</label>
-              <input
-                type="date"
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Leave Type</label>
+              <select
+                value={leaveType}
+                onChange={(e) => setLeaveType(e.target.value)}
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+              >
+                {LEAVE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Start Date</label>
+                <input
+                  type="date"
+                  required
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">End Date</label>
+                <input
+                  type="date"
+                  required
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            {startDate && endDate && (
+              <div className="flex items-center space-x-2 text-[11px] text-blue-600 font-semibold bg-blue-50/50 border border-blue-100 rounded-xl px-3 py-2">
+                <Info className="w-3.5 h-3.5 shrink-0" />
+                <span>{previewDays} working day(s) requested (Sundays excluded).</span>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Reason</label>
+              <textarea
                 required
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                rows="6"
+                placeholder="Briefly describe the reason for leave..."
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500 resize-none"
               />
             </div>
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">End Date</label>
-              <input
-                type="date"
-                required
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
-              />
+
+            {error && (
+              <p className="text-[11px] text-red-600 font-semibold bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</p>
+            )}
+
+            <div className="flex items-center space-x-3.5 pt-2">
+              <button
+                type="button"
+                onClick={() => { setShowAddModal(false); resetForm(); }}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-xs cursor-pointer transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-lg shadow-blue-500/10 cursor-pointer transition-all"
+              >
+                Submit Request
+              </button>
+            </div>
+          </form>
+
+          <div className="space-y-6">
+            <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3">Applying As</h3>
+              <p className="text-sm font-bold text-slate-800">{employee.name || employee.employeeName || employee.id}</p>
+              <p className="text-[11px] text-slate-400 font-semibold mt-0.5">{employee.department} · {employee.designation}</p>
+            </div>
+
+            <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-3">Recent Requests</h3>
+              {recentLeaves.length === 0 ? (
+                <p className="text-[11px] text-slate-400 font-semibold py-4 text-center">No previous requests yet.</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {recentLeaves.map(l => (
+                    <div key={l.id} className="flex items-center justify-between gap-2 border border-slate-100 rounded-xl px-3 py-2">
+                      <div>
+                        <p className="text-[11px] font-bold text-slate-700">{l.leaveType}</p>
+                        <p className="text-[10px] text-slate-400 font-semibold">{l.startDate} - {l.endDate}</p>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${getStatusBadge(l.status)}`}>
+                        {l.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-
-          {startDate && endDate && (
-            <div className="flex items-center space-x-2 text-[11px] text-blue-600 font-semibold bg-blue-50/50 border border-blue-100 rounded-xl px-3 py-2">
-              <Info className="w-3.5 h-3.5 shrink-0" />
-              <span>{previewDays} working day(s) requested (Sundays excluded).</span>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Reason</label>
-            <textarea
-              required
-              rows="3"
-              placeholder="Briefly describe the reason for leave..."
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500 resize-none"
-            />
-          </div>
-
-          {error && (
-            <p className="text-[11px] text-red-600 font-semibold bg-red-50 border border-red-100 rounded-xl px-3 py-2">{error}</p>
-          )}
-
-          <div className="flex items-center space-x-3.5 pt-2">
-            <button
-              type="button"
-              onClick={() => { setShowAddModal(false); resetForm(); }}
-              className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-xs cursor-pointer transition-all"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-lg shadow-blue-500/10 cursor-pointer transition-all"
-            >
-              Submit Request
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
     );
   }
@@ -210,7 +251,7 @@ export default function LeaveManagementView({
         </button>
       </div>
 
-      {/* Pending approvals (managers / HR / admin only) */}
+      {/* Pending approvals (HR reviews regular staff, Admin reviews Manager/HR requests) */}
       {isApprover && (
         <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">

@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
-import { FileText, Send, Calendar, CheckSquare, Users, Eye, Sparkles, ArrowLeft } from 'lucide-react';
+import { FileText, Send, Calendar, CheckSquare, Users, Eye, Sparkles, ArrowLeft, Download } from 'lucide-react';
 import { api } from '../../api';
+import { exportToCsv } from '../../utils/exportCsv';
+
+const REPORT_EXPORT_COLUMNS = [
+  { label: 'Employee', value: 'employeeName' },
+  { label: 'Date', value: 'date' },
+  { label: 'Department', value: (r) => r.department || '' },
+  { label: 'Hours Spent', value: (r) => r.hoursSpent || 0 },
+  { label: 'Tasks Completed', value: (r) => r.tasksCompleted || '' },
+  { label: 'Challenges Faced', value: (r) => r.challengesFaced || '' },
+  { label: 'Next Day Plan', value: (r) => r.nextDayPlan || '' },
+  { label: 'Status', value: 'status' },
+  { label: 'Review Comments', value: (r) => r.reviewComments || '' }
+];
 
 export default function WorkReportView({
   employee,
@@ -191,7 +204,18 @@ export default function WorkReportView({
       {/* Main Tab Renderings */}
       {subTab === 'my-logs' && (
         <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
-          <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-4">Historical Submissions</h3>
+          <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Historical Submissions</h3>
+            {myReports.length > 0 && (
+              <button
+                onClick={() => exportToCsv(`Work-Logs-${employee.name}`, REPORT_EXPORT_COLUMNS, myReports)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 text-slate-600 font-bold rounded-lg text-[11px] cursor-pointer transition-all"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export CSV
+              </button>
+            )}
+          </div>
           {myReports.length === 0 ? (
             <p className="text-xs text-slate-400 text-center py-10 font-medium">No logs submitted yet.</p>
           ) : (
@@ -301,7 +325,18 @@ export default function WorkReportView({
 
       {subTab === 'team-logs' && (
         <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
-          <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-4">Team Submissions Queue</h3>
+          <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Team Submissions Queue</h3>
+            {teamReports.length > 0 && (
+              <button
+                onClick={() => exportToCsv('Team-Work-Logs', REPORT_EXPORT_COLUMNS, teamReports)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 text-slate-600 font-bold rounded-lg text-[11px] cursor-pointer transition-all"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export CSV
+              </button>
+            )}
+          </div>
           {teamReports.length === 0 ? (
             <p className="text-xs text-slate-400 text-center py-10 font-medium">No team logs submitted yet.</p>
           ) : (

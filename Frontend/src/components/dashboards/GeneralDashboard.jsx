@@ -1,5 +1,5 @@
 import React from 'react';
-import { Laptop, Bug, CheckSquare, Award, Clock, FileCheck2, ShieldCheck } from 'lucide-react';
+import { Laptop, Bug, CheckSquare, Award, Clock, FileCheck2, ShieldCheck, Lightbulb } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 
 export default function GeneralDashboard({ employee, kpis = {} }) {
@@ -95,8 +95,8 @@ export default function GeneralDashboard({ employee, kpis = {} }) {
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  <Cell fill="#10B981" />
-                  <Cell fill="#EF4444" />
+                  <Cell fill="#0ca30c" />
+                  <Cell fill="#d03b3b" />
                 </Pie>
                 <Tooltip contentStyle={{ background: '#1E293B', borderRadius: '12px', border: 'none', color: '#fff', fontSize: '11px' }} />
               </PieChart>
@@ -136,8 +136,9 @@ export default function GeneralDashboard({ employee, kpis = {} }) {
             </div>
           </div>
 
-          <div className="border-t border-slate-50 pt-3.5 mt-4 text-[10px] text-slate-400 font-medium">
-            💡 Make commits to developer branch. Telemetry is gathered automatically.
+          <div className="border-t border-slate-50 pt-3.5 mt-4 flex items-start gap-1.5 text-[10px] text-slate-400 font-medium">
+            <Lightbulb className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-px" />
+            <span>Make commits to developer branch. Telemetry is gathered automatically.</span>
           </div>
         </div>
       </div>
