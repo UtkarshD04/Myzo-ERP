@@ -43,11 +43,25 @@ const employeeSchema = new mongoose.Schema({
   // % of the total value of quotations this employee closed (status
   // "Accepted") in a given month, paid out as sales commission via payroll.
   commissionPercent: { type: Number, default: 0 },
-  password: { type: String, default: 'password123' }
+  // No default: a hardcoded default here would be stored in plaintext (this
+  // schema has no hashing hook), reintroducing the same known-password gap
+  // authService.login guards against. Every real creation path (see
+  // employeeController.addEmployee) sets an explicit bcrypt-hashed value.
+  password: String,
+  // Set only while a forgot-password reset link is outstanding; cleared on
+  // use or replaced by a fresh request. The raw token is never stored —
+  // only its sha256 hash (see authService.requestPasswordReset) — so a DB
+  // leak alone can't be used to reset anyone's password.
+  resetTokenHash: { type: String, default: null },
+  resetTokenExpiry: { type: Date, default: null }
 }, { timestamps: true });
 
 export { employeeSchema };
 export const Employee = mongoose.model('Employee', employeeSchema);
+
+// Excluded from every read path alongside password: a token hash has no
+// legitimate reason to ever reach the frontend/localStorage.
+const PUBLIC_PROJECTION = { password: 0, resetTokenHash: 0, resetTokenExpiry: 0 };
 
 // Compensation and personal-document fields: only Admin/HR (or the employee
 // viewing their own record) should ever see these for OTHER employees.
@@ -72,7 +86,7 @@ export function sanitizeEmployeeForViewer(employee, viewer) {
 }
 
 export async function findAllEmployees() {
-  return Employee.find({}, { password: 0 }).lean();
+  return Employee.find({}, PUBLIC_PROJECTION).lean();
 }
 
 export async function createEmployee(data) {
@@ -89,6 +103,10 @@ function findByIdQuery(id) {
     query.$or.push({ _id: id });
   }
   return query;
+}
+
+export async function findEmployeeById(id) {
+  return Employee.findOne(findByIdQuery(id)).lean();
 }
 
 export async function updateEmployeeById(id, updates) {

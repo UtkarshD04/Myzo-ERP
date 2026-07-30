@@ -11,9 +11,14 @@ const QUOTATION_OVERRIDE_ROLES = ['Admin', 'Manager'];
 
 function computeTotals({ items = [], discountPercent = 0, gstMode = 'split', cgstRate = 0, sgstRate = 0, igstRate = 0, taxType = 'None', taxRate = 0, adjustment = 0 }) {
   const computedItems = items.map(item => {
-    const quantity = Number(item.quantity) || 0;
-    const unitPrice = Number(item.unitPrice) || 0;
-    const discount = Number(item.discount) || 0;
+    // There is no server-side price catalog to check these against (the
+    // `products` collection belongs to another app and carries no price
+    // field — unit prices are legitimately negotiated per quote). The one
+    // invariant we CAN enforce is that a line can't go negative and inflate
+    // the total, e.g. via a negative discount or negative quantity/price.
+    const quantity = Math.max(Number(item.quantity) || 0, 0);
+    const unitPrice = Math.max(Number(item.unitPrice) || 0, 0);
+    const discount = Math.max(Number(item.discount) || 0, 0);
     const lineTotal = Math.max(quantity * unitPrice - discount, 0);
     return { ...item, quantity, unitPrice, discount, lineTotal };
   });
@@ -63,7 +68,11 @@ export async function getQuotations(req, res) {
 }
 
 export async function addQuotation(req, res) {
-  const { customerName, items, sendToCustomer, ...bodyRest } = req.body;
+  // salesperson/createdBy are stripped out of bodyRest here and re-applied
+  // below from req.user — commission is paid out against `salesperson`
+  // (see payrollController.js), so it must never be client-supplied, same
+  // as employeeId in attendanceController.js / assignedBy in taskController.js.
+  const { customerName, items, sendToCustomer, salesperson, salespersonName, createdBy, createdByName, ...bodyRest } = req.body;
 
   if (!customerName || !Array.isArray(items) || items.length === 0) {
     const error = new Error('Customer name and at least one product line item are required.');
@@ -79,7 +88,17 @@ export async function addQuotation(req, res) {
 
   const totals = computeTotals(req.body);
   const id = bodyRest.id || buildId('QUO');
-  const draftQuotation = { ...bodyRest, customerName, items, id, ...totals };
+  const draftQuotation = {
+    ...bodyRest,
+    customerName,
+    items,
+    id,
+    ...totals,
+    salesperson: req.user.id,
+    salespersonName: req.user.name,
+    createdBy: req.user.id,
+    createdByName: req.user.name
+  };
 
   let emailError = null;
   if (sendToCustomer) {
@@ -106,9 +125,20 @@ export async function addQuotation(req, res) {
   }
 }
 
+// Client-editable fields only. Ownership (salesperson/createdBy) and every
+// computed total (subtotal, taxes, totalAmount, ...) are deliberately left
+// off this list — they're either server-assigned at creation or derived by
+// computeTotals() below, never taken verbatim from the request body, since
+// totalAmount feeds straight into commission payout (payrollController.js).
+const QUOTATION_EDITABLE_FIELDS = [
+  'referenceNumber', 'quoteDate', 'customerName', 'customerPhone', 'customerEmail',
+  'customerAddress', 'subject', 'items', 'discountPercent', 'gstMode', 'cgstRate',
+  'sgstRate', 'igstRate', 'taxType', 'taxRate', 'adjustment', 'status', 'validUntil',
+  'customerNotes', 'termsAndConditions'
+];
+
 export async function modifyQuotation(req, res) {
   const { id } = req.params;
-  const updates = { ...req.body };
 
   const existing = await findQuotationById(id);
   if (!existing) {
@@ -117,6 +147,11 @@ export async function modifyQuotation(req, res) {
     throw error;
   }
   requireOwnerOrRole(req, existing.salesperson, ...QUOTATION_OVERRIDE_ROLES);
+
+  const updates = {};
+  for (const field of QUOTATION_EDITABLE_FIELDS) {
+    if (req.body[field] !== undefined) updates[field] = req.body[field];
+  }
 
   if (Array.isArray(updates.items)) {
     Object.assign(updates, computeTotals(updates));

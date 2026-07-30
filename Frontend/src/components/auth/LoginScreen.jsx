@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { KeyRound, ShieldAlert, Sparkles, Mail, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 
-export default function LoginScreen({ employees = [], onLoginSuccess }) {
+export default function LoginScreen({ employees = [], onLoginSuccess, onForgotPassword }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [preview, setPreview] = useState(null);
@@ -145,7 +145,12 @@ export default function LoginScreen({ employees = [], onLoginSuccess }) {
               >
                 <div className="flex items-center justify-between">
                   <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Password</label>
-                  <span className="text-[10px] text-blue-600 hover:underline cursor-pointer font-semibold">Forgot Password?</span>
+                  <span
+                    onClick={onForgotPassword}
+                    className="text-[10px] text-blue-600 hover:underline cursor-pointer font-semibold"
+                  >
+                    Forgot Password?
+                  </span>
                 </div>
                 <div className="relative group">
                   <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-colors group-focus-within:text-blue-600" />

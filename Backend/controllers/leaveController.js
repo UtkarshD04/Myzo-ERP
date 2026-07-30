@@ -7,7 +7,7 @@ export async function getLeaves(req, res) {
 }
 
 export async function requestLeave(req, res) {
-  const result = await createLeaveRequest(req.body);
+  const result = await createLeaveRequest({ ...req.body, employeeId: req.user.id });
   res.status(201).json({ ...result, leaves: filterLeavesForViewer(result.leaves, req.user) });
 }
 

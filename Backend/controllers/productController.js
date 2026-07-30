@@ -36,6 +36,12 @@ export async function addProduct(req, res) {
     throw error;
   }
 
+  // `images` is the gallery shown on the website product page; `image` is
+  // kept in sync as images[0] for older consumers that only read a single field.
+  const images = Array.isArray(req.body.images)
+    ? req.body.images.filter(Boolean)
+    : (req.body.image ? [req.body.image] : []);
+
   try {
     const product = await createProduct({
       series,
@@ -44,7 +50,8 @@ export async function addProduct(req, res) {
       type: req.body.type || '',
       badge: req.body.badge || '',
       description: req.body.description || '',
-      image: req.body.image || null,
+      image: images[0] || null,
+      images,
       color: req.body.color || '#2563eb',
       specs: Array.isArray(req.body.specs) ? req.body.specs : [],
       useCases: Array.isArray(req.body.useCases) ? req.body.useCases : [],
@@ -71,6 +78,10 @@ export async function modifyProduct(req, res) {
   const { id } = req.params;
   const updates = { ...req.body };
   if (updates.discount !== undefined) updates.discount = Number(updates.discount) || 0;
+  if (Array.isArray(updates.images)) {
+    updates.images = updates.images.filter(Boolean);
+    updates.image = updates.images[0] || null;
+  }
 
   let previousStock = null;
   if (updates.stock !== undefined) {

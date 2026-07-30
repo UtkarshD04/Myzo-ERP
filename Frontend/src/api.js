@@ -27,6 +27,7 @@ async function request(path, options = {}) {
 export const api = {
   // Bootstrap & Auth
   bootstrap: () => request('/bootstrap'),
+  getPerformanceSummary: () => request('/performance-summary'),
 
   login: async (email, password) => {
     const data = await request('/auth/login', {
@@ -39,6 +40,16 @@ export const api = {
 
   logout: () => clearToken(),
   hasSession: () => Boolean(getToken()),
+
+  forgotPassword: (email) => request('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  }),
+
+  resetPassword: (token, newPassword) => request('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, newPassword }),
+  }),
 
   // Attendance
   checkIn: (employeeId, location) => request('/attendance/check-in', {
@@ -191,4 +202,37 @@ export const api = {
 
   // Inventory: Stock Ledger
   getStockMovements: () => request('/stock-movements'),
+
+  // Expense Claims
+  getExpenseClaims: () => request('/expense-claims'),
+  addExpenseClaim: (payload) => request('/expense-claims', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  updateExpenseClaimStatus: (id, updates) => request(`/expense-claims/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  }),
+
+  // Asset Tracking
+  getAssets: () => request('/assets'),
+  addAsset: (payload) => request('/assets', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  updateAsset: (id, updates) => request(`/assets/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  }),
+
+  // Vendor Directory
+  getVendors: () => request('/vendors'),
+  addVendor: (payload) => request('/vendors', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  updateVendor: (id, updates) => request(`/vendors/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  }),
 };

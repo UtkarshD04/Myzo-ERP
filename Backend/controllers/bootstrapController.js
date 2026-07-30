@@ -13,10 +13,13 @@ import { findAllCandidates, filterCandidatesForViewer } from '../models/candidat
 import { findAllOnboarding, filterOnboardingForViewer } from '../models/onboardingModel.js';
 import { findAllPurchaseOrders, filterPurchaseOrdersForViewer } from '../models/purchaseOrderModel.js';
 import { findAllStockMovements, filterStockMovementsForViewer } from '../models/stockMovementModel.js';
+import { findAllExpenseClaims, filterExpenseClaimsForViewer } from '../models/expenseClaimModel.js';
+import { findAllAssets, filterAssetsForViewer } from '../models/assetModel.js';
+import { findAllVendors, filterVendorsForViewer } from '../models/vendorModel.js';
 import { getHolidays } from '../services/holidayService.js';
 
 export async function getBootstrapData(req, res) {
-  const rawEmployees = await Employee.find({}, { password: 0 }).lean();
+  const rawEmployees = await Employee.find({}, { password: 0, resetTokenHash: 0, resetTokenExpiry: 0 }).lean();
 
   const employees = rawEmployees.map(e => sanitizeEmployeeForViewer({
     ...e,
@@ -39,6 +42,9 @@ export async function getBootstrapData(req, res) {
   const onboarding = filterOnboardingForViewer(await findAllOnboarding(), req.user);
   const purchaseOrders = filterPurchaseOrdersForViewer(await findAllPurchaseOrders(), req.user);
   const stockMovements = filterStockMovementsForViewer(await findAllStockMovements(), req.user);
+  const expenseClaims = filterExpenseClaimsForViewer(await findAllExpenseClaims(), req.user);
+  const assets = filterAssetsForViewer(await findAllAssets(), req.user);
+  const vendors = filterVendorsForViewer(await findAllVendors(), req.user);
 
   // Try to get real holidays from Calendarific, fallback to an empty list
   const liveHolidays = await getHolidays(
@@ -63,6 +69,9 @@ export async function getBootstrapData(req, res) {
     onboarding,
     purchaseOrders,
     stockMovements,
+    expenseClaims,
+    assets,
+    vendors,
     holidays: liveHolidays || [],
   });
 }

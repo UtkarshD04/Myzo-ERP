@@ -45,13 +45,13 @@ export default function DashboardView({
   quotations = [],
   payrolls = [],
   reports,
+  kpis = {},
   setActiveTab,
   onCheckIn,
   onCheckOut,
 }) {
   const role = employee.role?.toLowerCase() || '';
   const dept = employee.department?.toLowerCase() || '';
-  const currentKPIs = {};
 
   // Today attendance check
   const todayStr = new Date().toISOString().split('T')[0];
@@ -100,9 +100,9 @@ export default function DashboardView({
     }
     if (isHR) return <HRDashboard employee={employee} employees={employees} attendanceHistory={allAttendance || []} />;
     if (isSalesManager) return <SalesManagerDashboard employee={employee} employees={employees} quotations={quotations} payrolls={payrolls} />;
-    if (isBDE) return <BDEDashboard employee={employee} kpis={currentKPIs} payrolls={payrolls} />;
+    if (isBDE) return <BDEDashboard employee={employee} kpis={kpis} payrolls={payrolls} />;
     if (isSalesAssociate) return <SalesAssociateDashboard employee={employee} quotations={quotations} payrolls={payrolls} />;
-    return <GeneralDashboard employee={employee} kpis={currentKPIs} />;
+    return <GeneralDashboard employee={employee} kpis={kpis} />;
   };
 
   return (

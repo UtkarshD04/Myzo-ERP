@@ -14,12 +14,15 @@ const EMPTY_FORM = {
   discount: 0,
   status: 'Active',
   isPublished: true,
-  image: null
+  images: []
 };
 
 // There's no file-storage backend (S3/Cloudinary) here — images are stored
 // as base64 data URLs directly on the product document, so keep them small.
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+// Website product page shows a thumbnail strip under the main image —
+// cap the gallery so a single product doc doesn't balloon in size.
+const MAX_IMAGES = 6;
 
 function readImageAsDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -81,7 +84,7 @@ export default function ProductsManagementView({ products = [], onAddProduct, on
       discount: p.discount ?? 0,
       status: p.status || 'Active',
       isPublished: p.isPublished !== false,
-      image: p.image || null
+      images: p.images?.length ? p.images : (p.image ? [p.image] : [])
     });
     setSpecs(p.specs?.length ? p.specs : ['']);
     setUseCases(p.useCases?.length ? p.useCases : ['']);
@@ -89,23 +92,36 @@ export default function ProductsManagementView({ products = [], onAddProduct, on
     setShowForm(true);
   };
 
-  const handleImageChange = async (e) => {
-    const file = e.target.files?.[0];
+  const handleImagesChange = async (e) => {
+    const files = Array.from(e.target.files || []);
     e.target.value = '';
-    if (!file) return;
+    if (!files.length) return;
 
-    if (!file.type.startsWith('image/')) {
-      setError('Please choose an image file.');
+    const room = MAX_IMAGES - form.images.length;
+    if (room <= 0) {
+      setError(`You can add up to ${MAX_IMAGES} images.`);
       return;
     }
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError('Image is too large — please choose one under 2MB.');
-      return;
+
+    const toAdd = files.slice(0, room);
+    for (const file of toAdd) {
+      if (!file.type.startsWith('image/')) {
+        setError('Please choose image files only.');
+        return;
+      }
+      if (file.size > MAX_IMAGE_BYTES) {
+        setError('Each image must be under 2MB.');
+        return;
+      }
     }
 
     setError('');
-    const dataUrl = await readImageAsDataUrl(file);
-    setForm(prev => ({ ...prev, image: dataUrl }));
+    const dataUrls = await Promise.all(toAdd.map(readImageAsDataUrl));
+    setForm(prev => ({ ...prev, images: [...prev.images, ...dataUrls] }));
+  };
+
+  const removeImageAt = (index) => {
+    setForm(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
   };
 
   const handleSubmit = async (e) => {
@@ -214,37 +230,45 @@ export default function ProductsManagementView({ products = [], onAddProduct, on
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Product Image</label>
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-16 h-16 rounded-xl shrink-0 flex items-center justify-center overflow-hidden border border-slate-200"
-                      style={form.image ? undefined : { background: `linear-gradient(135deg, ${form.color}, ${form.color}99)` }}
-                    >
-                      {form.image ? (
-                        <img src={form.image} alt="Product preview" className="w-full h-full object-cover" />
-                      ) : (
-                        <Package className="w-6 h-6 text-white/90" />
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-600 hover:border-blue-300 hover:text-blue-600 cursor-pointer transition-all flex items-center gap-1.5">
-                        <ImagePlus className="w-3.5 h-3.5" />
-                        {form.image ? 'Change Image' : 'Upload Image'}
-                        <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
-                      </label>
-                      {form.image && (
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Product Images</label>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {form.images.map((img, i) => (
+                      <div key={i} className="relative w-16 h-16 rounded-xl shrink-0 overflow-hidden border border-slate-200 group">
+                        <img src={img} alt={`Product preview ${i + 1}`} className="w-full h-full object-cover" />
+                        {i === 0 && (
+                          <span className="absolute bottom-0 left-0 right-0 bg-slate-900/70 text-white text-[8px] font-bold uppercase tracking-wide text-center py-0.5">
+                            Cover
+                          </span>
+                        )}
                         <button
                           type="button"
-                          onClick={() => setForm({ ...form, image: null })}
-                          className="p-2 rounded-xl border border-red-200 text-red-500 hover:bg-red-50 cursor-pointer transition-all"
+                          onClick={() => removeImageAt(i)}
+                          className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-white/90 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                           title="Remove image"
                         >
-                          <ImageOff className="w-3.5 h-3.5" />
+                          <ImageOff className="w-3 h-3" />
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    ))}
+                    {form.images.length === 0 && (
+                      <div
+                        className="w-16 h-16 rounded-xl shrink-0 flex items-center justify-center border border-slate-200"
+                        style={{ background: `linear-gradient(135deg, ${form.color}, ${form.color}99)` }}
+                      >
+                        <Package className="w-6 h-6 text-white/90" />
+                      </div>
+                    )}
+                    {form.images.length < MAX_IMAGES && (
+                      <label className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-600 hover:border-blue-300 hover:text-blue-600 cursor-pointer transition-all flex items-center gap-1.5">
+                        <ImagePlus className="w-3.5 h-3.5" />
+                        Add Image{form.images.length > 0 ? 's' : ''}
+                        <input type="file" accept="image/*" multiple onChange={handleImagesChange} className="hidden" />
+                      </label>
+                    )}
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-1.5">Optional — falls back to a color swatch if not set. Max 2MB.</p>
+                  <p className="text-[10px] text-slate-400 mt-1.5">
+                    Optional — falls back to a color swatch if not set. First image is the cover shown in listings. Up to {MAX_IMAGES} images, max 2MB each.
+                  </p>
                 </div>
 
                 <div>
@@ -534,6 +558,7 @@ export default function ProductsManagementView({ products = [], onAddProduct, on
             const lowStock = isLowStock(p);
             const visibleSpecs = (p.specs || []).slice(0, 3);
             const extraSpecs = (p.specs || []).length - visibleSpecs.length;
+            const coverImage = p.images?.[0] || p.image;
 
             return (
               <div
@@ -543,10 +568,10 @@ export default function ProductsManagementView({ products = [], onAddProduct, on
                 {/* Banner */}
                 <div
                   className="h-28 flex items-center justify-center relative shrink-0"
-                  style={p.image ? undefined : { background: `linear-gradient(135deg, ${p.color || '#2563eb'}, ${p.color || '#2563eb'}99)` }}
+                  style={coverImage ? undefined : { background: `linear-gradient(135deg, ${p.color || '#2563eb'}, ${p.color || '#2563eb'}99)` }}
                 >
-                  {p.image ? (
-                    <img src={p.image} alt={`${p.series} ${p.model}`} className="w-full h-full object-cover" />
+                  {coverImage ? (
+                    <img src={coverImage} alt={`${p.series} ${p.model}`} className="w-full h-full object-cover" />
                   ) : (
                     <Package className="w-9 h-9 text-white/90" />
                   )}

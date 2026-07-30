@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { findAllEmployees, createEmployee, updateEmployeeById, deleteEmployeeById, sanitizeEmployeeForViewer } from '../models/employeeModel.js';
+import { findAllEmployees, findEmployeeById, createEmployee, updateEmployeeById, deleteEmployeeById, sanitizeEmployeeForViewer } from '../models/employeeModel.js';
 import { buildId } from '../services/timeService.js';
 
 const REQUIRED_FIELDS = ['name', 'officialEmail', 'department', 'designation', 'role'];
@@ -53,20 +53,41 @@ export async function addEmployee(req, res) {
   }
 }
 
+// The only field a non-privileged employee may ever change, and only on their
+// own record (see ProfileView's photo uploader). Everything else — org
+// structure (reportsTo, department, designation...), identity, and
+// compensation — requires Admin/HR, on ANY record including your own,
+// otherwise an employee could e.g. rewrite their own/a colleague's `reportsTo`
+// to fake a manager relationship and gain report-approval rights over them.
+const SELF_SERVICE_FIELDS = ['photo'];
+
 export async function modifyEmployee(req, res) {
   const { id } = req.params;
   const updates = { ...req.body };
+  const requesterRole = req.user.role;
+  const isPrivileged = requesterRole === 'Admin' || requesterRole === 'HR';
 
-  // Only Admin or HR is authorized to change protected fields (identity + compensation)
-  const PROTECTED_FIELDS = [
-    'name', 'officialEmail', 'password', 'role', 'department', 'employmentStatus', 'salary', 'basicPercent', 'hraPercent', 'medicalAllowance', 'pfPercent', 'commissionPercent',
-    'bankName', 'accountNo', 'ifscCode', 'pan', 'esiNo', 'pfNo', 'uanNo', 'location', 'fatherName', 'fatherDob', 'motherName', 'motherDob'
-  ];
-  const hasProtectedChanges = PROTECTED_FIELDS.some(field => updates[field] !== undefined);
-  if (hasProtectedChanges) {
-    const requesterRole = req.user.role;
-    if (requesterRole !== 'Admin' && requesterRole !== 'HR') {
-      const error = new Error('Access denied. Only Admins can modify these protected fields.');
+  if (!isPrivileged) {
+    const isSelf = req.user.id === id;
+    const onlySelfServiceFields = Object.keys(updates).every(field => SELF_SERVICE_FIELDS.includes(field));
+    if (!isSelf || !onlySelfServiceFields) {
+      const error = new Error('Access denied. You can only update your own photo — ask an Admin or HR for any other change.');
+      error.statusCode = 403;
+      throw error;
+    }
+  }
+
+  // Granting the Admin role is the one privilege escalation HR must never be
+  // able to perform itself — on anyone, including their own account — since
+  // that would let HR bypass every other Admin-only check in this file.
+  // Compared against the record's current role (not just the submitted
+  // value) so HR can still freely edit an existing Admin's other fields
+  // without being blocked by an unchanged role:'Admin' the edit form
+  // resubmits alongside them.
+  if (updates.role === 'Admin' && requesterRole !== 'Admin') {
+    const existing = await findEmployeeById(id);
+    if (existing?.role !== 'Admin') {
+      const error = new Error('Access denied. Only an Admin can grant the Admin role.');
       error.statusCode = 403;
       throw error;
     }

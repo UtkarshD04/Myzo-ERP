@@ -20,7 +20,10 @@ import {
   UserPlus,
   ClipboardCheck,
   Boxes,
-  Contact
+  Contact,
+  CreditCard,
+  Laptop,
+  Truck
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -43,6 +46,8 @@ export default function Sidebar({
       { id: 'quotations', label: 'Quotations', icon: FileSpreadsheet },
       { id: 'customers', label: 'Customers', icon: Contact },
       { id: 'invoices', label: 'Invoices', icon: Receipt },
+      { id: 'expenses', label: 'Expense Claims', icon: CreditCard },
+      { id: 'assets', label: 'Asset Tracking', icon: Laptop },
     ];
 
     if (dept === 'sales' || role === 'manager') {
@@ -52,6 +57,7 @@ export default function Sidebar({
     if (role === 'admin' || (role === 'manager' && dept === 'sales')) {
       base.push({ id: 'products', label: 'Products', icon: Package });
       base.push({ id: 'inventory', label: 'Inventory & Stock', icon: Boxes });
+      base.push({ id: 'vendors', label: 'Vendor Directory', icon: Truck });
     }
 
     base.push({ id: 'workreport', label: 'Daily Work Logs', icon: FileText });

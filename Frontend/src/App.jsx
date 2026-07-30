@@ -3,6 +3,8 @@ import { api } from './api';
 
 // Layout Components
 import LoginScreen from './components/auth/LoginScreen';
+import ForgotPasswordScreen from './components/auth/ForgotPasswordScreen';
+import ResetPasswordScreen from './components/auth/ResetPasswordScreen';
 import Sidebar from './components/layout/Sidebar';
 import Navbar from './components/layout/Navbar';
 
@@ -26,6 +28,9 @@ import LeaveManagementView from './components/views/LeaveManagementView';
 import RecruitmentView from './components/views/RecruitmentView';
 import OnboardingView from './components/views/OnboardingView';
 import InventoryView from './components/views/InventoryView';
+import ExpenseClaimsView from './components/views/ExpenseClaimsView';
+import AssetTrackingView from './components/views/AssetTrackingView';
+import VendorDirectoryView from './components/views/VendorDirectoryView';
 
 export default function App() {
   // ─── Persistent State ───────────────────────────────────────────────────────
@@ -50,9 +55,19 @@ export default function App() {
   const [onboarding, setOnboarding] = useState([]);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [stockMovements, setStockMovements] = useState([]);
+  const [expenseClaims, setExpenseClaims] = useState([]);
+  const [assets, setAssets] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [apiStatus, setApiStatus] = useState('connecting');
+  const [kpis, setKpis] = useState({});
 
   // ─── UI State ────────────────────────────────────────────────────────────────
+  // Pre-login screen switcher. Starts on 'reset' if the page was opened from
+  // a forgot-password email link (?resetToken=...) — checked once on mount
+  // since this app has no router to own that URL param.
+  const [authScreen, setAuthScreen] = useState(() => (
+    new URLSearchParams(window.location.search).get('resetToken') ? 'reset' : 'login'
+  ));
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -75,6 +90,9 @@ export default function App() {
     if (state.onboarding)   setOnboarding(state.onboarding);
     if (state.purchaseOrders) setPurchaseOrders(state.purchaseOrders);
     if (state.stockMovements) setStockMovements(state.stockMovements);
+    if (state.expenseClaims) setExpenseClaims(state.expenseClaims);
+    if (state.assets)        setAssets(state.assets);
+    if (state.vendors)       setVendors(state.vendors);
   };
 
   // ─── Bootstrap from API on mount ────────────────────────────────────────────
@@ -120,6 +138,22 @@ export default function App() {
     return () => { mounted = false; };
   }, []);
 
+  // ─── Dashboard KPIs (Developer/Finance/BDE cards) ───────────────────────────
+  // Refetched whenever the dashboard is opened (initial login lands here, and
+  // `employee` changing on login also satisfies this) rather than only once on
+  // mount, so numbers don't go stale while the user works elsewhere in the app.
+  // A failure here should never block login or force a logout — it's a
+  // dashboard nicety, not core app state — so it's fetched independently of
+  // bootstrap and any error is swallowed.
+  useEffect(() => {
+    if (!employee || activeTab !== 'dashboard' || !api.hasSession()) return;
+    let mounted = true;
+    api.getPerformanceSummary()
+      .then(summary => { if (mounted) setKpis(summary); })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, [employee, activeTab]);
+
   // ─── Sync employee to localStorage ──────────────────────────────────────────
   useEffect(() => {
     if (employee) localStorage.setItem('myzo_logged_in_employee', JSON.stringify(employee));
@@ -141,6 +175,33 @@ export default function App() {
     api.logout();
     setEmployee(null);
     localStorage.removeItem('myzo_logged_in_employee');
+
+    // Clear every piece of fetched company data from memory. This app runs on
+    // shared/kiosk devices for GPS check-in, so leaving the last session's
+    // data in state would let the next person at the device read it off the
+    // login screen (e.g. the employee-directory-powered email match preview).
+    setEmployees([]);
+    setTasks([]);
+    setHolidays([]);
+    setAttendanceHistory([]);
+    setReports([]);
+    setProducts([]);
+    setManageProducts([]);
+    setQuotations([]);
+    setInvoices([]);
+    setCustomers([]);
+    setPayrolls([]);
+    setLeaves([]);
+    setCandidates([]);
+    setOnboarding([]);
+    setPurchaseOrders([]);
+    setStockMovements([]);
+    setExpenseClaims([]);
+    setAssets([]);
+    setVendors([]);
+    setKpis({});
+    setApiStatus('connecting');
+    setActiveTab('dashboard');
   };
 
   // ─── Geo-location Helper ─────────────────────────────────────────────────────
@@ -354,9 +415,57 @@ export default function App() {
     applyServerState(state);
   };
 
+  // ─── Expense Claim Handlers ──────────────────────────────────────────────────
+  const handleAddExpenseClaim = async (payload) => {
+    const state = await api.addExpenseClaim(payload);
+    applyServerState(state);
+  };
+
+  const handleUpdateExpenseClaimStatus = async (id, updates) => {
+    const state = await api.updateExpenseClaimStatus(
+      id,
+      { ...updates, reviewerName: employee.name }
+    );
+    applyServerState(state);
+  };
+
+  // ─── Asset Tracking Handlers ─────────────────────────────────────────────────
+  const handleAddAsset = async (payload) => {
+    const state = await api.addAsset(payload);
+    applyServerState(state);
+  };
+
+  const handleUpdateAsset = async (id, updates) => {
+    const state = await api.updateAsset(id, updates);
+    applyServerState(state);
+  };
+
+  // ─── Vendor Directory Handlers ───────────────────────────────────────────────
+  const handleAddVendor = async (payload) => {
+    const { vendors: updated } = await api.addVendor(payload);
+    setVendors(updated);
+  };
+
+  const handleUpdateVendor = async (id, updates) => {
+    const { vendors: updated } = await api.updateVendor(id, updates);
+    setVendors(updated);
+  };
+
   // ─── Auth Guard ──────────────────────────────────────────────────────────────
   if (!employee) {
-    return <LoginScreen employees={employees} onLoginSuccess={handleLoginSuccess} />;
+    if (authScreen === 'forgot') {
+      return <ForgotPasswordScreen onBackToLogin={() => setAuthScreen('login')} />;
+    }
+    if (authScreen === 'reset') {
+      return <ResetPasswordScreen onBackToLogin={() => setAuthScreen('login')} />;
+    }
+    return (
+      <LoginScreen
+        employees={employees}
+        onLoginSuccess={handleLoginSuccess}
+        onForgotPassword={() => setAuthScreen('forgot')}
+      />
+    );
   }
 
   const myAttendance = attendanceHistory.filter(a => a.employeeId === employee.id);
@@ -414,6 +523,7 @@ export default function App() {
               quotations={quotations}
               payrolls={payrolls}
               reports={reports}
+              kpis={kpis}
               setActiveTab={setActiveTab}
               onCheckIn={handleCheckIn}
               onCheckOut={handleCheckOut}
@@ -474,6 +584,7 @@ export default function App() {
               employees={employees}
               quotations={quotations}
               payrolls={payrolls}
+              kpis={kpis}
             />
           )}
 
@@ -511,6 +622,7 @@ export default function App() {
 
           {activeTab === 'employees' && (
             <EmployeeManagementView
+              employee={employee}
               employees={employees}
               attendanceHistory={attendanceHistory}
               quotations={quotations}
@@ -575,6 +687,34 @@ export default function App() {
               stockMovements={stockMovements}
               onAddPurchaseOrder={handleAddPurchaseOrder}
               onUpdatePurchaseOrder={handleUpdatePurchaseOrder}
+            />
+          )}
+
+          {activeTab === 'expenses' && (
+            <ExpenseClaimsView
+              employee={employee}
+              expenseClaims={expenseClaims}
+              onAddExpenseClaim={handleAddExpenseClaim}
+              onUpdateExpenseClaimStatus={handleUpdateExpenseClaimStatus}
+            />
+          )}
+
+          {activeTab === 'assets' && (
+            <AssetTrackingView
+              employee={employee}
+              employees={employees}
+              assets={assets}
+              onAddAsset={handleAddAsset}
+              onUpdateAsset={handleUpdateAsset}
+            />
+          )}
+
+          {activeTab === 'vendors' && (
+            <VendorDirectoryView
+              employee={employee}
+              vendors={vendors}
+              onAddVendor={handleAddVendor}
+              onUpdateVendor={handleUpdateVendor}
             />
           )}
 

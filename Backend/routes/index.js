@@ -1,5 +1,5 @@
 import { checkInEmployee, checkOutEmployee } from '../controllers/attendanceController.js';
-import { loginEmployee } from '../controllers/authController.js';
+import { loginEmployee, forgotPassword, resetPasswordWithToken } from '../controllers/authController.js';
 import { getBootstrapData } from '../controllers/bootstrapController.js';
 import { addCustomer, getCustomers, modifyCustomer, removeCustomer } from '../controllers/customerController.js';
 import { addEmployee, getEmployees, modifyEmployee, removeEmployee } from '../controllers/employeeController.js';
@@ -15,12 +15,18 @@ import { getCandidates, addCandidate, modifyCandidate } from '../controllers/can
 import { getOnboarding, modifyOnboarding } from '../controllers/onboardingController.js';
 import { getPurchaseOrders, addPurchaseOrder, modifyPurchaseOrder } from '../controllers/purchaseOrderController.js';
 import { getStockMovements } from '../controllers/stockMovementController.js';
+import { getPerformanceSummary } from '../controllers/performanceController.js';
+import { getExpenseClaims, addExpenseClaim, modifyExpenseClaimStatus } from '../controllers/expenseClaimController.js';
+import { getAssets, addAsset, modifyAsset } from '../controllers/assetController.js';
+import { getVendors, addVendor, modifyVendor } from '../controllers/vendorController.js';
 
 export const routes = [
   // Only the login route is reachable without a valid session token — every
   // other route (including bootstrap, which returns the full company
   // dataset) requires authentication. See services/router.js.
   { method: 'POST', path: '/api/auth/login', handler: loginEmployee, public: true },
+  { method: 'POST', path: '/api/auth/forgot-password', handler: forgotPassword, public: true },
+  { method: 'POST', path: '/api/auth/reset-password', handler: resetPasswordWithToken, public: true },
   { method: 'GET', path: '/api/bootstrap', handler: getBootstrapData },
   { method: 'POST', path: '/api/attendance/check-in', handler: checkInEmployee },
   { method: 'POST', path: '/api/attendance/check-out', handler: checkOutEmployee },
@@ -67,6 +73,16 @@ export const routes = [
   { method: 'GET', path: '/api/purchase-orders', handler: getPurchaseOrders },
   { method: 'POST', path: '/api/purchase-orders', handler: addPurchaseOrder },
   { method: 'PATCH', path: '/api/purchase-orders/:id', handler: modifyPurchaseOrder },
-  { method: 'GET', path: '/api/stock-movements', handler: getStockMovements }
+  { method: 'GET', path: '/api/stock-movements', handler: getStockMovements },
+  { method: 'GET', path: '/api/performance-summary', handler: getPerformanceSummary },
+  { method: 'GET', path: '/api/expense-claims', handler: getExpenseClaims },
+  { method: 'POST', path: '/api/expense-claims', handler: addExpenseClaim },
+  { method: 'PATCH', path: '/api/expense-claims/:id', handler: modifyExpenseClaimStatus },
+  { method: 'GET', path: '/api/assets', handler: getAssets },
+  { method: 'POST', path: '/api/assets', handler: addAsset },
+  { method: 'PATCH', path: '/api/assets/:id', handler: modifyAsset },
+  { method: 'GET', path: '/api/vendors', handler: getVendors },
+  { method: 'POST', path: '/api/vendors', handler: addVendor },
+  { method: 'PATCH', path: '/api/vendors/:id', handler: modifyVendor }
 ];
 

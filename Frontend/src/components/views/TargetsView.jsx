@@ -7,7 +7,7 @@ import BDEDashboard from '../dashboards/BDEDashboard';
 // staff, plus any manager (see layout/Sidebar.jsx). Routes to the same
 // quota/commission dashboards used on the home Dashboard, since those are
 // already real, quotation-driven target analytics rather than mock numbers.
-export default function TargetsView({ employee, employees = [], quotations = [], payrolls = [] }) {
+export default function TargetsView({ employee, employees = [], quotations = [], payrolls = [], kpis = {} }) {
   const role = employee.role?.toLowerCase() || '';
   const dept = employee.department?.toLowerCase() || '';
   const designation = employee.designation?.toLowerCase() || '';
@@ -21,7 +21,7 @@ export default function TargetsView({ employee, employees = [], quotations = [],
       return <SalesManagerDashboard employee={employee} employees={employees} quotations={quotations} payrolls={payrolls} scope="team" />;
     }
     if (isBDE) {
-      return <BDEDashboard employee={employee} payrolls={payrolls} />;
+      return <BDEDashboard employee={employee} kpis={kpis} payrolls={payrolls} />;
     }
     if (isSalesAssociate) {
       return <SalesAssociateDashboard employee={employee} quotations={quotations} payrolls={payrolls} />;

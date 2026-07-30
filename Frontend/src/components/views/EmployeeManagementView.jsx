@@ -45,7 +45,7 @@ function currentMonthKey() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-export default function EmployeeManagementView({ employees = [], attendanceHistory = [], quotations = [], onAddEmployee, onUpdateEmployee, onDeleteEmployee }) {
+export default function EmployeeManagementView({ employee, employees = [], attendanceHistory = [], quotations = [], onAddEmployee, onUpdateEmployee, onDeleteEmployee }) {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -589,7 +589,12 @@ export default function EmployeeManagementView({ employees = [], attendanceHisto
                 <option value="Employee">Employee</option>
                 <option value="Manager">Manager</option>
                 <option value="HR">HR</option>
-                <option value="Admin">Admin</option>
+                {/* Only an Admin can grant the Admin role (enforced server-side too) —
+                    still shown when editing a record that's already Admin, so HR can
+                    see/save its other fields without the select silently losing the value. */}
+                {(employee?.role === 'Admin' || form.role === 'Admin') && (
+                  <option value="Admin">Admin</option>
+                )}
               </select>
             </div>
             <div>
