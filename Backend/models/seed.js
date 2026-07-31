@@ -26,7 +26,8 @@ async function seed() {
     officialEmail: ADMIN_EMAIL,
     role: 'Admin',
     employmentStatus: 'Active',
-    password: ADMIN_PASSWORD
+    password: ADMIN_PASSWORD,
+    isSuperAdmin: true
   });
 
   console.log('Seeded one Admin account (no existing data was modified):');

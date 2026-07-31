@@ -23,6 +23,12 @@ const employeeSchema = new mongoose.Schema({
   directReportingEmployees: [String],
   employmentStatus: String,
   role: String,
+  // Set only by the one-time seed script (never via the API — see
+  // employeeController's addEmployee/modifyEmployee, both of which strip this
+  // field from any request body before touching the DB). Marks the single
+  // permanent Admin: the only account allowed to create further Admins, and
+  // the only account no one can delete.
+  isSuperAdmin: { type: Boolean, default: false },
   bankName: String,
   accountNo: String,
   ifscCode: String,

@@ -17,6 +17,18 @@ export async function addEmployee(req, res) {
     throw error;
   }
 
+  // isSuperAdmin is bootstrap-only (set by models/seed.js) — never settable
+  // through this endpoint, even by an Admin, so it can't be self-granted.
+  delete req.body.isSuperAdmin;
+
+  // Only the one designated Super Admin (not just any Admin) may create
+  // another Admin account — mirrors modifyEmployee's grant-Admin guard.
+  if (req.body.role === 'Admin' && !req.user.isSuperAdmin) {
+    const error = new Error('Access denied. Only the Super Admin can create another Admin account.');
+    error.statusCode = 403;
+    throw error;
+  }
+
   const missing = REQUIRED_FIELDS.filter(field => !req.body[field]);
   if (missing.length) {
     const error = new Error(`Missing required field(s): ${missing.join(', ')}`);
@@ -73,6 +85,11 @@ export async function modifyEmployee(req, res) {
   const requesterRole = req.user.role;
   const isPrivileged = requesterRole === 'Admin' || requesterRole === 'HR';
 
+  // isSuperAdmin is bootstrap-only (set by models/seed.js) — never editable
+  // through this endpoint, so no one (not even the Super Admin) can grant or
+  // strip it via the API.
+  delete updates.isSuperAdmin;
+
   if (!isPrivileged) {
     const isSelf = req.user.id === id;
     const onlySelfServiceFields = Object.keys(updates).every(field => SELF_SERVICE_FIELDS.includes(field));
@@ -83,17 +100,16 @@ export async function modifyEmployee(req, res) {
     }
   }
 
-  // Granting the Admin role is the one privilege escalation HR must never be
-  // able to perform itself — on anyone, including their own account — since
-  // that would let HR bypass every other Admin-only check in this file.
-  // Compared against the record's current role (not just the submitted
-  // value) so HR can still freely edit an existing Admin's other fields
-  // without being blocked by an unchanged role:'Admin' the edit form
-  // resubmits alongside them.
-  if (updates.role === 'Admin' && requesterRole !== 'Admin') {
+  // Granting the Admin role is reserved for the one designated Super Admin —
+  // not just any Admin — since that's the whole point of having a single
+  // account whose power can't be casually handed out. Compared against the
+  // record's current role (not just the submitted value) so everyone else
+  // can still freely edit an existing Admin's other fields without being
+  // blocked by an unchanged role:'Admin' the edit form resubmits alongside them.
+  if (updates.role === 'Admin' && !req.user.isSuperAdmin) {
     const existing = await findEmployeeById(id);
     if (existing?.role !== 'Admin') {
-      const error = new Error('Access denied. Only an Admin can grant the Admin role.');
+      const error = new Error('Access denied. Only the Super Admin can grant the Admin role.');
       error.statusCode = 403;
       throw error;
     }
@@ -127,6 +143,14 @@ export async function removeEmployee(req, res) {
   }
 
   const { id } = req.params;
+
+  const existing = await findEmployeeById(id);
+  if (existing?.isSuperAdmin) {
+    const error = new Error('The Super Admin account cannot be deleted.');
+    error.statusCode = 403;
+    throw error;
+  }
+
   const employee = await deleteEmployeeById(id);
   if (!employee) {
     const error = new Error('Employee not found.');

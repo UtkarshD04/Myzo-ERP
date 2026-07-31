@@ -613,10 +613,11 @@ export default function EmployeeManagementView({ employee, employees = [], atten
                 <option value="Employee">Employee</option>
                 <option value="Manager">Manager</option>
                 <option value="HR">HR</option>
-                {/* Only an Admin can grant the Admin role (enforced server-side too) —
-                    still shown when editing a record that's already Admin, so HR can
-                    see/save its other fields without the select silently losing the value. */}
-                {(employee?.role === 'Admin' || form.role === 'Admin') && (
+                {/* Only the Super Admin can grant the Admin role (enforced server-side
+                    too) — still shown when editing a record that's already Admin, so
+                    everyone else can see/save its other fields without the select
+                    silently losing the value. */}
+                {(employee?.isSuperAdmin || form.role === 'Admin') && (
                   <option value="Admin">Admin</option>
                 )}
               </select>
@@ -937,7 +938,14 @@ export default function EmployeeManagementView({ employee, employees = [], atten
                         referrerPolicy="no-referrer"
                       />
                       <div className="min-w-0">
-                        <p className="font-bold text-xs text-slate-800 truncate group-hover:text-blue-600 transition-colors">{emp.name}</p>
+                        <p className="font-bold text-xs text-slate-800 truncate group-hover:text-blue-600 transition-colors flex items-center gap-1.5">
+                          {emp.name}
+                          {emp.isSuperAdmin && (
+                            <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-600 border border-amber-100 shrink-0">
+                              Super Admin
+                            </span>
+                          )}
+                        </p>
                         <p className="text-[10px] text-slate-400 truncate">{emp.officialEmail}</p>
                       </div>
                     </button>
@@ -990,13 +998,15 @@ export default function EmployeeManagementView({ employee, employees = [], atten
                           ? <UserCheck2 className="w-3.5 h-3.5" />
                           : <UserX className="w-3.5 h-3.5" />}
                       </button>
-                      <button
-                        onClick={() => setDeleteTarget(emp)}
-                        title="Delete employee"
-                        className="p-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 cursor-pointer transition-all"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {!emp.isSuperAdmin && (
+                        <button
+                          onClick={() => setDeleteTarget(emp)}
+                          title="Delete employee"
+                          className="p-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 cursor-pointer transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
