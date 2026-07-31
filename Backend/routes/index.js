@@ -19,6 +19,10 @@ import { getPerformanceSummary } from '../controllers/performanceController.js';
 import { getExpenseClaims, addExpenseClaim, modifyExpenseClaimStatus } from '../controllers/expenseClaimController.js';
 import { getAssets, addAsset, modifyAsset } from '../controllers/assetController.js';
 import { getVendors, addVendor, modifyVendor } from '../controllers/vendorController.js';
+import { getWebsiteUsers } from '../controllers/websiteUserController.js';
+import { getProductEnquiries, modifyProductEnquiryStatus } from '../controllers/productEnquiryController.js';
+import { getAfterSalesServices, modifyAfterSalesServiceStatus } from '../controllers/afterSalesServiceController.js';
+import { getBecomePartners, modifyBecomePartnerStatus } from '../controllers/becomePartnerController.js';
 
 export const routes = [
   // Only the login route is reachable without a valid session token — every
@@ -83,6 +87,16 @@ export const routes = [
   { method: 'PATCH', path: '/api/assets/:id', handler: modifyAsset },
   { method: 'GET', path: '/api/vendors', handler: getVendors },
   { method: 'POST', path: '/api/vendors', handler: addVendor },
-  { method: 'PATCH', path: '/api/vendors/:id', handler: modifyVendor }
+  { method: 'PATCH', path: '/api/vendors/:id', handler: modifyVendor },
+  // Read-mostly views onto the public website's shared MongoDB collections
+  // (see models/websiteUserModel.js and friends) — website visitor activity
+  // surfaced for the sales/support team without a second app to log into.
+  { method: 'GET', path: '/api/website-users', handler: getWebsiteUsers },
+  { method: 'GET', path: '/api/product-enquiries', handler: getProductEnquiries },
+  { method: 'PATCH', path: '/api/product-enquiries/:id', handler: modifyProductEnquiryStatus },
+  { method: 'GET', path: '/api/after-sales-services', handler: getAfterSalesServices },
+  { method: 'PATCH', path: '/api/after-sales-services/:id', handler: modifyAfterSalesServiceStatus },
+  { method: 'GET', path: '/api/become-partners', handler: getBecomePartners },
+  { method: 'PATCH', path: '/api/become-partners/:id', handler: modifyBecomePartnerStatus }
 ];
 

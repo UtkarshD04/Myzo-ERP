@@ -1,4 +1,8 @@
-const BASE = '/api';
+// Relative '/api' keeps the vite dev proxy (vite.config.js) working
+// unchanged; in production, set VITE_API_BASE_URL at build time to the
+// backend service's public URL (e.g. https://erp-api.yourdomain.com/api) so
+// the two containers don't need to share a domain.
+const BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 const TOKEN_KEY = 'myzo_auth_token';
 
 const getToken = () => localStorage.getItem(TOKEN_KEY);
@@ -234,5 +238,23 @@ export const api = {
   updateVendor: (id, updates) => request(`/vendors/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(updates),
+  }),
+
+  // Website Activity (read views onto the public website's shared DB)
+  getWebsiteUsers: () => request('/website-users'),
+  getProductEnquiries: () => request('/product-enquiries'),
+  updateProductEnquiryStatus: (id, status) => request(`/product-enquiries/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  }),
+  getAfterSalesServices: () => request('/after-sales-services'),
+  updateAfterSalesServiceStatus: (id, status) => request(`/after-sales-services/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  }),
+  getBecomePartners: () => request('/become-partners'),
+  updateBecomePartnerStatus: (id, status) => request(`/become-partners/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
   }),
 };

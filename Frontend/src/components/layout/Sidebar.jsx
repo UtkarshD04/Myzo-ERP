@@ -23,7 +23,8 @@ import {
   Contact,
   CreditCard,
   Laptop,
-  Truck
+  Truck,
+  Globe
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -58,6 +59,10 @@ export default function Sidebar({
       base.push({ id: 'products', label: 'Products', icon: Package });
       base.push({ id: 'inventory', label: 'Inventory & Stock', icon: Boxes });
       base.push({ id: 'vendors', label: 'Vendor Directory', icon: Truck });
+    }
+
+    if (role === 'admin' || role === 'manager' || dept === 'sales') {
+      base.push({ id: 'website-activity', label: 'Website Activity', icon: Globe });
     }
 
     base.push({ id: 'workreport', label: 'Daily Work Logs', icon: FileText });

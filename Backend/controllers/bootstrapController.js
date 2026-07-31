@@ -16,6 +16,10 @@ import { findAllStockMovements, filterStockMovementsForViewer } from '../models/
 import { findAllExpenseClaims, filterExpenseClaimsForViewer } from '../models/expenseClaimModel.js';
 import { findAllAssets, filterAssetsForViewer } from '../models/assetModel.js';
 import { findAllVendors, filterVendorsForViewer } from '../models/vendorModel.js';
+import { findAllWebsiteUsers } from '../models/websiteUserModel.js';
+import { findAllProductEnquiries } from '../models/productEnquiryModel.js';
+import { findAllAfterSalesServices } from '../models/afterSalesServiceModel.js';
+import { findAllBecomePartners } from '../models/becomePartnerModel.js';
 import { getHolidays } from '../services/holidayService.js';
 
 export async function getBootstrapData(req, res) {
@@ -45,6 +49,10 @@ export async function getBootstrapData(req, res) {
   const expenseClaims = filterExpenseClaimsForViewer(await findAllExpenseClaims(), req.user);
   const assets = filterAssetsForViewer(await findAllAssets(), req.user);
   const vendors = filterVendorsForViewer(await findAllVendors(), req.user);
+  const websiteUsers = await findAllWebsiteUsers();
+  const productEnquiries = await findAllProductEnquiries();
+  const afterSalesServices = await findAllAfterSalesServices();
+  const becomePartners = await findAllBecomePartners();
 
   // Try to get real holidays from Calendarific, fallback to an empty list
   const liveHolidays = await getHolidays(
@@ -72,6 +80,10 @@ export async function getBootstrapData(req, res) {
     expenseClaims,
     assets,
     vendors,
+    websiteUsers,
+    productEnquiries,
+    afterSalesServices,
+    becomePartners,
     holidays: liveHolidays || [],
   });
 }

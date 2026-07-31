@@ -31,6 +31,7 @@ import InventoryView from './components/views/InventoryView';
 import ExpenseClaimsView from './components/views/ExpenseClaimsView';
 import AssetTrackingView from './components/views/AssetTrackingView';
 import VendorDirectoryView from './components/views/VendorDirectoryView';
+import WebsiteActivityView from './components/views/WebsiteActivityView';
 
 export default function App() {
   // ─── Persistent State ───────────────────────────────────────────────────────
@@ -58,6 +59,10 @@ export default function App() {
   const [expenseClaims, setExpenseClaims] = useState([]);
   const [assets, setAssets] = useState([]);
   const [vendors, setVendors] = useState([]);
+  const [websiteUsers, setWebsiteUsers] = useState([]);
+  const [productEnquiries, setProductEnquiries] = useState([]);
+  const [afterSalesServices, setAfterSalesServices] = useState([]);
+  const [becomePartners, setBecomePartners] = useState([]);
   const [apiStatus, setApiStatus] = useState('connecting');
   const [kpis, setKpis] = useState({});
 
@@ -93,6 +98,10 @@ export default function App() {
     if (state.expenseClaims) setExpenseClaims(state.expenseClaims);
     if (state.assets)        setAssets(state.assets);
     if (state.vendors)       setVendors(state.vendors);
+    if (state.websiteUsers)      setWebsiteUsers(state.websiteUsers);
+    if (state.productEnquiries)  setProductEnquiries(state.productEnquiries);
+    if (state.afterSalesServices) setAfterSalesServices(state.afterSalesServices);
+    if (state.becomePartners)    setBecomePartners(state.becomePartners);
   };
 
   // ─── Bootstrap from API on mount ────────────────────────────────────────────
@@ -199,6 +208,10 @@ export default function App() {
     setExpenseClaims([]);
     setAssets([]);
     setVendors([]);
+    setWebsiteUsers([]);
+    setProductEnquiries([]);
+    setAfterSalesServices([]);
+    setBecomePartners([]);
     setKpis({});
     setApiStatus('connecting');
     setActiveTab('dashboard');
@@ -449,6 +462,22 @@ export default function App() {
   const handleUpdateVendor = async (id, updates) => {
     const { vendors: updated } = await api.updateVendor(id, updates);
     setVendors(updated);
+  };
+
+  // ─── Website Activity Handlers ───────────────────────────────────────────────
+  const handleUpdateProductEnquiryStatus = async (id, status) => {
+    const { productEnquiries: updated } = await api.updateProductEnquiryStatus(id, status);
+    setProductEnquiries(updated);
+  };
+
+  const handleUpdateAfterSalesServiceStatus = async (id, status) => {
+    const { afterSalesServices: updated } = await api.updateAfterSalesServiceStatus(id, status);
+    setAfterSalesServices(updated);
+  };
+
+  const handleUpdateBecomePartnerStatus = async (id, status) => {
+    const { becomePartners: updated } = await api.updateBecomePartnerStatus(id, status);
+    setBecomePartners(updated);
   };
 
   // ─── Auth Guard ──────────────────────────────────────────────────────────────
@@ -715,6 +744,18 @@ export default function App() {
               vendors={vendors}
               onAddVendor={handleAddVendor}
               onUpdateVendor={handleUpdateVendor}
+            />
+          )}
+
+          {activeTab === 'website-activity' && (
+            <WebsiteActivityView
+              productEnquiries={productEnquiries}
+              afterSalesServices={afterSalesServices}
+              becomePartners={becomePartners}
+              websiteUsers={websiteUsers}
+              onUpdateProductEnquiryStatus={handleUpdateProductEnquiryStatus}
+              onUpdateAfterSalesServiceStatus={handleUpdateAfterSalesServiceStatus}
+              onUpdateBecomePartnerStatus={handleUpdateBecomePartnerStatus}
             />
           )}
 
