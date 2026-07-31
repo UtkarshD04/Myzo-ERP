@@ -1,11 +1,16 @@
+# Build context is the repo root (both Backend/ and Frontend/ are visible
+# here), so every COPY source below is prefixed with Frontend/ — plain
+# `COPY . .` would pull in Backend/ too and break the "package.json not
+# found" lookup since it'd land one directory too shallow.
+
 # ---- Build stage ----
 FROM node:20-alpine AS build
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY Frontend/package.json Frontend/package-lock.json ./
 RUN npm ci
 
-COPY . .
+COPY Frontend/ ./
 
 # Baked into the static bundle at build time — point this at the backend
 # service's public URL (e.g. https://erp-api.yourdomain.com/api). Falls back
@@ -18,6 +23,6 @@ RUN npm run build
 # ---- Serve stage ----
 FROM nginx:1.27-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY Frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
