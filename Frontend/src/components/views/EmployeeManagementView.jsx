@@ -479,38 +479,42 @@ export default function EmployeeManagementView({ employee, employees = [], atten
           </div>
         </div>
 
-        {/* Option cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <button
-            onClick={() => setDetailTab('attendance')}
-            className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm text-left cursor-pointer hover:border-blue-200 hover:bg-blue-50/20 transition-all group"
-          >
-            <div className="flex items-center justify-between">
-              <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                <Clock className="w-5 h-5" />
+        {/* Option cards — hidden for the Super Admin's own record unless
+            you ARE the Super Admin (see Employee Directory row buttons for
+            the matching restriction on this same data). */}
+        {(!emp.isSuperAdmin || employee?.id === emp.id) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button
+              onClick={() => setDetailTab('attendance')}
+              className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm text-left cursor-pointer hover:border-blue-200 hover:bg-blue-50/20 transition-all group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
-            </div>
-            <h3 className="text-sm font-bold text-slate-800 mt-4">Attendance</h3>
-            <p className="text-xs text-slate-500 mt-1">Monthly check-in/out history, working hours and overtime.</p>
-            <p className="text-[10px] text-slate-400 font-semibold mt-3">{monthAttendanceCount} day(s) present this month</p>
-          </button>
+              <h3 className="text-sm font-bold text-slate-800 mt-4">Attendance</h3>
+              <p className="text-xs text-slate-500 mt-1">Monthly check-in/out history, working hours and overtime.</p>
+              <p className="text-[10px] text-slate-400 font-semibold mt-3">{monthAttendanceCount} day(s) present this month</p>
+            </button>
 
-          <button
-            onClick={() => setDetailTab('quotations')}
-            className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm text-left cursor-pointer hover:border-blue-200 hover:bg-blue-50/20 transition-all group"
-          >
-            <div className="flex items-center justify-between">
-              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
-                <FileSpreadsheet className="w-5 h-5" />
+            <button
+              onClick={() => setDetailTab('quotations')}
+              className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm text-left cursor-pointer hover:border-blue-200 hover:bg-blue-50/20 transition-all group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
-            </div>
-            <h3 className="text-sm font-bold text-slate-800 mt-4">Quotations</h3>
-            <p className="text-xs text-slate-500 mt-1">Quotations created, their status and win-rate performance.</p>
-            <p className="text-[10px] text-slate-400 font-semibold mt-3">{empQuotationCount} quotation(s) created</p>
-          </button>
-        </div>
+              <h3 className="text-sm font-bold text-slate-800 mt-4">Quotations</h3>
+              <p className="text-xs text-slate-500 mt-1">Quotations created, their status and win-rate performance.</p>
+              <p className="text-[10px] text-slate-400 font-semibold mt-3">{empQuotationCount} quotation(s) created</p>
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -964,13 +968,15 @@ export default function EmployeeManagementView({ employee, employees = [], atten
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center justify-end space-x-2">
-                      <button
-                        onClick={() => { setSelectedEmployee(emp); setDetailTab('attendance'); }}
-                        title="View attendance details"
-                        className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer transition-all"
-                      >
-                        <Clock className="w-3.5 h-3.5" />
-                      </button>
+                      {(!emp.isSuperAdmin || employee?.id === emp.id) && (
+                        <button
+                          onClick={() => { setSelectedEmployee(emp); setDetailTab('attendance'); }}
+                          title="View attendance details"
+                          className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer transition-all"
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       {(!emp.isSuperAdmin || employee?.id === emp.id) && (
                         <button
                           onClick={() => { setSelectedEmployee(emp); setDetailTab('quotations'); }}
