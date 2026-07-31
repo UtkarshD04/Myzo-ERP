@@ -50,6 +50,12 @@ export default function EmployeeManagementView({ employee, employees = [], atten
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  // Kept out of `form`/EMPTY_FORM on purpose: that same state also backs the
+  // edit flow, and an empty `password: ''` field would round-trip into the
+  // update payload and silently wipe the stored hash (see backend's
+  // `if (updates.password)` check — an empty string is falsy but still gets
+  // sent). Only ever read when creating a new account.
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -77,6 +83,7 @@ export default function EmployeeManagementView({ employee, employees = [], atten
   const openAddModal = () => {
     setEditingId(null);
     setForm(EMPTY_FORM);
+    setPassword('');
     setError('');
     setShowModal(true);
   };
@@ -123,6 +130,7 @@ export default function EmployeeManagementView({ employee, employees = [], atten
 
     const payload = {
       ...form,
+      ...(editingId ? {} : { password }),
       salary: form.salary ? Number(form.salary) : undefined,
       basicPercent: form.basicPercent !== '' ? Number(form.basicPercent) : undefined,
       hraPercent: form.hraPercent !== '' ? Number(form.hraPercent) : undefined,
@@ -555,6 +563,22 @@ export default function EmployeeManagementView({ employee, employees = [], atten
             />
           </div>
 
+          {!editingId && (
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Login Password</label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Min. 6 characters"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Department</label>
@@ -832,12 +856,6 @@ export default function EmployeeManagementView({ employee, employees = [], atten
               </div>
             </div>
           </div>
-
-          {!editingId && (
-            <p className="text-[10px] text-slate-400 font-semibold bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
-              New accounts default to the password <span className="font-mono text-slate-600">password123</span> unless changed later.
-            </p>
-          )}
 
           <div className="flex items-center space-x-3.5 pt-2">
             <button

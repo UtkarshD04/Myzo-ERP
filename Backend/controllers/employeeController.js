@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import { findAllEmployees, findEmployeeById, createEmployee, updateEmployeeById, deleteEmployeeById, sanitizeEmployeeForViewer } from '../models/employeeModel.js';
 import { buildId } from '../services/timeService.js';
 
-const REQUIRED_FIELDS = ['name', 'officialEmail', 'department', 'designation', 'role'];
+const REQUIRED_FIELDS = ['name', 'officialEmail', 'department', 'designation', 'role', 'password'];
 
 export async function getEmployees(req, res) {
   const employees = await findAllEmployees();
@@ -24,7 +24,13 @@ export async function addEmployee(req, res) {
     throw error;
   }
 
-  const password = await bcrypt.hash(req.body.password || 'password123', 10);
+  if (req.body.password.length < 6) {
+    const error = new Error('Password must be at least 6 characters.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const password = await bcrypt.hash(req.body.password, 10);
   const normalizedEmail = req.body.officialEmail.trim().toLowerCase();
 
   const newId = buildId('EMP');
