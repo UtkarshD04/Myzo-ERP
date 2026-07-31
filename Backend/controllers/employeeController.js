@@ -84,6 +84,7 @@ export async function modifyEmployee(req, res) {
   const updates = { ...req.body };
   const requesterRole = req.user.role;
   const isPrivileged = requesterRole === 'Admin' || requesterRole === 'HR';
+  const isSelf = req.user.id === id;
 
   // isSuperAdmin is bootstrap-only (set by models/seed.js) — never editable
   // through this endpoint, so no one (not even the Super Admin) can grant or
@@ -91,13 +92,23 @@ export async function modifyEmployee(req, res) {
   delete updates.isSuperAdmin;
 
   if (!isPrivileged) {
-    const isSelf = req.user.id === id;
     const onlySelfServiceFields = Object.keys(updates).every(field => SELF_SERVICE_FIELDS.includes(field));
     if (!isSelf || !onlySelfServiceFields) {
       const error = new Error('Access denied. You can only update your own photo — ask an Admin or HR for any other change.');
       error.statusCode = 403;
       throw error;
     }
+  }
+
+  // The Super Admin's own record — status, role, salary, everything — can
+  // only ever be changed by the Super Admin themself. Not even another Admin
+  // or HR may edit or deactivate it; this is what makes the "one indestructible
+  // Admin" guarantee hold, not just the delete-block in removeEmployee.
+  const existing = await findEmployeeById(id);
+  if (existing?.isSuperAdmin && !isSelf) {
+    const error = new Error('Access denied. Only the Super Admin can edit their own profile.');
+    error.statusCode = 403;
+    throw error;
   }
 
   // Granting the Admin role is reserved for the one designated Super Admin —
@@ -107,7 +118,6 @@ export async function modifyEmployee(req, res) {
   // can still freely edit an existing Admin's other fields without being
   // blocked by an unchanged role:'Admin' the edit form resubmits alongside them.
   if (updates.role === 'Admin' && !req.user.isSuperAdmin) {
-    const existing = await findEmployeeById(id);
     if (existing?.role !== 'Admin') {
       const error = new Error('Access denied. Only the Super Admin can grant the Admin role.');
       error.statusCode = 403;

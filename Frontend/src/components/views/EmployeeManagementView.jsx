@@ -971,33 +971,39 @@ export default function EmployeeManagementView({ employee, employees = [], atten
                       >
                         <Clock className="w-3.5 h-3.5" />
                       </button>
-                      <button
-                        onClick={() => { setSelectedEmployee(emp); setDetailTab('quotations'); }}
-                        title="View quotation performance"
-                        className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer transition-all"
-                      >
-                        <FileSpreadsheet className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => openEditModal(emp)}
-                        title="Edit employee"
-                        className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer transition-all"
-                      >
-                        <UserCog className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => toggleStatus(emp)}
-                        title={emp.employmentStatus === 'Inactive' ? 'Reactivate employee' : 'Deactivate employee'}
-                        className={`p-1.5 rounded-lg border cursor-pointer transition-all ${
-                          emp.employmentStatus === 'Inactive'
-                            ? 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
-                            : 'border-red-200 text-red-500 hover:bg-red-50'
-                        }`}
-                      >
-                        {emp.employmentStatus === 'Inactive'
-                          ? <UserCheck2 className="w-3.5 h-3.5" />
-                          : <UserX className="w-3.5 h-3.5" />}
-                      </button>
+                      {(!emp.isSuperAdmin || employee?.id === emp.id) && (
+                        <button
+                          onClick={() => { setSelectedEmployee(emp); setDetailTab('quotations'); }}
+                          title="View quotation performance"
+                          className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer transition-all"
+                        >
+                          <FileSpreadsheet className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {(!emp.isSuperAdmin || employee?.id === emp.id) && (
+                        <button
+                          onClick={() => openEditModal(emp)}
+                          title="Edit employee"
+                          className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer transition-all"
+                        >
+                          <UserCog className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {(!emp.isSuperAdmin || employee?.id === emp.id) && (
+                        <button
+                          onClick={() => toggleStatus(emp)}
+                          title={emp.employmentStatus === 'Inactive' ? 'Reactivate employee' : 'Deactivate employee'}
+                          className={`p-1.5 rounded-lg border cursor-pointer transition-all ${
+                            emp.employmentStatus === 'Inactive'
+                              ? 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
+                              : 'border-red-200 text-red-500 hover:bg-red-50'
+                          }`}
+                        >
+                          {emp.employmentStatus === 'Inactive'
+                            ? <UserCheck2 className="w-3.5 h-3.5" />
+                            : <UserX className="w-3.5 h-3.5" />}
+                        </button>
+                      )}
                       {!emp.isSuperAdmin && (
                         <button
                           onClick={() => setDeleteTarget(emp)}
