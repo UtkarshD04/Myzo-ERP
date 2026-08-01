@@ -40,7 +40,15 @@ const payrollSchema = new mongoose.Schema({
   status: { type: String, default: 'Generated' }, // 'Generated' | 'Paid'
   generatedBy: String,
   generatedByName: String,
-  paidAt: { type: Date, default: null }
+  paidAt: { type: Date, default: null },
+
+  // A payslip is auto-generated every month but stays hidden from the
+  // employee until HR/Admin explicitly approves it from the employee's
+  // profile in the directory.
+  approved: { type: Boolean, default: false },
+  approvedAt: { type: Date, default: null },
+  approvedBy: String,
+  approvedByName: String
 }, { timestamps: true });
 
 payrollSchema.index({ employeeId: 1, month: 1 }, { unique: true });
@@ -70,8 +78,9 @@ export async function updatePayrollById(id, updates) {
 
 // Every field on a payroll record is compensation data (unlike the employee
 // record's mix of general + sensitive fields), so there's no partial view —
-// Admin/HR see all records, everyone else only their own (for Payslips & Docs).
+// Admin/HR see all records (including unapproved ones, so they can approve
+// them), everyone else only their own *approved* records (for Payslips & Docs).
 export function filterPayrollsForViewer(payrolls, viewer) {
   if (viewer.role === 'Admin' || viewer.role === 'HR') return payrolls;
-  return payrolls.filter(p => p.employeeId === viewer.id);
+  return payrolls.filter(p => p.employeeId === viewer.id && p.approved);
 }

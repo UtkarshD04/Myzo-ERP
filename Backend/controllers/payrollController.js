@@ -42,16 +42,10 @@ export async function getPayrolls(req, res) {
   res.json({ payrolls });
 }
 
-export async function generatePayroll(req, res) {
-  requireAdminOrHR(req);
-
-  const { month, generatedBy, generatedByName } = req.body;
-  if (!month || !/^\d{4}-\d{2}$/.test(month)) {
-    const error = new Error('A valid month (YYYY-MM) is required.');
-    error.statusCode = 400;
-    throw error;
-  }
-
+// Shared by the HTTP handler (HR/Admin clicking "Generate Payroll") and the
+// monthly auto-generation cron in services/payrollAutoGenService.js — both
+// just need a month string and who/what triggered it.
+export async function generatePayrollForMonth(month, { generatedBy, generatedByName } = {}) {
   const employees = (await findAllEmployees()).filter(e => e.employmentStatus !== 'Inactive');
   const workingDays = workingDaysInMonth(month);
   const { start: monthStart, end: monthEnd } = monthDateRange(month);
@@ -131,7 +125,20 @@ export async function generatePayroll(req, res) {
     });
   }
 
-  const payrolls = await findAllPayrolls();
+  return findAllPayrolls();
+}
+
+export async function generatePayroll(req, res) {
+  requireAdminOrHR(req);
+
+  const { month, generatedBy, generatedByName } = req.body;
+  if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+    const error = new Error('A valid month (YYYY-MM) is required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const payrolls = await generatePayrollForMonth(month, { generatedBy, generatedByName });
   res.status(201).json({ payrolls });
 }
 
@@ -143,6 +150,18 @@ export async function modifyPayroll(req, res) {
 
   if (updates.status === 'Paid') {
     updates.paidAt = new Date();
+  }
+
+  // Approving a payslip is what makes it visible to the employee in
+  // Payslips & Docs — stamp who/when server-side rather than trusting the client.
+  if (updates.approved === true) {
+    updates.approvedAt = new Date();
+    updates.approvedBy = req.user.id;
+    updates.approvedByName = req.user.name;
+  } else if (updates.approved === false) {
+    updates.approvedAt = null;
+    updates.approvedBy = null;
+    updates.approvedByName = null;
   }
 
   const payrolls = await updatePayrollById(id, updates);

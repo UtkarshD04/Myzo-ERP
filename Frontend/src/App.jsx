@@ -655,9 +655,11 @@ export default function App() {
               employees={employees}
               attendanceHistory={attendanceHistory}
               quotations={quotations}
+              payrolls={payrolls}
               onAddEmployee={handleAddEmployee}
               onUpdateEmployee={handleUpdateEmployee}
               onDeleteEmployee={handleDeleteEmployee}
+              onUpdatePayroll={handleUpdatePayroll}
             />
           )}
 

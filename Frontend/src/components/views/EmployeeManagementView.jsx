@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, UserCog, UserX, UserCheck2, Users, Trash2, AlertTriangle, Clock, ArrowLeft, MapPin, CalendarClock, FileSpreadsheet, ChevronRight, TrendingUp } from 'lucide-react';
+import { Plus, Search, UserCog, UserX, UserCheck2, Users, Trash2, AlertTriangle, Clock, ArrowLeft, MapPin, CalendarClock, FileSpreadsheet, ChevronRight, TrendingUp, Wallet, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 const QUOTE_STATUS_STYLES = {
   Draft: 'bg-slate-50 text-slate-600 border-slate-100',
@@ -45,7 +45,7 @@ function currentMonthKey() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-export default function EmployeeManagementView({ employee, employees = [], attendanceHistory = [], quotations = [], onAddEmployee, onUpdateEmployee, onDeleteEmployee }) {
+export default function EmployeeManagementView({ employee, employees = [], attendanceHistory = [], quotations = [], payrolls = [], onAddEmployee, onUpdateEmployee, onDeleteEmployee, onUpdatePayroll }) {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -63,6 +63,8 @@ export default function EmployeeManagementView({ employee, employees = [], atten
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [detailTab, setDetailTab] = useState('menu');
   const [attendanceMonth, setAttendanceMonth] = useState(currentMonthKey());
+  const [approveMonth, setApproveMonth] = useState('');
+  const [approving, setApproving] = useState(false);
 
   const openEmployeeDetail = (emp) => {
     setSelectedEmployee(emp);
@@ -172,6 +174,18 @@ export default function EmployeeManagementView({ employee, employees = [], atten
       alert(err.message);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const approveSalarySlip = async (payslipId) => {
+    setApproving(true);
+    try {
+      await onUpdatePayroll(payslipId, { approved: true });
+      setApproveMonth('');
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setApproving(false);
     }
   };
 
@@ -442,11 +456,132 @@ export default function EmployeeManagementView({ employee, employees = [], atten
     );
   }
 
+  if (selectedEmployee && detailTab === 'payslips') {
+    const emp = selectedEmployee;
+    const empPayslips = payrolls
+      .filter(p => p.employeeId === emp.id)
+      .sort((a, b) => b.month.localeCompare(a.month));
+    const pendingPayslips = empPayslips.filter(p => !p.approved);
+    const monthLabel = (month) => new Date(`${month}-01T00:00:00`).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    return (
+      <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto font-sans text-slate-800 animate-in fade-in duration-200">
+        <button
+          onClick={() => setDetailTab('menu')}
+          className="flex items-center space-x-2 text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to {emp.name}</span>
+        </button>
+
+        {/* Header card */}
+        <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm flex items-center space-x-3.5">
+          <img
+            src={emp.photo}
+            alt={emp.name}
+            className="w-14 h-14 rounded-2xl object-cover border border-slate-100 shrink-0"
+            referrerPolicy="no-referrer"
+          />
+          <div className="min-w-0">
+            <h2 className="text-xl font-bold text-slate-800 truncate">{emp.name} — Salary Slips</h2>
+            <p className="text-xs text-slate-500 mt-0.5 truncate">{emp.designation} · {emp.department}</p>
+          </div>
+        </div>
+
+        {/* Approve a salary slip */}
+        <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
+          <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-1 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-500" /> Approve Salary Slip
+          </h3>
+          <p className="text-xs text-slate-500 mb-4">
+            Salary slips are generated automatically every month but stay hidden from {emp.name.split(' ')[0]} until you approve them here.
+          </p>
+
+          {pendingPayslips.length === 0 ? (
+            <p className="text-xs text-slate-400 font-semibold">No pending salary slips waiting for approval.</p>
+          ) : (
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+              <select
+                value={approveMonth}
+                onChange={(e) => setApproveMonth(e.target.value)}
+                className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-500 sm:w-64"
+              >
+                <option value="">Select month...</option>
+                {pendingPayslips.map(p => (
+                  <option key={p.id} value={p.id}>{monthLabel(p.month)} — {money(p.netPay)}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => approveMonth && approveSalarySlip(approveMonth)}
+                disabled={!approveMonth || approving}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                {approving ? 'Approving...' : 'Approve Salary Slip'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Full history */}
+        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+          <div className="px-6 pt-5">
+            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-1">All Salary Slips</h3>
+          </div>
+          <div className="overflow-x-auto p-6 pt-3">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 text-slate-400 uppercase tracking-wider">
+                  <th className="py-3 pr-4 font-extrabold">Month</th>
+                  <th className="py-3 pr-4 font-extrabold">Net Pay</th>
+                  <th className="py-3 pr-4 font-extrabold">Payment Status</th>
+                  <th className="py-3 pr-4 font-extrabold">Approval</th>
+                  <th className="py-3 font-extrabold">Approved By</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50 font-medium">
+                {empPayslips.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-slate-400 font-semibold">
+                      No salary slips generated for {emp.name} yet.
+                    </td>
+                  </tr>
+                )}
+                {empPayslips.map(p => (
+                  <tr key={p.id} className="hover:bg-slate-50/50">
+                    <td className="py-3.5 pr-4 text-slate-800 font-bold">{monthLabel(p.month)}</td>
+                    <td className="py-3.5 pr-4 text-slate-800 font-bold font-mono">{money(p.netPay)}</td>
+                    <td className="py-3.5 pr-4">
+                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border ${
+                        p.status === 'Paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-600 border-slate-100'
+                      }`}>
+                        {p.status}
+                      </span>
+                    </td>
+                    <td className="py-3.5 pr-4">
+                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border ${
+                        p.approved ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
+                      }`}>
+                        {p.approved ? 'Approved' : 'Pending Approval'}
+                      </span>
+                    </td>
+                    <td className="py-3.5 text-slate-500">{p.approved ? (p.approvedByName || '--') : '--'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (selectedEmployee) {
     const emp = selectedEmployee;
     const empQuotationCount = quotations.filter(q => q.salesperson === emp.id).length;
     const todayKey = currentMonthKey();
     const monthAttendanceCount = attendanceHistory.filter(a => a.employeeId === emp.id && (a.date || '').startsWith(todayKey) && a.status === 'Present').length;
+    const empPendingPayslipCount = payrolls.filter(p => p.employeeId === emp.id && !p.approved).length;
 
     return (
       <div className="p-4 md:p-6 space-y-6 max-w-4xl mx-auto font-sans text-slate-800 animate-in fade-in duration-200">
@@ -483,7 +618,7 @@ export default function EmployeeManagementView({ employee, employees = [], atten
             you ARE the Super Admin (see Employee Directory row buttons for
             the matching restriction on this same data). */}
         {(!emp.isSuperAdmin || employee?.id === emp.id) && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <button
               onClick={() => setDetailTab('attendance')}
               className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm text-left cursor-pointer hover:border-blue-200 hover:bg-blue-50/20 transition-all group"
@@ -512,6 +647,23 @@ export default function EmployeeManagementView({ employee, employees = [], atten
               <h3 className="text-sm font-bold text-slate-800 mt-4">Quotations</h3>
               <p className="text-xs text-slate-500 mt-1">Quotations created, their status and win-rate performance.</p>
               <p className="text-[10px] text-slate-400 font-semibold mt-3">{empQuotationCount} quotation(s) created</p>
+            </button>
+
+            <button
+              onClick={() => setDetailTab('payslips')}
+              className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm text-left cursor-pointer hover:border-blue-200 hover:bg-blue-50/20 transition-all group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
+                  <Wallet className="w-5 h-5" />
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-800 mt-4">Salary Slips</h3>
+              <p className="text-xs text-slate-500 mt-1">Review monthly salary slips and approve them for release.</p>
+              <p className={`text-[10px] font-semibold mt-3 ${empPendingPayslipCount > 0 ? 'text-amber-500' : 'text-slate-400'}`}>
+                {empPendingPayslipCount > 0 ? `${empPendingPayslipCount} pending approval` : 'All caught up'}
+              </p>
             </button>
           </div>
         )}

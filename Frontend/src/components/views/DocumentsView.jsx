@@ -31,7 +31,11 @@ function AmountRow({ label, value }) {
 export default function DocumentsView({ employee, payrolls = [] }) {
   const myPayslips = useMemo(
     () => payrolls
-      .filter(p => p.employeeId === employee.id)
+      // Non-admin/HR viewers only ever receive their own approved slips from
+      // the backend (see filterPayrollsForViewer), but Admin/HR receive the
+      // full company payroll unfiltered — re-apply both checks here so this
+      // page never shows a slip before HR has approved it, even for one's own.
+      .filter(p => p.employeeId === employee.id && p.approved)
       .sort((a, b) => b.month.localeCompare(a.month)),
     [payrolls, employee.id]
   );
