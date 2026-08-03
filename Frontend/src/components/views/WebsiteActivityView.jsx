@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Search, Globe, Package, Wrench, Handshake, Users, Mail, Phone, MapPin } from 'lucide-react';
+import { Search, Globe, Package, Wrench, Handshake, Users, Mail, Phone, MapPin, Briefcase } from 'lucide-react';
 
 const PRODUCT_ENQUIRY_STATUSES = ['new', 'contacted', 'converted', 'closed'];
 const AFTER_SALES_STATUSES = ['new', 'in-progress', 'resolved', 'closed'];
 const BECOME_PARTNER_STATUSES = ['new', 'contacted', 'approved', 'rejected'];
+const CAREER_APPLICATION_STATUSES = ['new', 'reviewing', 'shortlisted', 'rejected'];
 
 const STATUS_STYLES = {
   new: 'bg-blue-50 text-blue-600 border-blue-100',
@@ -12,6 +13,8 @@ const STATUS_STYLES = {
   converted: 'bg-emerald-50 text-emerald-600 border-emerald-100',
   approved: 'bg-emerald-50 text-emerald-600 border-emerald-100',
   resolved: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+  shortlisted: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+  reviewing: 'bg-amber-50 text-amber-600 border-amber-100',
   closed: 'bg-slate-100 text-slate-500 border-slate-200',
   rejected: 'bg-red-50 text-red-600 border-red-100',
 };
@@ -273,7 +276,75 @@ function WebsiteUsersTab({ items, search }) {
   );
 }
 
-const TABS = [
+// Recruitment data — unlike the tabs above, this one is HR/Admin-only (see
+// careerApplicationController.js). The parent decides whether to include
+// this tab in TABS based on the viewer's role.
+function CareerApplicationsTab({ items, search, onUpdateStatus }) {
+  const [savingId, setSavingId] = useState(null);
+  const filtered = items.filter(i => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return [i.firstName, i.lastName, i.email, i.phone, i.department].some(v => (v || '').toLowerCase().includes(q));
+  });
+
+  const handleStatus = async (id, status) => {
+    setSavingId(id);
+    try {
+      await onUpdateStatus(id, status);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  return (
+    <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="border-b border-slate-100 bg-slate-50/60">
+              <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Applicant</th>
+              <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Department</th>
+              <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Experience</th>
+              <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Message</th>
+              <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Submitted</th>
+              <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {filtered.map(item => (
+              <tr key={item._id} className="hover:bg-slate-50/60 transition-colors align-top">
+                <td className="px-5 py-3.5">
+                  <p className="font-bold text-xs text-slate-800">{item.firstName} {item.lastName}</p>
+                  <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5"><Mail className="w-3 h-3 shrink-0" /> {item.email}</p>
+                  <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3 shrink-0" /> {item.phone}</p>
+                </td>
+                <td className="px-5 py-3.5 text-xs font-semibold text-slate-600 max-w-[180px]">{item.department}</td>
+                <td className="px-5 py-3.5 text-xs text-slate-500">{item.experience || '--'}</td>
+                <td className="px-5 py-3.5 text-xs text-slate-500 max-w-[240px]">{item.message || '--'}</td>
+                <td className="px-5 py-3.5 text-[10px] text-slate-400 whitespace-nowrap">
+                  {item.createdAt ? new Date(item.createdAt).toLocaleString() : '--'}
+                </td>
+                <td className="px-5 py-3.5">
+                  <StatusSelect
+                    value={item.status}
+                    options={CAREER_APPLICATION_STATUSES}
+                    disabled={savingId === item._id}
+                    onChange={(status) => handleStatus(item._id, status)}
+                  />
+                </td>
+              </tr>
+            ))}
+            {filtered.length === 0 && <EmptyRow colSpan={6} label="No career applications yet." />}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+const BASE_TABS = [
   { id: 'enquiries', label: 'Product Enquiries', icon: Package },
   { id: 'service', label: 'After-Sales Requests', icon: Wrench },
   { id: 'partners', label: 'Become a Partner', icon: Handshake },
@@ -281,22 +352,34 @@ const TABS = [
 ];
 
 export default function WebsiteActivityView({
+  employee,
   productEnquiries = [],
   afterSalesServices = [],
   becomePartners = [],
   websiteUsers = [],
+  careerApplications = [],
   onUpdateProductEnquiryStatus,
   onUpdateAfterSalesServiceStatus,
   onUpdateBecomePartnerStatus,
+  onUpdateCareerApplicationStatus,
 }) {
   const [tab, setTab] = useState('enquiries');
   const [search, setSearch] = useState('');
+
+  // Career applications are HR/Admin-only (the API already enforces this —
+  // req.user.role gate in careerApplicationController.js — this just keeps
+  // the tab from showing up for roles that can't open it anyway).
+  const canViewCareerApplications = employee?.role === 'Admin' || employee?.role === 'HR';
+  const TABS = canViewCareerApplications
+    ? [...BASE_TABS, { id: 'careers', label: 'Career Applications', icon: Briefcase }]
+    : BASE_TABS;
 
   const counts = {
     enquiries: productEnquiries.length,
     service: afterSalesServices.length,
     partners: becomePartners.length,
     users: websiteUsers.length,
+    careers: careerApplications.length,
   };
 
   return (
@@ -352,6 +435,9 @@ export default function WebsiteActivityView({
       )}
       {tab === 'users' && (
         <WebsiteUsersTab items={websiteUsers} search={search} />
+      )}
+      {tab === 'careers' && canViewCareerApplications && (
+        <CareerApplicationsTab items={careerApplications} search={search} onUpdateStatus={onUpdateCareerApplicationStatus} />
       )}
     </div>
   );

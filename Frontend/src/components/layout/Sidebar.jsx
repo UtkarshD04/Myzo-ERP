@@ -61,7 +61,10 @@ export default function Sidebar({
       base.push({ id: 'vendors', label: 'Vendor Directory', icon: Truck });
     }
 
-    if (role === 'admin' || role === 'manager' || dept === 'sales') {
+    // HR included so they can reach the Career Applications tab in Website
+    // Activity — the tab itself is still gated to Admin/HR (see
+    // WebsiteActivityView.jsx), this just makes the page reachable.
+    if (role === 'admin' || role === 'manager' || role === 'hr' || dept === 'sales') {
       base.push({ id: 'website-activity', label: 'Website Activity', icon: Globe });
     }
 

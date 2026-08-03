@@ -257,4 +257,8 @@ export const api = {
     method: 'PATCH',
     body: JSON.stringify({ status }),
   }),
+  updateCareerApplicationStatus: (id, status) => request(`/career-applications/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  }),
 };

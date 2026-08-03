@@ -63,6 +63,7 @@ export default function App() {
   const [productEnquiries, setProductEnquiries] = useState([]);
   const [afterSalesServices, setAfterSalesServices] = useState([]);
   const [becomePartners, setBecomePartners] = useState([]);
+  const [careerApplications, setCareerApplications] = useState([]);
   const [apiStatus, setApiStatus] = useState('connecting');
   const [kpis, setKpis] = useState({});
 
@@ -102,6 +103,7 @@ export default function App() {
     if (state.productEnquiries)  setProductEnquiries(state.productEnquiries);
     if (state.afterSalesServices) setAfterSalesServices(state.afterSalesServices);
     if (state.becomePartners)    setBecomePartners(state.becomePartners);
+    if (state.careerApplications) setCareerApplications(state.careerApplications);
   };
 
   // ─── Bootstrap from API on mount ────────────────────────────────────────────
@@ -212,6 +214,7 @@ export default function App() {
     setProductEnquiries([]);
     setAfterSalesServices([]);
     setBecomePartners([]);
+    setCareerApplications([]);
     setKpis({});
     setApiStatus('connecting');
     setActiveTab('dashboard');
@@ -478,6 +481,11 @@ export default function App() {
   const handleUpdateBecomePartnerStatus = async (id, status) => {
     const { becomePartners: updated } = await api.updateBecomePartnerStatus(id, status);
     setBecomePartners(updated);
+  };
+
+  const handleUpdateCareerApplicationStatus = async (id, status) => {
+    const { careerApplications: updated } = await api.updateCareerApplicationStatus(id, status);
+    setCareerApplications(updated);
   };
 
   // ─── Auth Guard ──────────────────────────────────────────────────────────────
@@ -751,13 +759,16 @@ export default function App() {
 
           {activeTab === 'website-activity' && (
             <WebsiteActivityView
+              employee={employee}
               productEnquiries={productEnquiries}
               afterSalesServices={afterSalesServices}
               becomePartners={becomePartners}
               websiteUsers={websiteUsers}
+              careerApplications={careerApplications}
               onUpdateProductEnquiryStatus={handleUpdateProductEnquiryStatus}
               onUpdateAfterSalesServiceStatus={handleUpdateAfterSalesServiceStatus}
               onUpdateBecomePartnerStatus={handleUpdateBecomePartnerStatus}
+              onUpdateCareerApplicationStatus={handleUpdateCareerApplicationStatus}
             />
           )}
 

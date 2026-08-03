@@ -23,6 +23,7 @@ import { getWebsiteUsers } from '../controllers/websiteUserController.js';
 import { getProductEnquiries, modifyProductEnquiryStatus } from '../controllers/productEnquiryController.js';
 import { getAfterSalesServices, modifyAfterSalesServiceStatus } from '../controllers/afterSalesServiceController.js';
 import { getBecomePartners, modifyBecomePartnerStatus } from '../controllers/becomePartnerController.js';
+import { getCareerApplications, modifyCareerApplicationStatus } from '../controllers/careerApplicationController.js';
 
 export const routes = [
   // Only the login route is reachable without a valid session token — every
@@ -97,6 +98,9 @@ export const routes = [
   { method: 'GET', path: '/api/after-sales-services', handler: getAfterSalesServices },
   { method: 'PATCH', path: '/api/after-sales-services/:id', handler: modifyAfterSalesServiceStatus },
   { method: 'GET', path: '/api/become-partners', handler: getBecomePartners },
-  { method: 'PATCH', path: '/api/become-partners/:id', handler: modifyBecomePartnerStatus }
+  { method: 'PATCH', path: '/api/become-partners/:id', handler: modifyBecomePartnerStatus },
+  // HR-only, unlike the routes above — see careerApplicationController.js.
+  { method: 'GET', path: '/api/career-applications', handler: getCareerApplications },
+  { method: 'PATCH', path: '/api/career-applications/:id', handler: modifyCareerApplicationStatus }
 ];
 
