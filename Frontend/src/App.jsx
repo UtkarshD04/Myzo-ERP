@@ -257,6 +257,10 @@ export default function App() {
   const handleCheckIn = async () => {
     try {
       const location = await getLocation();
+      if (!location) {
+        alert('Location access is required to check in. Please allow location permission in your browser and try again.');
+        return;
+      }
       const state = await api.checkIn(employee.id, location);
       applyServerState(state);
     } catch (err) {
@@ -267,6 +271,10 @@ export default function App() {
   const handleCheckOut = async () => {
     try {
       const location = await getLocation();
+      if (!location) {
+        alert('Location access is required to check out. Please allow location permission in your browser and try again.');
+        return;
+      }
       const state = await api.checkOut(employee.id, location);
       applyServerState(state);
     } catch (err) {
