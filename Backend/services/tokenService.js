@@ -11,7 +11,7 @@ const EXPIRES_IN = process.env.JWT_EXPIRES_IN || '12h';
 // client-supplied role/id again, this is the one source of truth for both.
 export function signToken(employee) {
   return jwt.sign(
-    { id: employee.id, role: employee.role, name: employee.name, email: employee.officialEmail },
+    { id: employee.id, role: employee.role, name: employee.name, email: employee.officialEmail, isSuperAdmin: employee.isSuperAdmin === true },
     SECRET,
     { expiresIn: EXPIRES_IN }
   );
