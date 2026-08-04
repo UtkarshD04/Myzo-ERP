@@ -1,7 +1,56 @@
 import React, { useState } from 'react';
-import { KeyRound, ShieldAlert, Sparkles, Mail, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
+import { KeyRound, ShieldAlert, Mail, Eye, EyeOff, Loader2 } from 'lucide-react';
 
-export default function LoginScreen({ employees = [], onLoginSuccess, onForgotPassword }) {
+function DeskIllustration() {
+  return (
+    <svg viewBox="0 0 400 400" className="w-full h-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Window */}
+      <rect x="250" y="18" width="120" height="150" rx="8" fill="#EEF2FF" stroke="#C7D2FE" strokeWidth="6" />
+      <line x1="310" y1="18" x2="310" y2="168" stroke="#C7D2FE" strokeWidth="6" />
+      <line x1="250" y1="93" x2="370" y2="93" stroke="#C7D2FE" strokeWidth="6" />
+
+      {/* Shelf */}
+      <rect x="14" y="150" width="66" height="150" rx="6" fill="#1E1B4B" />
+      <rect x="22" y="176" width="50" height="6" fill="#4338CA" />
+      <rect x="22" y="222" width="50" height="6" fill="#4338CA" />
+      <rect x="26" y="188" width="14" height="30" rx="2" fill="#818CF8" />
+      <rect x="44" y="184" width="14" height="34" rx="2" fill="#6366F1" />
+
+      {/* Desk */}
+      <rect x="70" y="288" width="300" height="16" rx="4" fill="#1E1B4B" />
+      <rect x="90" y="304" width="10" height="70" fill="#312E81" />
+      <rect x="340" y="304" width="10" height="70" fill="#312E81" />
+
+      {/* Plant */}
+      <path d="M120 288 C110 260 118 232 132 214 C146 232 154 260 144 288 Z" fill="#10B981" />
+      <path d="M132 288 C126 268 130 248 140 234 C150 248 152 268 146 288 Z" fill="#34D399" />
+      <rect x="112" y="286" width="42" height="28" rx="5" fill="#1E1B4B" />
+
+      {/* Monitor */}
+      <rect x="188" y="188" width="120" height="86" rx="8" fill="#312E81" />
+      <rect x="198" y="198" width="100" height="62" rx="3" fill="#818CF8" />
+      <rect x="236" y="274" width="24" height="16" fill="#1E1B4B" />
+      <rect x="222" y="290" width="52" height="8" rx="3" fill="#1E1B4B" />
+
+      {/* Mug */}
+      <rect x="320" y="266" width="22" height="22" rx="4" fill="#4338CA" />
+      <path d="M342 270 q10 0 10 8 t-10 8" stroke="#4338CA" strokeWidth="4" fill="none" />
+
+      {/* Chair */}
+      <rect x="196" y="330" width="70" height="16" rx="6" fill="#1E1B4B" />
+      <rect x="205" y="234" width="52" height="96" rx="14" fill="#1E293B" />
+
+      {/* Person */}
+      <path d="M190 260 C190 228 214 210 232 210 C250 210 274 228 274 260 L274 300 L190 300 Z" fill="#6366F1" />
+      <circle cx="232" cy="176" r="30" fill="#F3C99D" />
+      <path d="M202 168 C202 142 218 128 232 128 C248 128 264 142 262 166 C256 156 246 150 232 150 C218 150 206 156 202 168 Z" fill="#1E1B4B" />
+      <rect x="208" y="232" width="20" height="46" rx="8" fill="#F3C99D" />
+      <rect x="238" y="232" width="20" height="46" rx="8" fill="#F3C99D" />
+    </svg>
+  );
+}
+
+export default function LoginScreen({ employees = [], onLoginSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [preview, setPreview] = useState(null);
@@ -32,173 +81,136 @@ export default function LoginScreen({ employees = [], onLoginSuccess, onForgotPa
   };
 
   const roleColor = {
-    Admin: 'bg-indigo-50 text-indigo-600 border border-indigo-100',
-    Manager: 'bg-amber-50 text-amber-600 border border-amber-100',
-    HR: 'bg-rose-50 text-rose-600 border border-rose-100',
-    Employee: 'bg-sky-50 text-sky-600 border border-sky-100',
+    Admin: 'bg-indigo-500/40 text-white border border-indigo-300/30',
+    Manager: 'bg-amber-500/40 text-white border border-amber-300/30',
+    HR: 'bg-rose-500/40 text-white border border-rose-300/30',
+    Employee: 'bg-sky-500/40 text-white border border-sky-300/30',
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/50 to-indigo-50/70 font-sans relative overflow-hidden p-4">
-      {/* Ambient Background Blobs */}
-      <div className="absolute top-0 -left-24 w-96 h-96 bg-blue-300 rounded-full filter blur-[120px] opacity-40 animate-pulse" />
-      <div className="absolute bottom-0 -right-24 w-96 h-96 bg-indigo-300 rounded-full filter blur-[120px] opacity-40 animate-pulse" style={{ animationDelay: '1s' }} />
-      <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-violet-200 rounded-full filter blur-[100px] opacity-30 animate-float" />
+    <div className="min-h-screen w-full flex items-center justify-center lg:justify-start relative overflow-hidden bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 font-sans px-4 lg:pl-16 xl:pl-28">
 
-      {/* Main Card */}
-      <div className="w-full max-w-5xl h-auto md:h-[640px] flex rounded-3xl overflow-hidden border border-slate-200/80 bg-white shadow-2xl shadow-slate-300/40 relative z-10 animate-in fade-in zoom-in-95 duration-500">
+      {/* Full-page wave background */}
+      <svg
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        preserveAspectRatio="none"
+        viewBox="0 0 1920 1080"
+        fill="none"
+      >
+        <path d="M0,320 C420,520 720,140 1920,460 L1920,1080 L0,1080 Z" fill="#C7D2FE" opacity="0.55" />
+        <path d="M0,520 C520,720 920,360 1920,660 L1920,1080 L0,1080 Z" fill="#A5B4FC" opacity="0.45" />
+        <path d="M0,720 C620,860 1020,610 1920,860 L1920,1080 L0,1080 Z" fill="#818CF8" opacity="0.25" />
+      </svg>
 
-        {/* Left Side: Brand Showcase */}
-        <div className="hidden md:flex md:w-1/2 relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-12 flex-col justify-between overflow-hidden">
-          {/* Decorative texture */}
-          <div className="absolute -top-16 -right-16 w-64 h-64 border border-white/10 rounded-full" />
-          <div className="absolute top-24 -right-8 w-40 h-40 border border-white/10 rounded-full" />
-          <div className="absolute -bottom-20 -left-10 w-72 h-72 bg-white/5 rounded-full filter blur-2xl animate-float" style={{ animationDelay: '0.5s' }} />
+      {/* Desk illustration */}
+      <div className="hidden lg:block absolute right-16 xl:right-32 bottom-16 w-64 xl:w-80 z-10">
+        <DeskIllustration />
+      </div>
 
-          <div className="bg-white rounded-2xl px-4 py-2.5 shadow-lg shadow-blue-950/20 inline-flex self-start relative z-10 animate-in fade-in slide-in-from-top-2 duration-500">
-            <img src="/logo.png" alt="Myzo" className="h-8 w-auto" />
+      {/* Card */}
+      <div className="relative z-20 w-full max-w-sm md:max-w-md rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl shadow-indigo-950/20 my-10">
+        {/* Card wave background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-blue-900 to-blue-700" />
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none" viewBox="0 0 500 700" fill="none">
+          <path d="M0,140 C150,300 350,40 500,210 L500,700 L0,700 Z" fill="#3B82F6" opacity="0.35" />
+          <path d="M0,270 C180,420 320,170 500,370 L500,700 L0,700 Z" fill="#60A5FA" opacity="0.25" />
+        </svg>
+
+        <div className="relative z-10 p-7 sm:p-9 md:p-10">
+
+          {/* Logo */}
+          <div className="flex items-center gap-2.5 mb-9">
+           
+            <span className="text-lg font-extrabold text-white tracking-tight">    <img src="/loginpagelogo.png" alt="Myzo" className="w-10 h-10 rounded-xl object-cover" /><span className="text-blue-400">ERP</span></span>
           </div>
 
-          <div className="space-y-6 relative z-10">
-            <div
-              className="inline-flex items-center space-x-2 px-3 py-1 bg-white/10 border border-white/15 backdrop-blur-sm rounded-full text-xs font-semibold text-blue-100 animate-in fade-in slide-in-from-bottom duration-500"
-              style={{ animationDelay: '80ms' }}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Production Grade Performance</span>
-            </div>
-            <h1
-              className="text-4xl font-extrabold text-white tracking-tight leading-[1.15] animate-in fade-in slide-in-from-bottom duration-500"
-              style={{ animationDelay: '160ms' }}
-            >
-              Redefining <br />
-              <span className="bg-gradient-to-r from-blue-200 via-sky-100 to-white bg-clip-text text-transparent">
-                Workforce Intelligence.
+          <h2 className="text-2xl font-bold text-white mb-6">Welcome back!</h2>
+
+          {/* Employee preview */}
+          {preview && (
+            <div className="flex items-center gap-3 p-3 rounded-xl mb-5 bg-white/10 border border-white/15">
+              <img
+                src={preview.photo}
+                alt={preview.name}
+                className="w-9 h-9 rounded-lg object-cover shrink-0 border border-white/15"
+                referrerPolicy="no-referrer"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm text-white truncate">{preview.name}</p>
+                <p className="text-[10px] text-white/50 truncate">{preview.designation} · {preview.department}</p>
+              </div>
+              <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${roleColor[preview.role] || 'bg-white/20 text-white'}`}>
+                {preview.role}
               </span>
-            </h1>
-            <p
-              className="text-blue-100/80 text-sm leading-relaxed max-w-sm animate-in fade-in slide-in-from-bottom duration-500"
-              style={{ animationDelay: '240ms' }}
-            >
-              An enterprise dashboard equipped with geolocated attendance trackers, Kanban-style sprint boards, and intuitive role-based views.
-            </p>
-          </div>
-
-          <div className="flex items-center justify-between text-xs text-blue-200/70 pt-6 border-t border-white/10 relative z-10">
-            <span>© 2026 MYZO Systems Inc.</span>
-            <span>v2.1.0-alpha</span>
-          </div>
-        </div>
-
-        {/* Right Side: Credential Form */}
-        <div className="w-full md:w-1/2 p-8 sm:p-12 flex flex-col justify-center bg-white">
-          <div className="space-y-6">
-            <div className="md:hidden">
-              <img src="/logo.png" alt="Myzo" className="h-8 w-auto" />
             </div>
-            <div className="animate-in fade-in slide-in-from-bottom duration-500">
-              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">System Access</h2>
-              <p className="text-xs text-slate-500 mt-1">Provide your credentials to check in and initialize your dashboard.</p>
-            </div>
+          )}
 
-            {/* Live Employee Match Preview */}
-            {preview && (
-              <div className="flex items-center space-x-3.5 p-3.5 bg-blue-50/60 border border-blue-100 rounded-2xl animate-in fade-in slide-in-from-top-2 duration-300">
-                <img
-                  src={preview.photo}
-                  alt={preview.name}
-                  className="w-11 h-11 rounded-xl object-cover border border-white shadow-sm"
-                  referrerPolicy="no-referrer"
+          <form onSubmit={handleLogin} className="space-y-5">
+
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-white/60">Email Address</label>
+              <div className="relative">
+                <input
+                  type="email"
+                  required
+                  placeholder="example@email.com"
+                  value={email}
+                  onChange={(e) => handleEmailChange(e.target.value)}
+                  className="w-full pl-4 pr-14 py-3.5 rounded-xl text-sm text-slate-800 bg-white/95 placeholder-slate-400 border border-white/40 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all font-medium"
                 />
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm text-slate-800 truncate">{preview.name}</p>
-                  <p className="text-xs text-slate-500 truncate">{preview.designation} · {preview.department}</p>
-                </div>
-                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${roleColor[preview.role] || 'bg-slate-100 text-slate-500'}`}>
-                  {preview.role}
+                <span className="absolute right-1.5 top-1.5 bottom-1.5 w-10 rounded-lg bg-indigo-950 flex items-center justify-center">
+                  <Mail className="w-4 h-4 text-white" />
                 </span>
+              </div>
+            </div>
+
+            {/* Password */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-white/60">Password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-4 pr-14 py-3.5 rounded-xl text-sm text-slate-800 bg-white/95 placeholder-slate-400 border border-white/40 focus:outline-none focus:ring-2 focus:ring-white/50 transition-all font-medium"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((p) => !p)}
+                  className="absolute right-1.5 top-1.5 bottom-1.5 w-10 rounded-lg bg-indigo-950 flex items-center justify-center cursor-pointer"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4 text-white" /> : <KeyRound className="w-4 h-4 text-white" />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2.5 p-3 rounded-xl text-xs font-semibold text-red-200 bg-red-500/20 border border-red-400/30">
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
               </div>
             )}
 
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div
-                className="space-y-1.5 animate-in fade-in slide-in-from-bottom duration-500"
-                style={{ animationDelay: '80ms' }}
-              >
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Official Email</label>
-                <div className="relative group">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-colors group-focus-within:text-blue-600" />
-                  <input
-                    type="email"
-                    required
-                    placeholder="name@myzo.com"
-                    value={email}
-                    onChange={(e) => handleEmailChange(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all duration-200 font-medium"
-                  />
-                </div>
-              </div>
-
-              <div
-                className="space-y-1.5 animate-in fade-in slide-in-from-bottom duration-500"
-                style={{ animationDelay: '160ms' }}
-              >
-                <div className="flex items-center justify-between">
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Password</label>
-                  <span
-                    onClick={onForgotPassword}
-                    className="text-[10px] text-blue-600 hover:underline cursor-pointer font-semibold"
-                  >
-                    Forgot Password?
-                  </span>
-                </div>
-                <div className="relative group">
-                  <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-colors group-focus-within:text-blue-600" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-11 pr-11 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all duration-200 font-medium"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((p) => !p)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-                  >
-                    {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
-                  </button>
-                </div>
-              </div>
-
-              {error && (
-                <div className="flex items-center space-x-2.5 p-3.5 bg-red-50 border border-red-100 text-red-600 rounded-xl text-xs font-semibold animate-shake">
-                  <ShieldAlert className="w-4.5 h-4.5 shrink-0" />
-                  <span>{error}</span>
-                </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 bg-indigo-950 hover:bg-indigo-900 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-indigo-950/40 cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Authenticating…</span>
+                </>
+              ) : (
+                <span>Login Now</span>
               )}
+            </button>
+          </form>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:from-blue-300 disabled:to-indigo-300 text-white font-semibold rounded-xl text-sm transition-all duration-200 shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] mt-2 cursor-pointer disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2 group animate-in fade-in slide-in-from-bottom duration-500"
-                style={{ animationDelay: '240ms' }}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Authenticating…</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Sign In</span>
-                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
+          <p className="text-white/25 text-[10px] text-center mt-7">© 2026 MYZO Systems Inc.</p>
         </div>
       </div>
     </div>
