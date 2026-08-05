@@ -6,7 +6,7 @@ import { filterAttendanceForViewer } from '../models/attendanceModel.js';
 // than trusting the frontend to have refused to send it.
 function requireLocation(location) {
   if (!location || typeof location.lat !== 'number' || typeof location.lng !== 'number') {
-    const error = new Error('Location access is required to check in/out. Please allow location permission in your browser and try again.');
+    const error = new Error('Location access is required to punch in/out. Please allow location permission in your browser and try again.');
     error.statusCode = 400;
     throw error;
   }
@@ -22,6 +22,6 @@ export async function checkInEmployee(req, res) {
 
 export async function checkOutEmployee(req, res) {
   requireLocation(req.body.location);
-  const result = await checkOut({ employeeId: req.user.id, location: req.body.location });
+  const result = await checkOut({ employeeId: req.user.id, location: req.body.location, reason: req.body.reason });
   res.json({ ...result, attendance: filterAttendanceForViewer(result.attendance, req.user) });
 }

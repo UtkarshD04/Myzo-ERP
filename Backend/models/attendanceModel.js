@@ -21,7 +21,9 @@ const attendanceSchema = new mongoose.Schema({
   workingHours: { type: Number, default: 0 },
   overtime: { type: Number, default: 0 },
   status: { type: String, default: 'Present' },
-  lateMark: { type: Boolean, default: false }
+  lateMark: { type: Boolean, default: false },
+  autoCheckOut: { type: Boolean, default: false },
+  lateCheckoutReason: { type: String, default: null }
 }, { timestamps: true });
 
 attendanceSchema.index({ employeeId: 1, date: 1 });

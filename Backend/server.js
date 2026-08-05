@@ -5,10 +5,12 @@ import { Employee } from './models/employeeModel.js';
 import { requestHandler } from './services/router.js';
 import { checkPendingQuotationFollowUps } from './services/followUpService.js';
 import { runMonthlyPayrollAutoGeneration } from './services/payrollAutoGenService.js';
+import { runDailyAutoPunchOut } from './services/autoPunchOutService.js';
 
 const PORT = process.env.PORT || 8080;
 const FOLLOW_UP_CHECK_INTERVAL_MS = 60 * 60 * 1000; // hourly is frequent enough for a day(s)-scale reminder
 const PAYROLL_AUTO_GEN_CHECK_INTERVAL_MS = 60 * 60 * 1000; // hourly; the service itself only acts once, on the 5th
+const AUTO_PUNCH_OUT_CHECK_INTERVAL_MS = 60 * 1000; // minutely so the 11:59 PM cutoff is caught promptly
 
 connectDB()
   .then(() => Employee.init())
@@ -22,6 +24,10 @@ connectDB()
     setInterval(() => {
       runMonthlyPayrollAutoGeneration().catch(err => console.error('Monthly payroll auto-generation failed:', err.message));
     }, PAYROLL_AUTO_GEN_CHECK_INTERVAL_MS);
+
+    setInterval(() => {
+      runDailyAutoPunchOut().catch(err => console.error('Auto punch-out check failed:', err.message));
+    }, AUTO_PUNCH_OUT_CHECK_INTERVAL_MS);
 
     const server = http.createServer(requestHandler);
 

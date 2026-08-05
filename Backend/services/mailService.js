@@ -128,6 +128,34 @@ function buildPasswordResetEmailHtml(employee, link) {
   `;
 }
 
+function buildLateCheckoutEmailHtml(employee, reason, time) {
+  return `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#1e293b;">
+      <h2 style="color:#dc2626;margin-bottom:4px;">Late Punch-Out</h2>
+      <p><strong>${esc(employee.name)}</strong>${employee.department ? ` (${esc(employee.department)})` : ''} punched out at ${esc(time)}, after the 6:30 PM cutoff.</p>
+      <table style="width:100%;margin-top:16px;border-collapse:collapse;">
+        <tr><td style="padding:6px 0;color:#64748b;">Reason given:</td><td style="padding:6px 0;font-weight:bold;">${esc(reason)}</td></tr>
+      </table>
+      <p style="margin-top:24px;">Regards,<br/>MYZO ERP</p>
+    </div>
+  `;
+}
+
+// Best-effort by design: recipients is the current HR/Admin roster, looked up
+// fresh by the caller (attendanceService) rather than hardcoded, and a
+// missing SMTP config or empty roster should never block the punch-out itself.
+export async function sendLateCheckoutEmail(employee, reason, time, recipients) {
+  const t = getTransporter();
+  if (!t || !recipients?.length) return;
+
+  await t.sendMail({
+    from: `"MYZO ERP" <${process.env.SMTP_USER}>`,
+    to: recipients.join(','),
+    subject: `Late Punch-Out: ${employee.name} at ${time}`,
+    html: buildLateCheckoutEmailHtml(employee, reason, time)
+  });
+}
+
 export async function sendPasswordResetEmail(employee, link) {
   const t = getTransporter();
   if (!t) {

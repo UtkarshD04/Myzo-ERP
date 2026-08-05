@@ -5,6 +5,7 @@ export function notFound(req, res) {
 export function handleError(error, req, res) {
   const statusCode = error.statusCode || 500;
   res.status(statusCode).json({
-    message: error.message || 'Internal server error'
+    message: error.message || 'Internal server error',
+    ...(error.requiresReason ? { requiresReason: true } : {})
   });
 }

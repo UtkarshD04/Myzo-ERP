@@ -34,7 +34,7 @@ export default function Navbar({
         <div className="hidden md:flex items-center space-x-2 px-3.5 py-1.5 bg-slate-50 rounded-full border border-slate-100 text-xs">
           <span className={`w-2 h-2 rounded-full ${isCheckedIn ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`}></span>
           <span className="font-semibold text-slate-600">
-            {isCheckedIn ? 'Online · Active' : 'Offline · Checked Out'}
+            {isCheckedIn ? 'Online · Active' : 'Offline · Punched Out'}
           </span>
           {todayAttendance?.checkIn && (
             <span className="text-slate-400 font-medium pl-1 border-l border-slate-200">

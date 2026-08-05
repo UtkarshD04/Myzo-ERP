@@ -49,7 +49,7 @@ export default function HRDashboard({ employee, employees = [], attendanceHistor
         </div>
 
         <div className="bg-white border border-slate-100 rounded-2xl p-4 sm:p-5 shadow-sm min-w-0">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Checked In Today</span>
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Punched In Today</span>
           <h3 className="text-xl sm:text-2xl font-black text-slate-800 mt-1 truncate">{checkedInToday} Present</h3>
           <span className="text-[10px] text-slate-400 font-semibold block mt-1.5 truncate">
             {employees.length > 0 ? Math.round((checkedInToday / employees.length) * 100) : 0}% of workforce

@@ -36,6 +36,14 @@ export async function addEmployee(req, res) {
     throw error;
   }
 
+  // Boolean, so it can't join REQUIRED_FIELDS' truthy check above — `false`
+  // (Office Employee) would wrongly read as "missing".
+  if (typeof req.body.isField !== 'boolean') {
+    const error = new Error('Please specify whether this employee is a Field Employee.');
+    error.statusCode = 400;
+    throw error;
+  }
+
   if (req.body.password.length < 6) {
     const error = new Error('Password must be at least 6 characters.');
     error.statusCode = 400;

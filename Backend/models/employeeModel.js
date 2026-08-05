@@ -29,6 +29,10 @@ const employeeSchema = new mongoose.Schema({
   // permanent Admin: the only account allowed to create further Admins, and
   // the only account no one can delete.
   isSuperAdmin: { type: Boolean, default: false },
+  // Whether this employee works out in the field vs. at a desk. Required at
+  // creation (see employeeController.addEmployee) rather than defaulting
+  // silently, since it's an explicit HR/Admin call about the employee's role.
+  isField: { type: Boolean, default: false },
   bankName: String,
   accountNo: String,
   ifscCode: String,

@@ -18,6 +18,7 @@ const EMPTY_FORM = {
   designation: '',
   post: '',
   role: 'Employee',
+  isField: false,
   reportsTo: '',
   joiningDate: '',
   salary: '',
@@ -100,6 +101,7 @@ export default function EmployeeManagementView({ employee, employees = [], atten
       designation: emp.designation || '',
       post: emp.post || '',
       role: emp.role || 'Employee',
+      isField: !!emp.isField,
       reportsTo: emp.reportsTo || '',
       joiningDate: emp.joiningDate || '',
       salary: emp.salary || '',
@@ -127,8 +129,8 @@ export default function EmployeeManagementView({ employee, employees = [], atten
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
     setError('');
+    setSubmitting(true);
 
     const payload = {
       ...form,
@@ -273,8 +275,8 @@ export default function EmployeeManagementView({ employee, employees = [], atten
               <thead>
                 <tr className="border-b border-slate-100 text-slate-400 uppercase tracking-wider">
                   <th className="py-3 pr-4 font-extrabold">Date</th>
-                  <th className="py-3 pr-4 font-extrabold">Check-In</th>
-                  <th className="py-3 pr-4 font-extrabold">Check-Out</th>
+                  <th className="py-3 pr-4 font-extrabold">Punch-In</th>
+                  <th className="py-3 pr-4 font-extrabold">Punch-Out</th>
                   <th className="py-3 pr-4 font-extrabold">Hours</th>
                   <th className="py-3 pr-4 font-extrabold">Overtime</th>
                   <th className="py-3 pr-4 font-extrabold">Location</th>
@@ -630,7 +632,7 @@ export default function EmployeeManagementView({ employee, employees = [], atten
                 <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
               </div>
               <h3 className="text-sm font-bold text-slate-800 mt-4">Attendance</h3>
-              <p className="text-xs text-slate-500 mt-1">Monthly check-in/out history, working hours and overtime.</p>
+              <p className="text-xs text-slate-500 mt-1">Monthly punch-in/out history, working hours and overtime.</p>
               <p className="text-[10px] text-slate-400 font-semibold mt-3">{monthAttendanceCount} day(s) present this month</p>
             </button>
 
@@ -789,6 +791,28 @@ export default function EmployeeManagementView({ employee, employees = [], atten
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
               />
             </div>
+          </div>
+
+          <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+            <div>
+              <label className="block text-xs font-bold text-slate-700">Field Employee *</label>
+              <p className="text-[10px] text-slate-400 font-medium mt-0.5">Works out in the field rather than at a desk.</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={form.isField}
+              onClick={() => setForm({ ...form, isField: !form.isField })}
+              className={`relative shrink-0 w-11 h-6 rounded-full transition-colors cursor-pointer ${
+                form.isField ? 'bg-blue-600' : 'bg-slate-300'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
+                  form.isField ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -21,8 +21,8 @@ export default function AttendanceView({
   const handleExport = () => {
     exportToCsv(`Attendance-${employee.name}`, [
       { label: 'Date', value: 'date' },
-      { label: 'Check-In', value: (r) => r.checkIn || '' },
-      { label: 'Check-Out', value: (r) => r.checkOut || '' },
+      { label: 'Punch-In', value: (r) => r.checkIn || '' },
+      { label: 'Punch-Out', value: (r) => r.checkOut || '' },
       { label: 'Working Hours', value: (r) => r.workingHours || 0 },
       { label: 'Overtime', value: (r) => r.overtime || 0 },
       { label: 'Location', value: (r) => r.checkInLocation?.placeName || r.checkOutLocation?.placeName || '' },
@@ -45,7 +45,7 @@ export default function AttendanceView({
       <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Attendance Tracker</h2>
-          <p className="text-xs text-slate-500 mt-1">Register daily check-ins and audit historical shift timings.</p>
+          <p className="text-xs text-slate-500 mt-1">Register daily punch-ins and audit historical shift timings.</p>
         </div>
 
         {/* Live check in action */}
@@ -53,7 +53,7 @@ export default function AttendanceView({
           {todayRecord && (
             <div className="text-right hidden sm:block">
               <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">
-                {isCheckedIn ? 'Checked In' : 'Checked Out'} · {todayRecord.date}
+                {isCheckedIn ? 'Punched In' : 'Punched Out'} · {todayRecord.date}
               </span>
               <span className="text-xs text-slate-700 font-semibold block">
                 {isCheckedIn ? todayRecord.checkIn : (todayRecord.checkOut || todayRecord.checkIn)}
@@ -72,7 +72,7 @@ export default function AttendanceView({
               onClick={onCheckOut}
               className="px-5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs rounded-xl border border-red-200 transition-all cursor-pointer active:scale-95 shadow-sm"
             >
-              Checkout Session
+              Punch Out
             </button>
           ) : isCompletedToday ? (
             <span className="px-5 py-2.5 bg-emerald-50 text-emerald-600 font-bold text-xs rounded-xl border border-emerald-200 cursor-not-allowed">
@@ -83,7 +83,7 @@ export default function AttendanceView({
               onClick={onCheckIn}
               className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer active:scale-95 shadow-md shadow-blue-500/10"
             >
-              Register Check-in
+              Register Punch-In
             </button>
           )}
         </div>
@@ -109,8 +109,8 @@ export default function AttendanceView({
               <thead>
                 <tr className="border-b border-slate-100 text-slate-400 uppercase tracking-wider">
                   <th className="py-3 pr-4 font-extrabold">Date</th>
-                  <th className="py-3 pr-4 font-extrabold">Check-In</th>
-                  <th className="py-3 pr-4 font-extrabold">Check-Out</th>
+                  <th className="py-3 pr-4 font-extrabold">Punch-In</th>
+                  <th className="py-3 pr-4 font-extrabold">Punch-Out</th>
                   <th className="py-3 pr-4 font-extrabold">Working Hours</th>
                   <th className="py-3 pr-4 font-extrabold">Overtime</th>
                   <th className="py-3 pr-4 font-extrabold">Location</th>
@@ -175,7 +175,7 @@ export default function AttendanceView({
           <div className="bg-amber-50/50 border border-amber-200/40 rounded-2xl p-4.5 text-xs text-amber-800 flex items-start space-x-2.5">
             <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
             <p className="leading-relaxed">
-              <strong>Check-out rule:</strong> Forgetting check-outs twice in a row flags the attendance logs for HR review. Ensure you check out at end of shift.
+              <strong>Punch-out rule:</strong> Forgetting punch-outs twice in a row flags the attendance logs for HR review. Ensure you punch out at end of shift.
             </p>
           </div>
         </div>

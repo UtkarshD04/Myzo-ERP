@@ -23,6 +23,7 @@ async function request(path, options = {}) {
   if (!res.ok) {
     const error = new Error(data.message || 'Request failed');
     error.status = res.status;
+    Object.assign(error, data);
     throw error;
   }
   return data;
@@ -61,9 +62,9 @@ export const api = {
     body: JSON.stringify({ employeeId, location }),
   }),
 
-  checkOut: (employeeId, location) => request('/attendance/check-out', {
+  checkOut: (employeeId, location, reason) => request('/attendance/check-out', {
     method: 'POST',
-    body: JSON.stringify({ employeeId, location }),
+    body: JSON.stringify({ employeeId, location, reason }),
   }),
 
   // Employees

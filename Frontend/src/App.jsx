@@ -258,7 +258,7 @@ export default function App() {
     try {
       const location = await getLocation();
       if (!location) {
-        alert('Location access is required to check in. Please allow location permission in your browser and try again.');
+        alert('Location access is required to punch in. Please allow location permission in your browser and try again.');
         return;
       }
       const state = await api.checkIn(employee.id, location);
@@ -272,10 +272,24 @@ export default function App() {
     try {
       const location = await getLocation();
       if (!location) {
-        alert('Location access is required to check out. Please allow location permission in your browser and try again.');
+        alert('Location access is required to punch out. Please allow location permission in your browser and try again.');
         return;
       }
-      const state = await api.checkOut(employee.id, location);
+
+      let state;
+      try {
+        state = await api.checkOut(employee.id, location);
+      } catch (err) {
+        // Office employees punching out after 6:30 PM must give HR/Admin a
+        // reason first — the backend flags this instead of just failing.
+        if (err.requiresReason) {
+          const reason = window.prompt(err.message);
+          if (!reason || !reason.trim()) return;
+          state = await api.checkOut(employee.id, location, reason.trim());
+        } else {
+          throw err;
+        }
+      }
       applyServerState(state);
     } catch (err) {
       alert(err.message);

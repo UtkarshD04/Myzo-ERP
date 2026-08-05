@@ -261,8 +261,8 @@ export const INITIAL_HOLIDAYS = [
 export const INITIAL_NOTIFICATIONS = [
   {
     id: 'NOT-01',
-    title: 'Attendance Checked In',
-    message: 'You have successfully checked in today at 09:12 AM.',
+    title: 'Attendance Punched In',
+    message: 'You have successfully punched in today at 09:12 AM.',
     time: '2 hours ago',
     read: false,
     category: 'Attendance'

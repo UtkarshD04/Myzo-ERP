@@ -125,12 +125,12 @@ export default function DashboardView({
           </p>
         </div>
 
-        {/* Check In / Out Action */}
+        {/* Punch In / Out Action */}
         <div className="flex items-center gap-3.5 shrink-0">
           <div className="flex items-center gap-2 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl">
             <span className={`w-2 h-2 rounded-full ${isCheckedIn ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
             <span className="text-xs font-bold text-slate-600 whitespace-nowrap">
-              {isCheckedIn ? 'Checked In' : isCompletedToday ? 'Shift Complete' : 'Not Checked In'}
+              {isCheckedIn ? 'Punched In' : isCompletedToday ? 'Shift Complete' : 'Not Punched In'}
             </span>
           </div>
 
@@ -139,7 +139,7 @@ export default function DashboardView({
               onClick={onCheckOut}
               className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all cursor-pointer active:scale-95 whitespace-nowrap"
             >
-              Check Out
+              Punch Out
             </button>
           ) : isCompletedToday ? (
             <span className="px-5 py-2.5 bg-slate-100 text-slate-400 font-bold text-xs rounded-xl cursor-not-allowed whitespace-nowrap">
@@ -150,7 +150,7 @@ export default function DashboardView({
               onClick={onCheckIn}
               className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer active:scale-95 whitespace-nowrap"
             >
-              Check In
+              Punch In
             </button>
           )}
         </div>
@@ -160,7 +160,7 @@ export default function DashboardView({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatTile
           icon={Clock}
-          label="Today's Check-In"
+          label="Today's Punch-In"
           value={todayRecord?.checkIn || '--:--'}
           meta={`Out: ${todayRecord?.checkOut || 'Active'}`}
           tone="blue"
