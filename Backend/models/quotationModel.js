@@ -7,7 +7,11 @@ const quotationItemSchema = new mongoose.Schema({
   quantity: { type: Number, default: 1 },
   unitPrice: { type: Number, default: 0 },
   discount: { type: Number, default: 0 },
-  lineTotal: { type: Number, default: 0 }
+  lineTotal: { type: Number, default: 0 },
+  // Watt-peak rating for the line item, if it's a solar module — lets the PDF
+  // show a Price/WP column the way solar-distribution quotes usually do.
+  // Left blank for products this doesn't apply to.
+  wattage: Number
 }, { _id: false });
 
 const quotationSchema = new mongoose.Schema({
@@ -18,9 +22,24 @@ const quotationSchema = new mongoose.Schema({
   customerPhone: String,
   customerEmail: String,
   customerAddress: String,
+  shippingAddress: String,
   salesperson: String,
   salespersonName: String,
+  // Set once at creation from the creating salesperson's own profile (mirrors
+  // salesperson/salespersonName) so the quotation PDF's letterhead can show
+  // "their" contact details rather than a single shared company inbox. Not
+  // in QUOTATION_EDITABLE_FIELDS, so a later edit — including by a Manager/
+  // Admin acting on the salesperson's behalf — can't overwrite it.
+  salespersonEmail: String,
+  salespersonPhone: String,
   subject: String,
+  paymentTerm: String,
+  deliveryPlan: String,
+  brand: String,
+  packingType: String,
+  customerType: String,
+  incoTerm: String,
+  fiscalPosition: String,
   items: { type: [quotationItemSchema], default: [] },
   subtotal: { type: Number, default: 0 },
   discountPercent: { type: Number, default: 0 },

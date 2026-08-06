@@ -7,6 +7,8 @@ import ForgotPasswordScreen from './components/auth/ForgotPasswordScreen';
 import ResetPasswordScreen from './components/auth/ResetPasswordScreen';
 import Sidebar from './components/layout/Sidebar';
 import Navbar from './components/layout/Navbar';
+import ModuleTabBar from './components/layout/ModuleTabBar';
+import { getModules } from './config/modules';
 
 // View Components
 import DashboardView from './components/views/DashboardView';
@@ -75,7 +77,6 @@ export default function App() {
     new URLSearchParams(window.location.search).get('resetToken') ? 'reset' : 'login'
   ));
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // ─── Apply server state ──────────────────────────────────────────────────────
@@ -529,6 +530,9 @@ export default function App() {
 
   const myAttendance = attendanceHistory.filter(a => a.employeeId === employee.id);
 
+  const modules = getModules(employee);
+  const activeModule = modules.find(m => m.tabs.some(t => t.id === activeTab));
+
   // ─── Main Layout ─────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex bg-slate-50 font-sans antialiased text-slate-800">
@@ -541,19 +545,17 @@ export default function App() {
         />
       )}
 
-      {/* Collapsible Sidebar */}
+      {/* Module Icon Rail (slides in as a drawer on mobile) */}
       <div className={`fixed inset-y-0 left-0 z-50 lg:static lg:z-auto transition-transform duration-300 ${
         mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}>
         <Sidebar
-          activeTab={activeTab}
-          setActiveTab={(tab) => {
-            setActiveTab(tab);
+          modules={modules}
+          activeModuleId={activeModule?.id}
+          onSelectModule={(module) => {
+            setActiveTab(module.tabs[0].id);
             setMobileSidebarOpen(false);
           }}
-          collapsed={sidebarCollapsed}
-          setCollapsed={setSidebarCollapsed}
-          employee={employee}
         />
       </div>
 
@@ -566,7 +568,17 @@ export default function App() {
           attendanceHistory={myAttendance}
           onLogout={handleLogout}
           onMenuClick={() => setMobileSidebarOpen(true)}
+          onNavigate={setActiveTab}
         />
+
+        {/* Module Tab Bar */}
+        {activeModule && activeModule.tabs.length > 1 && (
+          <ModuleTabBar
+            tabs={activeModule.tabs}
+            activeTab={activeTab}
+            onSelect={setActiveTab}
+          />
+        )}
 
         {/* Scrollable Page Content */}
         <main className="flex-1 overflow-y-auto bg-slate-50 pb-20 lg:pb-0">
@@ -704,8 +716,6 @@ export default function App() {
               onUpdateQuotation={handleUpdateQuotation}
               onSendFollowUp={handleSendQuotationFollowUp}
               onAddCustomer={handleAddCustomer}
-              onSetCustomerBlocked={handleSetCustomerBlocked}
-              onDeleteCustomer={handleDeleteCustomer}
               onConvertToInvoice={handleConvertQuotationToInvoice}
               setActiveTab={setActiveTab}
             />

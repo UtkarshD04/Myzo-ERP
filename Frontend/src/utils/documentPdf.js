@@ -12,6 +12,44 @@ export const COMPANY_INFO = {
   logoAspect: 677 / 369
 };
 
+// Letterhead/contact details for the Quotation & Invoice PDFs — these are
+// customer-facing sales documents branded as "Myzo", separate from the
+// registered entity name used on payslips above. Email/website/phone/GSTIN
+// and bank details are intentionally blank: fill them in with Myzo's real
+// registered details before sending documents to customers. Any left blank
+// are simply left off the printed PDF rather than showing an empty label.
+export const QUOTATION_BUSINESS_INFO = {
+  name: 'Myzo',
+  addressLines: COMPANY_INFO.addressLines,
+  // Fallback Email/Contact No only — each quotation/invoice shows the
+  // creating salesperson's own email/phone instead (see doc.salespersonEmail
+  // / doc.salespersonPhone below), so these are just the safety net for
+  // older records that predate that field.
+  email: '',
+  phone: '',
+  website: 'www.mmyzo.com',
+  gstin: '09AARCM1075B1ZG',
+  logoUrl: COMPANY_INFO.logoUrl,
+  logoAspect: COMPANY_INFO.logoAspect,
+  bank: { accountName: '', bankName: '', accountNumber: '', ifsc: '' }
+};
+
+// Falls back onto any Quotation/Invoice PDF whose own termsAndConditions is
+// blank — covers records saved before this default existed, and ones a
+// salesperson cleared out by mistake, so the T&C page always has content.
+// QuotationsView.jsx imports this same constant to pre-fill the create form,
+// so there's one place to edit these clauses.
+export const DEFAULT_TERMS_AND_CONDITIONS = [
+  'GST/applicable taxes will be charged extra as per actuals, in accordance with prevailing GST rules.',
+  "In case of any damage found after receipt of goods, the buyer must share photographs of the packaging and goods, along with the invoice number, transport receipt (LR) copy and a written acceptance note, within 3 to 5 working days, and inform our sales team.",
+  "Where transport is arranged on Ex-Works terms, transit insurance is the buyer's responsibility, whether the vehicle is arranged by the buyer or by Myzo; any transit damage will be charged extra under Ex-Works terms.",
+  "All warranties and guarantees are as per Myzo's standard policies.",
+  'For bulk orders, the buyer must inform Myzo in advance of any Pre-Delivery Inspection (PDI) or inline inspection, sharing the Quality Assurance Plan (QAP), Bill of Materials (BOM) and agreed inspection dates with our sales team.',
+  'Any dispute arising out of or in connection with this document shall be subject to the jurisdiction of the courts in Lucknow, India. Neither party shall be liable for delays caused by events beyond its reasonable control, including natural disasters or government action.',
+  'The customer must arrange pickup/delivery of the goods within the validity period stated above; prices may be revised to prevailing market rates without prior notice after this period.',
+  "Any change in law, or new duties/taxes levied after order confirmation, will be in the buyer's scope and charged extra at actuals."
+].join('\n');
+
 function loadImageDataUrl(url) {
   return fetch(url)
     .then(res => res.blob())
@@ -62,116 +100,227 @@ export function numberToIndianWords(amount) {
 }
 
 /**
- * Builds and downloads a PDF for a quotation or invoice. Both documents share
- * the same shape (customer/items/totals) so one generator covers both, keyed
- * off the differing date field names (quoteDate/validUntil vs invoiceDate/dueDate).
+ * Builds and downloads a PDF for a quotation or invoice, styled as a
+ * letterhead pro-forma — logo + contact header, an order-detail grid, a
+ * three-way Billing From / Bill To / Ship To block, an itemised table and
+ * totals, then a Terms & Conditions + Bank Details page. Both document types
+ * share the same shape (customer/items/totals) so one generator covers both,
+ * keyed off the differing field names (quoteDate/validUntil vs invoiceDate/dueDate).
  */
-export function downloadDocumentPdf({ type, doc }) {
+export async function downloadDocumentPdf({ type, doc }) {
   const isQuote = type === 'QUOTATION';
+  const biz = QUOTATION_BUSINESS_INFO;
   const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const margin = 40;
+  const contentWidth = pageWidth - margin * 2;
 
+  let logoDataUrl = null;
+  try {
+    logoDataUrl = await loadImageDataUrl(biz.logoUrl);
+  } catch {
+    logoDataUrl = null;
+  }
+
+  // ---- Title ----
+  const title = isQuote ? 'QUOTATION' : 'TAX INVOICE';
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(18);
+  pdf.setFontSize(16);
   pdf.setTextColor(30, 41, 59);
-  pdf.text('MYZO ERP', margin, 50);
+  pdf.text(title, pageWidth / 2, 38, { align: 'center' });
+  const titleWidth = pdf.getTextWidth(title);
+  pdf.setDrawColor(30, 41, 59);
+  pdf.setLineWidth(1);
+  pdf.line(pageWidth / 2 - titleWidth / 2, 46, pageWidth / 2 + titleWidth / 2, 46);
 
-  pdf.setFontSize(20);
-  pdf.setTextColor(37, 99, 235);
-  pdf.text(isQuote ? 'QUOTATION' : 'INVOICE', pageWidth - margin, 50, { align: 'right' });
+  // ---- Logo (left) + contact block (right) ----
+  let y = 66;
+  const logoWidth = 84;
+  const logoHeight = logoWidth / (biz.logoAspect || 1);
+  if (logoDataUrl) {
+    pdf.addImage(logoDataUrl, 'PNG', margin, y, logoWidth, logoHeight);
+  }
 
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(10);
-  pdf.setTextColor(100, 116, 139);
-  pdf.text(doc.id, pageWidth - margin, 66, { align: 'right' });
-
-  let y = 90;
-  pdf.setDrawColor(226, 232, 240);
-  pdf.line(margin, y, pageWidth - margin, y);
-  y += 20;
-
-  const leftCol = margin;
-  const rightCol = pageWidth / 2 + 20;
-
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(9);
-  pdf.setTextColor(148, 163, 184);
-  pdf.text('BILL TO', leftCol, y);
-  pdf.text(isQuote ? 'QUOTE DETAILS' : 'INVOICE DETAILS', rightCol, y);
-  y += 14;
-
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(11);
-  pdf.setTextColor(30, 41, 59);
-  pdf.text(doc.customerName || '-', leftCol, y);
+  // The salesperson who created this document is shown as the reply-to
+  // contact (matches the reference letterhead, which showed the handling
+  // salesperson's own email/phone rather than a single shared inbox);
+  // biz.email/biz.phone are just the fallback for older records.
+  const contactEmail = doc.salespersonEmail || biz.email;
+  const contactPhone = doc.salespersonPhone || biz.phone;
+  const contactLines = [
+    contactEmail && `Email: ${contactEmail}`,
+    biz.website && `Website: ${biz.website}`,
+    contactPhone && `Contact No: ${contactPhone}`,
+    biz.gstin && `GSTIN: ${biz.gstin}`
+  ].filter(Boolean);
 
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
   pdf.setTextColor(71, 85, 105);
-  const metaLines = isQuote
-    ? [
-        [`Quote Date:`, doc.quoteDate || '--'],
-        [`Expiry Date:`, doc.validUntil || '--'],
-        [`Salesperson:`, doc.salespersonName || '--'],
-        ...(doc.referenceNumber ? [[`Reference #:`, doc.referenceNumber]] : [])
-      ]
-    : [
-        [`Invoice Date:`, doc.invoiceDate || '--'],
-        [`Due Date:`, doc.dueDate || '--'],
-        [`Salesperson:`, doc.salespersonName || '--'],
-        ...(doc.sourceQuotationId ? [[`From Quote:`, doc.sourceQuotationId]] : [])
-      ];
-
-  let metaY = y;
-  metaLines.forEach(([label, value]) => {
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(100, 116, 139);
-    pdf.text(label, rightCol, metaY);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(30, 41, 59);
-    pdf.text(String(value), rightCol + 75, metaY);
-    metaY += 14;
+  let contactY = y + 8;
+  contactLines.forEach(line => {
+    pdf.text(line, pageWidth - margin, contactY, { align: 'right' });
+    contactY += 12;
   });
 
-  y += 14;
-  if (doc.customerEmail || doc.customerPhone) {
-    pdf.text([doc.customerEmail, doc.customerPhone].filter(Boolean).join('  ·  '), leftCol, y);
-    y += 14;
-  }
-  if (doc.customerAddress) {
-    const addrLines = pdf.splitTextToSize(doc.customerAddress, pageWidth / 2 - 60);
-    pdf.text(addrLines, leftCol, y);
-    y += addrLines.length * 12;
-  }
+  y = Math.max(y + logoHeight, contactY) + 14;
+  pdf.setDrawColor(226, 232, 240);
+  pdf.line(margin, y, pageWidth - margin, y);
+  y += 18;
 
-  y = Math.max(y, metaY) + 20;
+  // ---- Two-column label/value info grid (wraps long values gracefully) ----
+  const gridColWidth = contentWidth / 2;
+  const drawGridRows = (pairs) => {
+    let col = 0;
+    let rowMaxLines = 1;
+    pairs.forEach(([label, value]) => {
+      const colX = margin + col * gridColWidth;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8);
+      pdf.setTextColor(148, 163, 184);
+      pdf.text(label.toUpperCase(), colX, y);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9.5);
+      pdf.setTextColor(30, 41, 59);
+      const valueLines = pdf.splitTextToSize(String(value ?? '-'), gridColWidth - 16);
+      pdf.text(valueLines, colX, y + 13);
+      rowMaxLines = Math.max(rowMaxLines, valueLines.length);
+      if (col === 1) {
+        col = 0;
+        y += 13 + rowMaxLines * 11 + 8;
+        rowMaxLines = 1;
+      } else {
+        col = 1;
+      }
+    });
+    if (col === 1) y += 13 + rowMaxLines * 11 + 8;
+  };
 
-  const rows = (doc.items || []).map((item, i) => [
-    String(i + 1),
-    item.model ? `${item.productName}\n${item.model}` : (item.productName || ''),
-    String(item.quantity ?? ''),
-    money(item.unitPrice),
-    money(item.lineTotal)
+  const taxSummary = doc.igstRate
+    ? `IGST ${doc.igstRate}%`
+    : (doc.cgstRate || doc.sgstRate)
+      ? `CGST ${doc.cgstRate || 0}% + SGST ${doc.sgstRate || 0}%`
+      : (doc.taxType && doc.taxType !== 'None')
+        ? `${doc.taxType} ${doc.taxRate}%`
+        : 'N/A';
+
+  const identityPairs = [
+    [isQuote ? 'Quote Date' : 'Invoice Date', doc.quoteDate || doc.invoiceDate || '-'],
+    [isQuote ? 'Quotation No' : 'Invoice No', doc.id],
+    ['PO Number', doc.referenceNumber || '-'],
+    ['Brand', doc.brand || '-'],
+    ['Packing Type', doc.packingType || '-'],
+    [isQuote ? 'Expiry Date' : 'Due Date', doc.validUntil || doc.dueDate || '-']
+  ];
+  if (!isQuote && doc.sourceQuotationId) identityPairs.push(['From Quotation', doc.sourceQuotationId]);
+  drawGridRows(identityPairs);
+
+  pdf.setDrawColor(226, 232, 240);
+  pdf.line(margin, y, pageWidth - margin, y);
+  y += 16;
+
+  drawGridRows([
+    ['Customer Type', doc.customerType || '-'],
+    ['Inco Term', doc.incoTerm || '-'],
+    ['Payment Term', doc.paymentTerm || '-'],
+    ['Fiscal Position', doc.fiscalPosition || '-'],
+    ['Tax', taxSummary],
+    ['Salesperson', doc.salespersonName || '-']
   ]);
+
+  pdf.setDrawColor(226, 232, 240);
+  pdf.line(margin, y, pageWidth - margin, y);
+  y += 18;
+
+  // ---- Billing From / Bill To / Ship To ----
+  const colWidth = contentWidth / 3;
+  const billingCols = [
+    {
+      heading: 'BILLING FROM',
+      name: biz.name,
+      lines: [...biz.addressLines, contactPhone && `Phone: ${contactPhone}`, biz.gstin && `GSTIN: ${biz.gstin}`].filter(Boolean)
+    },
+    {
+      heading: 'BILL TO',
+      name: doc.customerName || '-',
+      lines: [doc.customerAddress, doc.customerPhone, doc.customerEmail].filter(Boolean)
+    },
+    {
+      heading: 'SHIP TO',
+      name: doc.customerName || null,
+      lines: [doc.shippingAddress || doc.customerAddress || '-']
+    }
+  ];
+
+  let maxColY = y;
+  billingCols.forEach((col, i) => {
+    const colX = margin + i * colWidth;
+    let colY = y;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8);
+    pdf.setTextColor(148, 163, 184);
+    pdf.text(col.heading, colX, colY);
+    colY += 14;
+    if (col.name) {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(9.5);
+      pdf.setTextColor(30, 41, 59);
+      const nameLines = pdf.splitTextToSize(col.name, colWidth - 14);
+      pdf.text(nameLines, colX, colY);
+      colY += nameLines.length * 12;
+    }
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(71, 85, 105);
+    col.lines.forEach(line => {
+      const wrapped = pdf.splitTextToSize(String(line), colWidth - 14);
+      pdf.text(wrapped, colX, colY);
+      colY += wrapped.length * 11;
+    });
+    maxColY = Math.max(maxColY, colY);
+  });
+  y = maxColY + 14;
+
+  pdf.setDrawColor(226, 232, 240);
+  pdf.line(margin, y, pageWidth - margin, y);
+  y += 16;
+
+  // ---- Item table ----
+  const perLineTaxPct = doc.igstRate || ((doc.cgstRate || 0) + (doc.sgstRate || 0)) || doc.taxRate || 0;
+  const rows = (doc.items || []).map((item, i) => {
+    const wp = Number(item.wattage);
+    const priceWp = wp > 0 ? (Number(item.unitPrice || 0) / wp).toFixed(2) : '-';
+    return [
+      String(i + 1),
+      item.model ? `${item.productName}\n${item.model}` : (item.productName || ''),
+      String(item.quantity ?? ''),
+      priceWp,
+      money(item.unitPrice),
+      perLineTaxPct ? `${perLineTaxPct}%` : '-',
+      money(item.lineTotal)
+    ];
+  });
 
   autoTable(pdf, {
     startY: y,
     margin: { left: margin, right: margin },
-    head: [['#', 'Item', 'Qty', 'Price', 'Amount']],
+    head: [['#', 'Item', 'Qty', 'Price/WP', 'Unit Price', 'Tax', 'Amount']],
     body: rows,
-    styles: { font: 'helvetica', fontSize: 9, textColor: [51, 65, 85], cellPadding: 6 },
+    styles: { font: 'helvetica', fontSize: 8.5, textColor: [51, 65, 85], cellPadding: 6 },
     headStyles: { fillColor: [241, 245, 249], textColor: [100, 116, 139], fontStyle: 'bold' },
     columnStyles: {
-      0: { cellWidth: 25 },
-      2: { cellWidth: 40, halign: 'center' },
-      3: { cellWidth: 80, halign: 'right' },
-      4: { cellWidth: 80, halign: 'right' }
+      0: { cellWidth: 22 },
+      2: { cellWidth: 34, halign: 'center' },
+      3: { cellWidth: 55, halign: 'right' },
+      4: { cellWidth: 70, halign: 'right' },
+      5: { cellWidth: 40, halign: 'center' },
+      6: { cellWidth: 75, halign: 'right' }
     }
   });
 
   let afterTableY = pdf.lastAutoTable.finalY + 20;
 
+  // ---- Totals ----
   const totalsX = pageWidth - margin - 200;
   const totalsValueX = pageWidth - margin;
   const totalLine = (label, value, opts = {}) => {
@@ -196,30 +345,67 @@ export function downloadDocumentPdf({ type, doc }) {
   afterTableY += 8;
   totalLine('Total', money(doc.totalAmount), { bold: true });
 
-  afterTableY += 20;
-  if (doc.customerNotes) {
+  afterTableY += 14;
+  if (doc.deliveryPlan) {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(9);
-    pdf.setTextColor(148, 163, 184);
-    pdf.text('NOTES', margin, afterTableY);
-    afterTableY += 14;
+    pdf.setTextColor(30, 41, 59);
+    pdf.text('Delivery Plan:', margin, afterTableY);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(71, 85, 105);
-    const noteLines = pdf.splitTextToSize(doc.customerNotes, pageWidth - margin * 2);
-    pdf.text(noteLines, margin, afterTableY);
-    afterTableY += noteLines.length * 12 + 12;
+    pdf.text(String(doc.deliveryPlan), margin + 72, afterTableY);
+    afterTableY += 20;
   }
 
-  if (doc.termsAndConditions) {
+  // ---- Terms & Conditions + Bank Details, own page ----
+  // Falls back to the Myzo standard terms whenever a document's own field is
+  // blank (older records, or one a salesperson cleared out), so this page is
+  // never silently skipped.
+  const termsText = doc.termsAndConditions || DEFAULT_TERMS_AND_CONDITIONS;
+  const bankConfigured = !!biz.bank.accountNumber;
+  {
+    pdf.addPage();
+    let ty = 50;
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(9);
-    pdf.setTextColor(148, 163, 184);
-    pdf.text('TERMS AND CONDITIONS', margin, afterTableY);
-    afterTableY += 14;
+    pdf.setFontSize(11);
+    pdf.setTextColor(30, 41, 59);
+    pdf.text('TERMS & CONDITIONS', margin, ty);
+    ty += 10;
+    pdf.setDrawColor(226, 232, 240);
+    pdf.line(margin, ty, pageWidth - margin, ty);
+    ty += 20;
+
+    const clauses = termsText
+      .split('\n')
+      .map(line => line.trim())
+      .filter(Boolean);
+
     pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
     pdf.setTextColor(71, 85, 105);
-    const termLines = pdf.splitTextToSize(doc.termsAndConditions, pageWidth - margin * 2);
-    pdf.text(termLines, margin, afterTableY);
+    clauses.forEach((clause, i) => {
+      const wrapped = pdf.splitTextToSize(`${i + 1}. ${clause}`, contentWidth);
+      pdf.text(wrapped, margin, ty);
+      ty += wrapped.length * 13 + 4;
+    });
+
+    if (bankConfigured) {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(9);
+      pdf.setTextColor(71, 85, 105);
+      pdf.text(`${clauses.length + 1}. Bank Details:`, margin, ty);
+      ty += 14;
+      pdf.setFont('helvetica', 'normal');
+      [
+        `Account Name: ${biz.bank.accountName || '-'}`,
+        `Bank: ${biz.bank.bankName || '-'}`,
+        `Account Number: ${biz.bank.accountNumber}`,
+        `IFSC Code: ${biz.bank.ifsc || '-'}`
+      ].forEach(line => {
+        pdf.text(line, margin + 10, ty);
+        ty += 13;
+      });
+    }
   }
 
   pdf.save(`${doc.id}.pdf`);

@@ -38,30 +38,29 @@ export default function SalesAssociateDashboard({ employee, quotations = [], pay
   // every "Target" bar shares the neutral baseline hue, every "Sold" bar
   // shares the accent, so the daily/monthly pairing reads at a glance.
   const chartData = [
-    { name: 'Daily Target', Value: dailyTarget, color: '#c3c2b7' },
-    { name: 'Daily Sold', Value: dailyValue, color: '#2a78d6' },
-    { name: 'Monthly Target (20x)', Value: monthlyTarget, color: '#c3c2b7' },
-    { name: 'Monthly Sold', Value: monthlyValue, color: '#2a78d6' }
+    { name: 'Daily Target', Value: dailyTarget, color: '#e2e8f0' },
+    { name: 'Daily Sold', Value: dailyValue, color: '#2563eb' },
+    { name: 'Monthly Target (20x)', Value: monthlyTarget, color: '#e2e8f0' },
+    { name: 'Monthly Sold', Value: monthlyValue, color: '#2563eb' }
   ];
 
   return (
     <div className="space-y-6">
       {/* 20x Monthly Target Banner */}
-      <div className="bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 rounded-3xl p-6 border border-slate-800 text-white relative overflow-hidden shadow-xl">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-blue-500 rounded-full filter blur-[100px] opacity-10" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs font-bold text-blue-400">
-              <Target className="w-3.5 h-3.5 animate-pulse" />
+            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-blue-50 border border-blue-100 rounded-lg text-xs font-bold text-blue-600">
+              <Target className="w-3.5 h-3.5" />
               <span>Target Quota (20× Basic Salary)</span>
             </div>
-            <h2 className="text-3xl font-black tracking-tight mt-1">₹{monthlyTarget.toLocaleString()}</h2>
+            <h2 className="text-3xl font-black tracking-tight text-slate-900 mt-1">₹{monthlyTarget.toLocaleString()}</h2>
             <p className="text-slate-400 text-xs font-medium">
               Calculated from basic salary: ₹{employee.salary?.toLocaleString()} × 20
             </p>
           </div>
-          <div className="flex flex-col items-center justify-center bg-white/5 border border-white/10 rounded-2xl px-6 py-4.5 min-w-[120px]">
-            <span className="text-4xl font-black bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">
+          <div className="flex flex-col items-center justify-center bg-blue-50 border border-blue-100 rounded-2xl px-6 py-4.5 min-w-30">
+            <span className="text-4xl font-black text-blue-600">
               {monthlyPct}%
             </span>
             <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mt-1.5">Achieved</span>
@@ -69,14 +68,14 @@ export default function SalesAssociateDashboard({ employee, quotations = [], pay
         </div>
 
         {/* Progress details */}
-        <div className="mt-6 border-t border-slate-800/80 pt-4.5">
+        <div className="mt-6 border-t border-slate-100 pt-4.5">
           <div className="flex justify-between text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-2">
             <span>Sold: ₹{currentKPIs.monthlyValue.toLocaleString()}</span>
             <span>Remains: ₹{remaining.toLocaleString()}</span>
           </div>
-          <div className="w-full bg-slate-950/60 rounded-full h-3 border border-slate-800/60">
+          <div className="w-full bg-slate-100 rounded-full h-3">
             <div
-              className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-blue-500 to-indigo-500"
+              className="h-full rounded-full transition-all duration-500 bg-blue-600"
               style={{ width: `${monthlyPct}%` }}
             />
           </div>

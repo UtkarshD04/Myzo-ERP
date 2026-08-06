@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, ArrowLeft, ChevronDown, MoreHorizontal, SlidersHorizontal, Mail, User, Package, ChevronLeft, ChevronRight, Printer, Download } from 'lucide-react';
-import { downloadDocumentPdf } from '../../utils/documentPdf';
+import { downloadDocumentPdf, DEFAULT_TERMS_AND_CONDITIONS } from '../../utils/documentPdf';
 
 const STATUS_STYLES = {
   Unpaid: 'bg-amber-50 text-amber-600 border-amber-100',
@@ -47,17 +47,6 @@ export default function InvoicesView({ employee, invoices = [], onUpdateInvoice 
     }
   };
 
-  const tabBar = (
-    <div className="bg-white border-b border-slate-200 px-4 md:px-6">
-      <div className="flex items-center gap-6 overflow-x-auto text-[13px] font-semibold">
-        <span className="py-3 whitespace-nowrap text-blue-600 border-b-2 border-blue-600 -mb-px cursor-default">Invoices</span>
-        <span className="py-3 whitespace-nowrap text-slate-300 cursor-not-allowed select-none">Payments Received</span>
-        <span className="py-3 whitespace-nowrap text-slate-300 cursor-not-allowed select-none">Recurring Invoices</span>
-        <span className="py-3 whitespace-nowrap text-slate-300 cursor-not-allowed select-none">Credit Notes</span>
-      </div>
-    </div>
-  );
-
   if (showDetail) {
     const inv = showDetail;
     const currentIndex = filtered.findIndex(x => x.id === inv.id);
@@ -66,7 +55,6 @@ export default function InvoicesView({ employee, invoices = [], onUpdateInvoice 
 
     return (
       <div className="max-w-7xl mx-auto font-sans text-slate-800 animate-in fade-in duration-200">
-        {tabBar}
         <div className="p-4 md:p-6 space-y-4">
 
           <div className="flex items-center justify-between flex-wrap gap-3">
@@ -139,12 +127,19 @@ export default function InvoicesView({ employee, invoices = [], onUpdateInvoice 
               <MetaRow label="Due Date" value={inv.dueDate || '--'} />
               <MetaRow label="Salesperson" value={inv.salespersonName || '--'} />
               {inv.sourceQuotationId && <MetaRow label="From Quote" value={inv.sourceQuotationId} />}
-              {inv.referenceNumber && <MetaRow label="Reference #" value={inv.referenceNumber} />}
+              {inv.referenceNumber && <MetaRow label="PO Number" value={inv.referenceNumber} />}
+              {inv.paymentTerm && <MetaRow label="Payment Term" value={inv.paymentTerm} />}
+              {inv.deliveryPlan && <MetaRow label="Delivery Plan" value={inv.deliveryPlan} />}
+              {inv.brand && <MetaRow label="Brand" value={inv.brand} />}
+              {inv.packingType && <MetaRow label="Packing Type" value={inv.packingType} />}
+              {inv.customerType && <MetaRow label="Customer Type" value={inv.customerType} />}
+              {inv.incoTerm && <MetaRow label="Inco Term" value={inv.incoTerm} />}
+              {inv.fiscalPosition && <MetaRow label="Fiscal Position" value={inv.fiscalPosition} />}
             </div>
 
             <div className="border-t border-slate-50 pt-4">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Customer Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                 <div>
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Name</p>
                   <p className="font-bold text-slate-800 flex items-center gap-1.5">
@@ -157,6 +152,12 @@ export default function InvoicesView({ employee, invoices = [], onUpdateInvoice 
                   <p className="text-slate-600 font-semibold leading-relaxed whitespace-pre-line">
                     {inv.customerAddress || '-'}
                     {inv.customerPhone && <><br />{inv.customerPhone}</>}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Shipping Address</p>
+                  <p className="text-slate-600 font-semibold leading-relaxed whitespace-pre-line">
+                    {inv.shippingAddress || inv.customerAddress || '-'}
                   </p>
                 </div>
               </div>
@@ -268,8 +269,8 @@ export default function InvoicesView({ employee, invoices = [], onUpdateInvoice 
 
             <div className="border-t border-slate-50 pt-4">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Terms and Conditions</h4>
-              <p className="text-xs text-slate-400 font-semibold">
-                {inv.termsAndConditions || 'No Terms and Conditions'}
+              <p className="text-xs text-slate-400 font-semibold whitespace-pre-line">
+                {inv.termsAndConditions || DEFAULT_TERMS_AND_CONDITIONS}
               </p>
             </div>
           </div>
@@ -298,7 +299,6 @@ export default function InvoicesView({ employee, invoices = [], onUpdateInvoice 
 
   return (
     <div className="max-w-7xl mx-auto font-sans text-slate-800 animate-in fade-in duration-200">
-      {tabBar}
       <div className="p-4 md:p-6 space-y-4">
 
         <div className="flex items-center justify-between flex-wrap gap-3">

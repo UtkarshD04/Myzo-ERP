@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Plus, Search, Trash2, FileSpreadsheet, IndianRupee, Info, ArrowLeft, FileEdit, Send, Users, Mail, User, Ban, CheckCircle2, ChevronDown, MoreHorizontal, SlidersHorizontal, Share2, Printer, ChevronLeft, ChevronRight, Package, Download, MessageCircle, ArrowRightLeft, BellRing } from 'lucide-react';
-import { downloadDocumentPdf } from '../../utils/documentPdf';
+import { Plus, Search, Trash2, FileSpreadsheet, IndianRupee, Info, ArrowLeft, FileEdit, Send, Users, Mail, User, ChevronDown, MoreHorizontal, SlidersHorizontal, Share2, Printer, ChevronLeft, ChevronRight, Package, Download, MessageCircle, ArrowRightLeft, BellRing } from 'lucide-react';
+import { downloadDocumentPdf, DEFAULT_TERMS_AND_CONDITIONS } from '../../utils/documentPdf';
 
-const EMPTY_ITEM = { productId: '', productName: '', model: '', quantity: 1, unitPrice: 0, discount: 0 };
+const EMPTY_ITEM = { productId: '', productName: '', model: '', quantity: 1, unitPrice: 0, discount: 0, wattage: '' };
 
 const STATUS_STYLES = {
   Draft: 'bg-slate-50 text-slate-600 border-slate-100',
@@ -79,7 +79,15 @@ const EMPTY_FORM = {
   customerPhone: '',
   customerEmail: '',
   customerAddress: '',
+  shippingAddress: '',
   subject: '',
+  paymentTerm: '',
+  deliveryPlan: '',
+  brand: '',
+  packingType: '',
+  customerType: '',
+  incoTerm: '',
+  fiscalPosition: 'Domestic',
   discountPercent: 0,
   gstMode: 'split',
   cgstRate: 0,
@@ -89,12 +97,12 @@ const EMPTY_FORM = {
   taxRate: 0,
   adjustment: 0,
   customerNotes: 'Looking forward for your business.',
-  termsAndConditions: ''
+  termsAndConditions: DEFAULT_TERMS_AND_CONDITIONS
 };
 
 const EMPTY_CUSTOMER_FORM = { name: '', email: '' };
 
-export default function QuotationsView({ employee, employees = [], quotations = [], products = [], customers = [], onAddQuotation, onUpdateQuotation, onSendFollowUp, onAddCustomer, onSetCustomerBlocked, onDeleteCustomer, onConvertToInvoice, setActiveTab }) {
+export default function QuotationsView({ employee, employees = [], quotations = [], products = [], customers = [], onAddQuotation, onUpdateQuotation, onSendFollowUp, onAddCustomer, onConvertToInvoice, setActiveTab }) {
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(null);
@@ -109,13 +117,6 @@ export default function QuotationsView({ employee, employees = [], quotations = 
   const [form, setForm] = useState(EMPTY_FORM);
   const [items, setItems] = useState([{ ...EMPTY_ITEM }]);
 
-  const [showCustomers, setShowCustomers] = useState(false);
-  const [showCustomerForm, setShowCustomerForm] = useState(false);
-  const [customerSearch, setCustomerSearch] = useState('');
-  const [customerForm, setCustomerForm] = useState(EMPTY_CUSTOMER_FORM);
-  const [customerError, setCustomerError] = useState('');
-  const [customerSubmitting, setCustomerSubmitting] = useState(false);
-
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
   const [showQuoteCustomerModal, setShowQuoteCustomerModal] = useState(false);
   const [quoteCustomerForm, setQuoteCustomerForm] = useState(EMPTY_CUSTOMER_FORM);
@@ -129,7 +130,13 @@ export default function QuotationsView({ employee, employees = [], quotations = 
   });
 
   const selectCustomerForQuote = (customer) => {
-    setForm(prev => ({ ...prev, customerName: customer.name, customerEmail: customer.email }));
+    setForm(prev => ({
+      ...prev,
+      customerName: customer.name,
+      customerEmail: customer.email,
+      customerPhone: customer.phone || prev.customerPhone,
+      customerAddress: customer.address || prev.customerAddress
+    }));
     setShowCustomerSuggestions(false);
   };
 
@@ -165,56 +172,6 @@ export default function QuotationsView({ employee, employees = [], quotations = 
     }
   };
 
-  const filteredCustomers = customers.filter(c => {
-    const q1 = customerSearch.trim().toLowerCase();
-    if (!q1) return true;
-    return c.name?.toLowerCase().includes(q1) || c.email?.toLowerCase().includes(q1);
-  });
-
-  const openCustomerForm = () => {
-    setCustomerForm(EMPTY_CUSTOMER_FORM);
-    setCustomerError('');
-    setShowCustomerForm(true);
-  };
-
-  const handleAddCustomerSubmit = async (e) => {
-    e.preventDefault();
-    setCustomerError('');
-
-    if (!customerForm.name.trim() || !customerForm.email.trim()) {
-      setCustomerError('Name and email are both required.');
-      return;
-    }
-
-    setCustomerSubmitting(true);
-    try {
-      await onAddCustomer({ name: customerForm.name.trim(), email: customerForm.email.trim() });
-      setShowCustomerForm(false);
-      setCustomerForm(EMPTY_CUSTOMER_FORM);
-    } catch (err) {
-      setCustomerError(err.message);
-    } finally {
-      setCustomerSubmitting(false);
-    }
-  };
-
-  const handleToggleBlockCustomer = async (customer) => {
-    try {
-      await onSetCustomerBlocked(customer._id, !customer.isBlocked);
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
-  const handleDeleteCustomerClick = async (customer) => {
-    if (!window.confirm(`Delete customer "${customer.name}"? This cannot be undone.`)) return;
-    try {
-      await onDeleteCustomer(customer._id);
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
   const filtered = quotations.filter(q => {
     const q1 = search.trim().toLowerCase();
     if (!q1) return true;
@@ -245,7 +202,15 @@ export default function QuotationsView({ employee, employees = [], quotations = 
       customerPhone: q.customerPhone || '',
       customerEmail: q.customerEmail || '',
       customerAddress: q.customerAddress || '',
+      shippingAddress: q.shippingAddress || '',
       subject: q.subject || '',
+      paymentTerm: q.paymentTerm || '',
+      deliveryPlan: q.deliveryPlan || '',
+      brand: q.brand || '',
+      packingType: q.packingType || '',
+      customerType: q.customerType || '',
+      incoTerm: q.incoTerm || '',
+      fiscalPosition: q.fiscalPosition || 'Domestic',
       discountPercent: q.discountPercent || 0,
       gstMode: q.gstMode || 'split',
       cgstRate: q.cgstRate || 0,
@@ -255,7 +220,7 @@ export default function QuotationsView({ employee, employees = [], quotations = 
       taxRate: q.taxRate || 0,
       adjustment: q.adjustment || 0,
       customerNotes: q.customerNotes || '',
-      termsAndConditions: q.termsAndConditions || ''
+      termsAndConditions: q.termsAndConditions || DEFAULT_TERMS_AND_CONDITIONS
     });
     setItems(
       q.items && q.items.length
@@ -265,7 +230,8 @@ export default function QuotationsView({ employee, employees = [], quotations = 
             model: it.model || '',
             quantity: it.quantity ?? 1,
             unitPrice: it.unitPrice ?? 0,
-            discount: it.discount ?? 0
+            discount: it.discount ?? 0,
+            wattage: it.wattage ?? ''
           }))
         : [{ ...EMPTY_ITEM }]
     );
@@ -308,7 +274,9 @@ export default function QuotationsView({ employee, employees = [], quotations = 
     e.preventDefault();
     setError('');
 
-    const validItems = items.filter(it => it.productId && Number(it.quantity) > 0);
+    const validItems = items
+      .filter(it => it.productId && Number(it.quantity) > 0)
+      .map(it => ({ ...it, wattage: it.wattage === '' || it.wattage == null ? undefined : Number(it.wattage) }));
     if (validItems.length === 0) {
       setError('Add at least one product line item.');
       return;
@@ -330,9 +298,19 @@ export default function QuotationsView({ employee, employees = [], quotations = 
         customerPhone: form.customerPhone,
         customerEmail: form.customerEmail,
         customerAddress: form.customerAddress,
+        shippingAddress: form.shippingAddress,
         salesperson: employee.id,
         salespersonName: employee.name,
+        salespersonEmail: employee.officialEmail,
+        salespersonPhone: employee.phone,
         subject: form.subject,
+        paymentTerm: form.paymentTerm,
+        deliveryPlan: form.deliveryPlan,
+        brand: form.brand,
+        packingType: form.packingType,
+        customerType: form.customerType,
+        incoTerm: form.incoTerm,
+        fiscalPosition: form.fiscalPosition,
         items: validItems,
         discountPercent: form.discountPercent,
         gstMode: form.gstMode,
@@ -442,220 +420,9 @@ export default function QuotationsView({ employee, employees = [], quotations = 
     setShowShareMenu(false);
   };
 
-  const tabBar = (
-    <div className="bg-white border-b border-slate-200 px-4 md:px-6">
-      <div className="flex items-center gap-6 overflow-x-auto text-[13px] font-semibold">
-        <button
-          onClick={() => { setShowCustomers(true); setShowCustomerForm(false); }}
-          className={`py-3 border-b-2 -mb-px whitespace-nowrap cursor-pointer transition-colors ${
-            showCustomers ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700'
-          }`}
-        >
-          Customers
-        </button>
-        <button
-          onClick={() => { setShowCustomers(false); setShowAddModal(false); setShowDetailModal(null); }}
-          className={`py-3 border-b-2 -mb-px whitespace-nowrap cursor-pointer transition-colors ${
-            !showCustomers ? 'text-blue-600 border-blue-600' : 'text-slate-500 border-transparent hover:text-slate-700'
-          }`}
-        >
-          Quotes
-        </button>
-        <span className="py-3 whitespace-nowrap text-slate-300 cursor-not-allowed select-none flex items-center gap-1">
-          Sales Orders <ChevronDown className="w-3 h-3" />
-        </span>
-      </div>
-    </div>
-  );
-
-  if (showCustomers) {
-    if (showCustomerForm) {
-      return (
-        <div className="max-w-7xl mx-auto font-sans text-slate-800 animate-in fade-in duration-200">
-          {tabBar}
-          <div className="p-4 md:p-6 space-y-6 max-w-lg mx-auto">
-          <button
-            onClick={() => setShowCustomerForm(false)}
-            className="flex items-center space-x-2 text-xs font-bold text-slate-500 hover:text-blue-600 cursor-pointer transition-all"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Customers</span>
-          </button>
-
-          <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-4">
-            <h2 className="text-lg font-bold text-slate-800 flex items-center space-x-2.5">
-              <Users className="w-5 h-5 text-blue-600" />
-              <span>New Customer</span>
-            </h2>
-
-            {customerError && (
-              <div className="text-[11px] font-semibold text-red-600 bg-red-50 border border-red-100 rounded-xl px-3.5 py-2.5">
-                {customerError}
-              </div>
-            )}
-
-            <form onSubmit={handleAddCustomerSubmit} className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Name *</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="Customer name"
-                    value={customerForm.name}
-                    onChange={(e) => setCustomerForm({ ...customerForm, name: e.target.value })}
-                    className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Email *</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                  <input
-                    type="email"
-                    required
-                    placeholder="Customer email"
-                    value={customerForm.email}
-                    onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })}
-                    className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2.5 pt-2">
-                <button
-                  type="submit"
-                  disabled={customerSubmitting}
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-lg shadow-blue-500/10 cursor-pointer transition-all disabled:opacity-60"
-                >
-                  {customerSubmitting ? 'Saving...' : 'Save Customer'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCustomerForm(false)}
-                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-xs cursor-pointer transition-all"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="max-w-7xl mx-auto font-sans text-slate-800 animate-in fade-in duration-200">
-        {tabBar}
-        <div className="p-4 md:p-6 space-y-4">
-
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-1.5 text-[15px] font-bold text-slate-800 select-none">
-            <span>All Customers</span>
-            <ChevronDown className="w-4 h-4 text-slate-400" />
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center rounded-lg overflow-hidden shadow-sm shadow-blue-500/10">
-              <button
-                onClick={openCustomerForm}
-                className="pl-3.5 pr-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>New</span>
-              </button>
-              <div className="px-2 py-2 bg-blue-600 border-l border-blue-500/60 text-white/70 cursor-not-allowed select-none">
-                <ChevronDown className="w-3.5 h-3.5" />
-              </div>
-            </div>
-            <div className="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-400 cursor-not-allowed select-none">
-              <MoreHorizontal className="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex items-center space-x-2.5">
-          <Search className="w-4 h-4 text-slate-400 shrink-0" />
-          <input
-            type="text"
-            placeholder="Search by name or email..."
-            value={customerSearch}
-            onChange={(e) => setCustomerSearch(e.target.value)}
-            className="flex-1 text-xs text-slate-800 placeholder-slate-400 focus:outline-none"
-          />
-        </div>
-
-        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/60">
-                  <th className="pl-5 pr-2 py-3 w-8"><input type="checkbox" className="rounded border-slate-300" /></th>
-                  <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Name</th>
-                  <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Email</th>
-                  <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                  <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {filteredCustomers.map(c => (
-                  <tr key={c._id || c.email} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="pl-5 pr-2 py-3.5"><input type="checkbox" className="rounded border-slate-300" /></td>
-                    <td className="px-5 py-3.5 text-xs font-bold text-slate-800">{c.name}</td>
-                    <td className="px-5 py-3.5 text-xs font-semibold text-slate-500">{c.email}</td>
-                    <td className="px-5 py-3.5">
-                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md border ${
-                        c.isBlocked ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                      }`}>
-                        {c.isBlocked ? 'Blocked' : 'Active'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center justify-end gap-3">
-                        <button
-                          onClick={() => handleToggleBlockCustomer(c)}
-                          className={`flex items-center gap-1 text-[11px] font-bold cursor-pointer transition-all ${
-                            c.isBlocked ? 'text-emerald-600 hover:text-emerald-700' : 'text-amber-600 hover:text-amber-700'
-                          }`}
-                        >
-                          {c.isBlocked ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Ban className="w-3.5 h-3.5" />}
-                          <span>{c.isBlocked ? 'Unblock' : 'Block'}</span>
-                        </button>
-                        <button
-                          onClick={() => handleDeleteCustomerClick(c)}
-                          className="flex items-center gap-1 text-[11px] font-bold text-red-500 hover:text-red-600 cursor-pointer transition-all"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Delete</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-
-                {filteredCustomers.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-5 py-10 text-center text-xs text-slate-400 font-semibold">
-                      No customers yet. Add your first one.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        </div>
-      </div>
-    );
-  }
-
   if (showAddModal) {
     return (
       <div className="max-w-7xl mx-auto font-sans text-slate-800 animate-in fade-in duration-200">
-        {tabBar}
         <div className="p-4 md:p-6 space-y-6">
         <button
           onClick={() => { setShowAddModal(false); setEditingId(null); }}
@@ -783,6 +550,116 @@ export default function QuotationsView({ employee, employees = [], quotations = 
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
                   />
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-50 pt-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Customer Phone</label>
+                    <input
+                      type="text"
+                      value={form.customerPhone}
+                      onChange={(e) => setForm({ ...form, customerPhone: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Billing Address</label>
+                    <textarea
+                      rows="1"
+                      value={form.customerAddress}
+                      onChange={(e) => setForm({ ...form, customerAddress: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500 resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center space-x-1">
+                    <span>Shipping Address</span>
+                    <Info className="w-3 h-3 text-slate-300" />
+                  </label>
+                  <textarea
+                    rows="1"
+                    placeholder="Leave blank to use the billing address"
+                    value={form.shippingAddress}
+                    onChange={(e) => setForm({ ...form, shippingAddress: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500 resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Order details (mirrors the distributor pro-forma layout) */}
+              <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-4">
+                <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Order Details</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Brand</label>
+                    <input
+                      type="text"
+                      value={form.brand}
+                      onChange={(e) => setForm({ ...form, brand: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Packing Type</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Pallet Packing"
+                      value={form.packingType}
+                      onChange={(e) => setForm({ ...form, packingType: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Customer Type</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Distribution"
+                      value={form.customerType}
+                      onChange={(e) => setForm({ ...form, customerType: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Inco Term</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. CIF, FOB, EXW"
+                      value={form.incoTerm}
+                      onChange={(e) => setForm({ ...form, incoTerm: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Fiscal Position</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Domestic, Export"
+                      value={form.fiscalPosition}
+                      onChange={(e) => setForm({ ...form, fiscalPosition: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Delivery Plan</label>
+                    <input
+                      type="date"
+                      value={form.deliveryPlan}
+                      onChange={(e) => setForm({ ...form, deliveryPlan: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Payment Term</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 20% Advance & 80% Before Dispatch"
+                      value={form.paymentTerm}
+                      onChange={(e) => setForm({ ...form, paymentTerm: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Item table */}
@@ -805,6 +682,7 @@ export default function QuotationsView({ employee, employees = [], quotations = 
                       <tr className="border-b border-slate-100 text-slate-400 uppercase tracking-wider">
                         <th className="py-2 pr-3 font-extrabold">Product</th>
                         <th className="py-2 pr-3 font-extrabold text-center w-20">Qty</th>
+                        <th className="py-2 pr-3 font-extrabold text-center w-20">Watt (Wp)</th>
                         <th className="py-2 pr-3 font-extrabold text-right w-28">Rate</th>
                         <th className="py-2 pr-3 font-extrabold text-right w-28">Amount</th>
                         <th className="py-2 w-8"></th>
@@ -831,6 +709,16 @@ export default function QuotationsView({ employee, employees = [], quotations = 
                               min="1"
                               value={item.quantity}
                               onChange={(e) => updateItem(index, { quantity: e.target.value })}
+                              className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-800 text-center focus:outline-none focus:border-blue-500"
+                            />
+                          </td>
+                          <td className="py-2.5 pr-3">
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="optional"
+                              value={item.wattage}
+                              onChange={(e) => updateItem(index, { wattage: e.target.value })}
                               className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-800 text-center focus:outline-none focus:border-blue-500"
                             />
                           </td>
@@ -877,7 +765,7 @@ export default function QuotationsView({ employee, employees = [], quotations = 
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Terms &amp; Conditions</label>
                   <textarea
-                    rows="3"
+                    rows="6"
                     placeholder="Enter the terms and conditions of your business..."
                     value={form.termsAndConditions}
                     onChange={(e) => setForm({ ...form, termsAndConditions: e.target.value })}
@@ -1163,7 +1051,6 @@ export default function QuotationsView({ employee, employees = [], quotations = 
 
     return (
       <div className="max-w-7xl mx-auto font-sans text-slate-800 animate-in fade-in duration-200">
-        {tabBar}
         <div className="p-4 md:p-6 space-y-4">
 
           {/* Top toolbar */}
@@ -1347,7 +1234,14 @@ export default function QuotationsView({ employee, employees = [], quotations = 
               <MetaRow label="Salesperson" value={q.salespersonName || '--'} />
               <MetaRow label="Expiry Date" value={q.validUntil || '--'} />
               <MetaRow label="PDF Template" value="Standard Template" />
-              {q.referenceNumber && <MetaRow label="Reference #" value={q.referenceNumber} />}
+              {q.referenceNumber && <MetaRow label="PO Number" value={q.referenceNumber} />}
+              {q.paymentTerm && <MetaRow label="Payment Term" value={q.paymentTerm} />}
+              {q.deliveryPlan && <MetaRow label="Delivery Plan" value={q.deliveryPlan} />}
+              {q.brand && <MetaRow label="Brand" value={q.brand} />}
+              {q.packingType && <MetaRow label="Packing Type" value={q.packingType} />}
+              {q.customerType && <MetaRow label="Customer Type" value={q.customerType} />}
+              {q.incoTerm && <MetaRow label="Inco Term" value={q.incoTerm} />}
+              {q.fiscalPosition && <MetaRow label="Fiscal Position" value={q.fiscalPosition} />}
             </div>
 
             {/* Customer Details */}
@@ -1370,7 +1264,9 @@ export default function QuotationsView({ employee, employees = [], quotations = 
                 </div>
                 <div>
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Shipping Address</p>
-                  <p className="text-slate-400 font-semibold">-</p>
+                  <p className="text-slate-600 font-semibold leading-relaxed whitespace-pre-line">
+                    {q.shippingAddress || q.customerAddress || '-'}
+                  </p>
                 </div>
               </div>
               {q.subject && (
@@ -1489,8 +1385,8 @@ export default function QuotationsView({ employee, employees = [], quotations = 
             {/* Terms and Conditions */}
             <div className="border-t border-slate-50 pt-4">
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Terms and Conditions</h4>
-              <p className="text-xs text-slate-400 font-semibold">
-                {q.termsAndConditions || 'No Terms and Conditions'}
+              <p className="text-xs text-slate-400 font-semibold whitespace-pre-line">
+                {q.termsAndConditions || DEFAULT_TERMS_AND_CONDITIONS}
               </p>
             </div>
           </div>
@@ -1520,7 +1416,6 @@ export default function QuotationsView({ employee, employees = [], quotations = 
 
   return (
     <div className="max-w-7xl mx-auto font-sans text-slate-800 animate-in fade-in duration-200">
-      {tabBar}
       <div className="p-4 md:p-6 space-y-4">
 
       <div className="flex items-center justify-between flex-wrap gap-3">

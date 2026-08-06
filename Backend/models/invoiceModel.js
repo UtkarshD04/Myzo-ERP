@@ -7,7 +7,10 @@ const invoiceItemSchema = new mongoose.Schema({
   quantity: { type: Number, default: 1 },
   unitPrice: { type: Number, default: 0 },
   discount: { type: Number, default: 0 },
-  lineTotal: { type: Number, default: 0 }
+  lineTotal: { type: Number, default: 0 },
+  // Mirrors quotationItemSchema.wattage — carried through on conversion so
+  // the invoice PDF can keep showing Price/WP for solar-module line items.
+  wattage: Number
 }, { _id: false });
 
 const invoiceSchema = new mongoose.Schema({
@@ -20,9 +23,21 @@ const invoiceSchema = new mongoose.Schema({
   customerPhone: String,
   customerEmail: String,
   customerAddress: String,
+  shippingAddress: String,
   salesperson: String,
   salespersonName: String,
+  // Carried through from the source quotation's own salespersonEmail/Phone —
+  // see quotationModel.js for why these aren't independently editable here.
+  salespersonEmail: String,
+  salespersonPhone: String,
   subject: String,
+  paymentTerm: String,
+  deliveryPlan: String,
+  brand: String,
+  packingType: String,
+  customerType: String,
+  incoTerm: String,
+  fiscalPosition: String,
   items: { type: [invoiceItemSchema], default: [] },
   subtotal: { type: Number, default: 0 },
   discountPercent: { type: Number, default: 0 },

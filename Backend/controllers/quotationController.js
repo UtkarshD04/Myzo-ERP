@@ -132,9 +132,10 @@ export async function addQuotation(req, res) {
 // totalAmount feeds straight into commission payout (payrollController.js).
 const QUOTATION_EDITABLE_FIELDS = [
   'referenceNumber', 'quoteDate', 'customerName', 'customerPhone', 'customerEmail',
-  'customerAddress', 'subject', 'items', 'discountPercent', 'gstMode', 'cgstRate',
-  'sgstRate', 'igstRate', 'taxType', 'taxRate', 'adjustment', 'status', 'validUntil',
-  'customerNotes', 'termsAndConditions'
+  'customerAddress', 'shippingAddress', 'subject', 'paymentTerm', 'deliveryPlan',
+  'brand', 'packingType', 'customerType', 'incoTerm', 'fiscalPosition', 'items',
+  'discountPercent', 'gstMode', 'cgstRate', 'sgstRate', 'igstRate', 'taxType',
+  'taxRate', 'adjustment', 'status', 'validUntil', 'customerNotes', 'termsAndConditions'
 ];
 
 export async function modifyQuotation(req, res) {
