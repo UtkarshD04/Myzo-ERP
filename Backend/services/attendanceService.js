@@ -11,8 +11,8 @@ import {
 } from '../models/lateCheckoutRequestModel.js';
 import { addNotification } from '../models/notificationModel.js';
 import { Employee } from '../models/employeeModel.js';
-import { buildId, getCurrentTimeLabel, getTodayDate } from './timeService.js';
-import { sendLateCheckoutEmail, sendLateCheckoutRequestReviewedEmail, sendLateCheckoutRequestSubmittedEmail } from './mailService.js';
+import { buildId, getCurrentTimeLabel, getTodayDate, getISTHourMinute, getISTInstantToday } from './timeService.js';
+import { sendLateCheckoutRequestReviewedEmail, sendLateCheckoutRequestSubmittedEmail } from './mailService.js';
 
 // Admins run the org, not a shift — neither the 6:30 PM late-checkout mail
 // gate nor the 11:59 PM auto punch-out applies to them.
@@ -79,8 +79,10 @@ const AUTO_PUNCH_OUT_TIME_LABEL = '11:59 PM';
 // the standard 8 still count as overtime, same as a manual punch-out.
 export async function autoPunchOutOpenRecords() {
   const date = getTodayDate();
-  const cutoff = new Date();
-  cutoff.setHours(23, 59, 0, 0);
+  // Real UTC instant of 11:59 PM *IST*, not the server's own local 23:59 —
+  // see timeService.js's header comment for why this can't be `new Date()`
+  // + `.setHours()`.
+  const cutoff = getISTInstantToday(23, 59, 0);
 
   const fieldEmployees = await Employee.find(
     { isField: true, role: { $ne: 'Admin' }, isSuperAdmin: { $ne: true } },
@@ -128,8 +130,9 @@ const LATE_CHECKOUT_HOUR = 18;
 const LATE_CHECKOUT_MINUTE = 30;
 
 function isPastLateCheckoutCutoff(now) {
-  return now.getHours() > LATE_CHECKOUT_HOUR
-    || (now.getHours() === LATE_CHECKOUT_HOUR && now.getMinutes() >= LATE_CHECKOUT_MINUTE);
+  const { hour, minute } = getISTHourMinute(now);
+  return hour > LATE_CHECKOUT_HOUR
+    || (hour === LATE_CHECKOUT_HOUR && minute >= LATE_CHECKOUT_MINUTE);
 }
 
 // Shared by a normal checkout and by an approved late-checkout request being
@@ -167,7 +170,7 @@ async function finalizeCheckoutRecord({ employeeId, date, location, time, now, l
   return { notifications, attendance };
 }
 
-export async function checkOut({ employeeId, location, reason } = {}) {
+export async function checkOut({ employeeId, location } = {}) {
   const date = getTodayDate();
   const time = getCurrentTimeLabel();
   const now = new Date();
@@ -188,11 +191,14 @@ export async function checkOut({ employeeId, location, reason } = {}) {
   const exempt = isExemptFromAttendanceRules(emp);
   const isPastCutoff = isPastLateCheckoutCutoff(now);
 
-  // Field Employees past 6:30 PM can't self-serve a reason like office staff
-  // — their punch-out only records once their reporting manager approves a
+  // Office (non-Field) employees past 6:30 PM can't self-serve a reason —
+  // their punch-out only records once their reporting manager approves a
   // late-checkout request (see requestLateCheckout/reviewLateCheckoutRequest
-  // below). Until then, punch-out is blocked entirely.
-  if (!exempt && emp?.isField && isPastCutoff) {
+  // below). Field Employees are exempt from this gate entirely: they run
+  // past 6:30 PM as a matter of course and, if they never manually punch
+  // out, get force-closed at 11:59 PM instead using their check-in location
+  // (see autoPunchOutOpenRecords above).
+  if (!exempt && !emp?.isField && isPastCutoff) {
     const approved = await LateCheckoutRequest.findOne({ employeeId, date, status: 'Approved' }).lean();
     if (!approved) {
       const error = new Error('It\'s past 6:30 PM. Please submit a punch-out request to your reporting manager for approval.');
@@ -203,37 +209,16 @@ export async function checkOut({ employeeId, location, reason } = {}) {
     return finalizeCheckoutRecord({ employeeId, date, location, time, now, lateCheckoutReason: approved.reason });
   }
 
-  // Office (non-Field) employees who haven't punched out by 6:30 PM must give
-  // a reason before the punch-out goes through; it's then emailed to HR/Admin.
-  const isLateCheckoutGated = !exempt && !emp?.isField && isPastCutoff;
-
-  if (isLateCheckoutGated && !reason?.trim()) {
-    const error = new Error('It\'s past 6:30 PM. Please provide a reason to punch out — it will be emailed to HR/Admin.');
-    error.statusCode = 428;
-    error.requiresReason = true;
-    throw error;
-  }
-
-  const result = await finalizeCheckoutRecord({
-    employeeId, date, location, time, now,
-    lateCheckoutReason: isLateCheckoutGated ? reason.trim() : null
-  });
-
-  if (isLateCheckoutGated) {
-    const hrAdmins = await Employee.find({ role: { $in: ['HR', 'Admin'] } }, { officialEmail: 1, email: 1 }).lean();
-    const recipients = hrAdmins.map(e => e.officialEmail || e.email).filter(Boolean);
-    // Best-effort: SMTP may be unconfigured, never let that block the punch-out itself.
-    sendLateCheckoutEmail(emp, reason.trim(), time, recipients).catch(() => {});
-  }
-
-  return result;
+  return finalizeCheckoutRecord({ employeeId, date, location, time, now, lateCheckoutReason: null });
 }
 
-// Field Employee submits a reason once past the 6:30 PM cutoff; it's routed
-// to their direct reporting manager (employee.reportsTo), mirroring the
-// direct-manager review pattern in reportController.modifyReport rather than
-// leave's role-based approver — the spec here is "goes to their manager,"
-// not a role class.
+// Office (non-Field) employee submits a reason once past the 6:30 PM cutoff;
+// it's routed to their direct reporting manager (employee.reportsTo),
+// mirroring the direct-manager review pattern in reportController.modifyReport
+// rather than leave's role-based approver — the spec here is "goes to their
+// manager," not a role class. Field Employees don't use this at all — they're
+// exempt from the 6:30 PM gate and instead force-closed at 11:59 PM if they
+// never manually punch out (see autoPunchOutOpenRecords/checkOut above).
 export async function requestLateCheckout({ employeeId, location, reason } = {}) {
   if (!reason?.trim()) {
     const error = new Error('Please provide a reason for the late punch-out request.');
@@ -252,8 +237,8 @@ export async function requestLateCheckout({ employeeId, location, reason } = {})
   }
 
   const emp = await Employee.findOne({ id: employeeId }).lean();
-  if (!emp?.isField) {
-    const error = new Error('Late punch-out approval requests are only for Field Employees.');
+  if (emp?.isField) {
+    const error = new Error('Late punch-out approval requests are only for Office Employees. Field Employees are auto punched-out at 11:59 PM.');
     error.statusCode = 400;
     throw error;
   }

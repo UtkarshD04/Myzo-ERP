@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 
-// Shown when a Field Employee tries to punch out past 6:30 PM — punch-out
-// only gets recorded once their reporting manager approves this request
-// (see attendanceService.checkOut's requiresApproval gate on the backend).
+// Shown when an Office (non-Field) Employee tries to punch out past 6:30 PM
+// — punch-out only gets recorded once their reporting manager approves this
+// request (see attendanceService.checkOut's requiresApproval gate on the
+// backend). Field Employees never see this — they're exempt from the 6:30 PM
+// gate and instead auto punched-out at 11:59 PM if they forget.
 export default function LateCheckoutRequestModal({ onSubmit, onCancel }) {
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');

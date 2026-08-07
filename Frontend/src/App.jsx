@@ -48,7 +48,7 @@ export default function App() {
   const [holidays, setHolidays] = useState([]);
   const [attendanceHistory, setAttendanceHistory] = useState([]);
   const [lateCheckoutRequests, setLateCheckoutRequests] = useState([]);
-  // Set while a Field Employee's punch-out is gated on manager approval —
+  // Set while an Office Employee's punch-out is gated on manager approval —
   // holds the GPS location captured for the checkout attempt so the request
   // form can reuse it without asking for location permission again.
   const [lateCheckoutPrompt, setLateCheckoutPrompt] = useState(null);
@@ -305,22 +305,15 @@ export default function App() {
       try {
         state = await api.checkOut(employee.id, location);
       } catch (err) {
-        // Field Employees punching out after 6:30 PM need their reporting
+        // Office employees punching out after 6:30 PM need their reporting
         // manager to approve first — open the request form instead of
-        // finalizing the punch-out here.
+        // finalizing the punch-out here. Field Employees never hit this;
+        // they're exempt from the 6:30 PM gate (see attendanceService.checkOut).
         if (err.requiresApproval) {
           setLateCheckoutPrompt({ location });
           return;
         }
-        // Office employees punching out after 6:30 PM must give HR/Admin a
-        // reason first — the backend flags this instead of just failing.
-        if (err.requiresReason) {
-          const reason = window.prompt(err.message);
-          if (!reason || !reason.trim()) return;
-          state = await api.checkOut(employee.id, location, reason.trim());
-        } else {
-          throw err;
-        }
+        throw err;
       }
       applyServerState(state);
     } catch (err) {

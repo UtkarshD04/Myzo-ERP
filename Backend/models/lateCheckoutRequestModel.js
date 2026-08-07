@@ -6,10 +6,11 @@ const locationSchema = new mongoose.Schema({
   placeName: String
 }, { _id: false });
 
-// Field Employees who try to punch out past 6:30 PM can't just self-serve a
-// reason like office staff do (see attendanceService.checkOut) — they need
+// Office (non-Field) Employees who try to punch out past 6:30 PM can't just
+// self-serve a reason anymore (see attendanceService.checkOut) — they need
 // their reporting manager (employee.reportsTo) to approve before the actual
-// checkout is recorded. This collection tracks that request lifecycle.
+// checkout is recorded. This collection tracks that request lifecycle. Field
+// Employees are exempt from this gate; see autoPunchOutOpenRecords instead.
 const lateCheckoutRequestSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   employeeId: { type: String, required: true },

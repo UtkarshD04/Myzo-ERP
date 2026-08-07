@@ -62,9 +62,9 @@ export const api = {
     body: JSON.stringify({ employeeId, location }),
   }),
 
-  checkOut: (employeeId, location, reason) => request('/attendance/check-out', {
+  checkOut: (employeeId, location) => request('/attendance/check-out', {
     method: 'POST',
-    body: JSON.stringify({ employeeId, location, reason }),
+    body: JSON.stringify({ employeeId, location }),
   }),
 
   getLateCheckoutRequests: () => request('/attendance/late-checkout-requests'),

@@ -23,7 +23,7 @@ export async function checkInEmployee(req, res) {
 
 export async function checkOutEmployee(req, res) {
   requireLocation(req.body.location);
-  const result = await checkOut({ employeeId: req.user.id, location: req.body.location, reason: req.body.reason });
+  const result = await checkOut({ employeeId: req.user.id, location: req.body.location });
   res.json({ ...result, attendance: filterAttendanceForViewer(result.attendance, req.user) });
 }
 
