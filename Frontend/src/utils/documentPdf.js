@@ -7,7 +7,8 @@ const money = (n) => `Rs. ${Number(n || 0).toLocaleString('en-IN', { maximumFrac
 // Exported so the on-screen payslip preview (DocumentsView) can render the same header.
 export const COMPANY_INFO = {
   name: 'MESHO SOLUTION SOLAR PARK PVT LTD.',
-  addressLines: ['Yogi Raj Tower Near Madhurima Sweets, Vibhuti Khand,', 'Gomti Nagar Lucknow, U.P'],
+  addressLines: ['Yogi Raj Tower Near By Madhurima Sweets, Vibhuti Khand, Gomti Nagar', 'Lucknow UP 226002'],
+  gstin: '09AARCM1075B1ZG',
   logoUrl: '/logo.png',
   logoAspect: 677 / 369
 };
@@ -28,7 +29,7 @@ export const QUOTATION_BUSINESS_INFO = {
   email: '',
   phone: '',
   website: 'www.mmyzo.com',
-  gstin: '09AARCM1075B1ZG',
+  gstin: COMPANY_INFO.gstin,
   logoUrl: COMPANY_INFO.logoUrl,
   logoAspect: COMPANY_INFO.logoAspect,
   bank: { accountName: '', bankName: '', accountNumber: '', ifsc: '' }
@@ -501,6 +502,16 @@ export function downloadSalaryDisbursementPdf({ monthLabel, rows = [], employees
   pdf.save(`Salary-Disbursement-${monthLabel.replace(/\s+/g, '-')}.pdf`);
 }
 
+// Payslip line items print as plain figures — no currency symbol and no
+// thousands grouping — matching the company's standard printed pay slip:
+// non-zero amounts show 2 decimals, zero shows as a bare "0". Net Pay is
+// its own headline figure and always prints as a whole number.
+const payslipAmount = (n) => {
+  const num = Number(n) || 0;
+  return num === 0 ? '0' : num.toFixed(2);
+};
+const payslipWhole = (n) => String(Math.round(Number(n) || 0));
+
 /**
  * Builds and downloads an individual employee's monthly payslip, formatted
  * like the company's standard printed pay slip (header, employee/bank
@@ -549,7 +560,22 @@ export async function downloadPayslipPdf({ employee = {}, payslip, monthLabel })
     headerY += 13;
   });
 
-  const boxTop = Math.max(headerY, logoTop + logoHeight) + 14;
+  // Contact block, top-right — shows this employee's own registered
+  // email/phone (matching the reference letterhead, which prints the
+  // slip-holder's own contact details here rather than a fixed company line).
+  const contactLines = [
+    employee.email && `Email: ${employee.email}`,
+    employee.phone && `Contact No: ${employee.phone}`,
+    COMPANY_INFO.gstin && `GSTIN: ${COMPANY_INFO.gstin}`
+  ].filter(Boolean);
+  pdf.setFontSize(8);
+  let contactY = logoTop + 8;
+  contactLines.forEach(line => {
+    pdf.text(line, boxRight, contactY, { align: 'right' });
+    contactY += 12;
+  });
+
+  const boxTop = Math.max(headerY, logoTop + logoHeight, contactY) + 14;
   pdf.setDrawColor(...lineColor);
   pdf.setLineWidth(0.75);
 
@@ -602,20 +628,20 @@ export async function downloadPayslipPdf({ employee = {}, payslip, monthLabel })
 
   // Earnings / Deductions body
   const earnings = [
-    ['Basic Salary', money(payslip.basicPay)],
-    ['HRA', money(payslip.hra)],
-    ['Conveyance Allowance', money(0)],
-    ['Medical Allowance', money(payslip.medical)],
-    ['Incentive', money(payslip.commission)]
+    ['Basic Salary', payslipAmount(payslip.basicPay)],
+    ['HRA', payslipAmount(payslip.hra)],
+    ['Conveyance Allowance', payslipAmount(0)],
+    ['Medical Allowance', payslipAmount(payslip.medical)],
+    ['Incentive', payslipAmount(payslip.commission)]
   ];
   const deductions = [
-    ['PF', money(payslip.pf)],
-    ['ESI', money(0)],
-    ['TDS', money(0)],
-    ['Advance', money(0)]
+    ['PF', payslipAmount(payslip.pf)],
+    ['ESI', payslipAmount(0)],
+    ['TDS', payslipAmount(0)],
+    ['Advance', payslipAmount(0)]
   ];
-  if (payslip.lopAmount) deductions.push([`Loss of Pay (${payslip.lopDays}d)`, money(payslip.lopAmount)]);
-  if (payslip.otherDeductions) deductions.push(['Other Deductions', money(payslip.otherDeductions)]);
+  if (payslip.lopAmount) deductions.push([`Loss of Pay (${payslip.lopDays}d)`, payslipAmount(payslip.lopAmount)]);
+  if (payslip.otherDeductions) deductions.push(['Other Deductions', payslipAmount(payslip.otherDeductions)]);
 
   const rowCount = Math.max(earnings.length, deductions.length);
   const earnDeductBody = Array.from({ length: rowCount }, (_, i) => [
@@ -638,7 +664,7 @@ export async function downloadPayslipPdf({ employee = {}, payslip, monthLabel })
   autoTable(pdf, {
     startY: sectionY,
     margin: { left: boxLeft, right: margin },
-    body: [['Total Earning', money(totalEarning), 'Total Deductions', money(payslip.totalDeductions)]],
+    body: [['Total Earning', payslipAmount(totalEarning), 'Total Deductions', payslipAmount(payslip.totalDeductions)]],
     theme: 'plain',
     styles: { font: 'helvetica', fontSize: 9.5, fontStyle: 'bold', cellPadding: { top: 5, bottom: 5, left: 8, right: 8 }, textColor: ink },
     columnStyles: { 1: { halign: 'right' }, 3: { halign: 'right' } }
@@ -657,7 +683,7 @@ export async function downloadPayslipPdf({ employee = {}, payslip, monthLabel })
   pdf.setFontSize(11);
   pdf.setTextColor(...ink);
   pdf.text('Net Pay', boxLeft + 8, netPayRowTop + 16);
-  pdf.text(money(payslip.netPay), boxLeft + 90, netPayRowTop + 16);
+  pdf.text(payslipWhole(payslip.netPay), boxLeft + 90, netPayRowTop + 16);
 
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8.5);

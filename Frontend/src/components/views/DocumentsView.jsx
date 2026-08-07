@@ -2,7 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { Download, Printer, Shield, FolderOpen, ArrowRight } from 'lucide-react';
 import { downloadPayslipPdf, numberToIndianWords, COMPANY_INFO } from '../../utils/documentPdf';
 
-const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+// Plain figures, no currency symbol or thousands grouping — matches the
+// company's standard printed pay slip: non-zero shows 2 decimals, zero
+// shows as a bare "0".
+const money = (n) => {
+  const num = Number(n) || 0;
+  return num === 0 ? '0' : num.toFixed(2);
+};
 
 function monthLabel(monthKey) {
   if (!monthKey) return '--';
@@ -140,6 +146,14 @@ export default function DocumentsView({ employee, payrolls = [] }) {
             {/* Header: logo top-left, company name/address centered independent of it */}
             <div className="relative px-4 pt-4 pb-3 text-center">
               <img src={COMPANY_INFO.logoUrl} alt="Company logo" className="absolute left-4 top-4 h-11 w-auto object-contain" />
+              {/* Shows this employee's own registered email/phone, matching
+                  the reference letterhead which prints the slip-holder's own
+                  contact details here rather than a fixed company line. */}
+              <div className="absolute right-4 top-4 text-right text-[9px] font-semibold text-slate-700 space-y-0.5">
+                {employee.email && <p>Email: {employee.email}</p>}
+                {employee.phone && <p>Contact No: {employee.phone}</p>}
+                {COMPANY_INFO.gstin && <p>GSTIN: {COMPANY_INFO.gstin}</p>}
+              </div>
               <h3 className="text-sm font-black tracking-tight">{COMPANY_INFO.name}</h3>
               {COMPANY_INFO.addressLines.map(line => (
                 <p key={line} className="text-[10px] font-semibold">{line}</p>
@@ -204,7 +218,7 @@ export default function DocumentsView({ employee, payrolls = [] }) {
             <div className="grid grid-cols-2 border-t border-slate-800">
               <div className="flex items-center gap-3 px-3 py-2.5 font-bold text-sm">
                 <span>Net Pay</span>
-                <span>{money(selectedSlip.netPay)}</span>
+                <span>{Math.round(Number(selectedSlip.netPay) || 0)}</span>
               </div>
               <div className="px-3 py-2 text-xs font-semibold space-y-1">
                 <p>Days payable: {Number(selectedSlip.presentDays || 0).toFixed(2)}</p>
