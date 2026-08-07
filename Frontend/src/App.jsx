@@ -34,6 +34,7 @@ import ExpenseClaimsView from './components/views/ExpenseClaimsView';
 import AssetTrackingView from './components/views/AssetTrackingView';
 import VendorDirectoryView from './components/views/VendorDirectoryView';
 import WebsiteActivityView from './components/views/WebsiteActivityView';
+import LateCheckoutRequestModal from './components/attendance/LateCheckoutRequestModal';
 
 export default function App() {
   // ─── Persistent State ───────────────────────────────────────────────────────
@@ -46,6 +47,11 @@ export default function App() {
   const [tasks, setTasks] = useState([]);
   const [holidays, setHolidays] = useState([]);
   const [attendanceHistory, setAttendanceHistory] = useState([]);
+  const [lateCheckoutRequests, setLateCheckoutRequests] = useState([]);
+  // Set while a Field Employee's punch-out is gated on manager approval —
+  // holds the GPS location captured for the checkout attempt so the request
+  // form can reuse it without asking for location permission again.
+  const [lateCheckoutPrompt, setLateCheckoutPrompt] = useState(null);
   const [reports, setReports] = useState([]);
   const [products, setProducts] = useState([]);
   const [manageProducts, setManageProducts] = useState([]);
@@ -85,6 +91,7 @@ export default function App() {
     if (state.tasks)        setTasks(state.tasks);
     if (state.holidays)     setHolidays(state.holidays);
     if (state.attendance)   setAttendanceHistory(state.attendance);
+    if (state.lateCheckoutRequests) setLateCheckoutRequests(state.lateCheckoutRequests);
     if (state.reports)      setReports(state.reports);
     if (state.products)     setProducts(state.products);
     if (state.manageProducts) setManageProducts(state.manageProducts);
@@ -166,6 +173,21 @@ export default function App() {
     return () => { mounted = false; };
   }, [employee, activeTab]);
 
+  // ─── Refresh payroll on Documents tab open ──────────────────────────────────
+  // `payrolls` state is otherwise only populated once at login/bootstrap, so an
+  // employee with an already-open session never sees a payslip HR/Admin
+  // approves after that point until they log out and back in. Refetching here
+  // (same low-stakes, swallow-errors pattern as the dashboard KPI fetch above)
+  // picks up newly approved payslips without requiring a fresh login.
+  useEffect(() => {
+    if (!employee || activeTab !== 'documents' || !api.hasSession()) return;
+    let mounted = true;
+    api.getPayrolls()
+      .then(({ payrolls: updated }) => { if (mounted && updated) setPayrolls(updated); })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, [employee, activeTab]);
+
   // ─── Sync employee to localStorage ──────────────────────────────────────────
   useEffect(() => {
     if (employee) localStorage.setItem('myzo_logged_in_employee', JSON.stringify(employee));
@@ -196,6 +218,8 @@ export default function App() {
     setTasks([]);
     setHolidays([]);
     setAttendanceHistory([]);
+    setLateCheckoutRequests([]);
+    setLateCheckoutPrompt(null);
     setReports([]);
     setProducts([]);
     setManageProducts([]);
@@ -281,6 +305,13 @@ export default function App() {
       try {
         state = await api.checkOut(employee.id, location);
       } catch (err) {
+        // Field Employees punching out after 6:30 PM need their reporting
+        // manager to approve first — open the request form instead of
+        // finalizing the punch-out here.
+        if (err.requiresApproval) {
+          setLateCheckoutPrompt({ location });
+          return;
+        }
         // Office employees punching out after 6:30 PM must give HR/Admin a
         // reason first — the backend flags this instead of just failing.
         if (err.requiresReason) {
@@ -295,6 +326,17 @@ export default function App() {
     } catch (err) {
       alert(err.message);
     }
+  };
+
+  const handleSubmitLateCheckoutRequest = async (reason) => {
+    const state = await api.requestLateCheckout(employee.id, lateCheckoutPrompt.location, reason);
+    applyServerState(state);
+    setLateCheckoutPrompt(null);
+  };
+
+  const handleReviewLateCheckoutRequest = async (id, status, reviewComments) => {
+    const state = await api.updateLateCheckoutRequest(id, { status, reviewComments });
+    applyServerState(state);
   };
 
   // ─── Employee Management Handlers ───────────────────────────────────────────
@@ -604,9 +646,12 @@ export default function App() {
           {activeTab === 'attendance' && (
             <AttendanceView
               employee={employee}
+              employees={employees}
               attendanceHistory={myAttendance}
+              lateCheckoutRequests={lateCheckoutRequests}
               onCheckIn={handleCheckIn}
               onCheckOut={handleCheckOut}
+              onReviewLateCheckoutRequest={handleReviewLateCheckoutRequest}
             />
           )}
 
@@ -841,6 +886,13 @@ export default function App() {
         </nav>
 
       </div>
+
+      {lateCheckoutPrompt && (
+        <LateCheckoutRequestModal
+          onSubmit={handleSubmitLateCheckoutRequest}
+          onCancel={() => setLateCheckoutPrompt(null)}
+        />
+      )}
     </div>
   );
 }

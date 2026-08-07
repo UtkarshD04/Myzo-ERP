@@ -1,4 +1,10 @@
-import { checkInEmployee, checkOutEmployee } from '../controllers/attendanceController.js';
+import {
+  checkInEmployee,
+  checkOutEmployee,
+  getLateCheckoutRequests,
+  submitLateCheckoutRequest,
+  modifyLateCheckoutRequest
+} from '../controllers/attendanceController.js';
 import { loginEmployee, forgotPassword, resetPasswordWithToken } from '../controllers/authController.js';
 import { getBootstrapData } from '../controllers/bootstrapController.js';
 import { addCustomer, getCustomers, modifyCustomer, removeCustomer } from '../controllers/customerController.js';
@@ -35,6 +41,9 @@ export const routes = [
   { method: 'GET', path: '/api/bootstrap', handler: getBootstrapData },
   { method: 'POST', path: '/api/attendance/check-in', handler: checkInEmployee },
   { method: 'POST', path: '/api/attendance/check-out', handler: checkOutEmployee },
+  { method: 'GET', path: '/api/attendance/late-checkout-requests', handler: getLateCheckoutRequests },
+  { method: 'POST', path: '/api/attendance/late-checkout-requests', handler: submitLateCheckoutRequest },
+  { method: 'PATCH', path: '/api/attendance/late-checkout-requests/:id', handler: modifyLateCheckoutRequest },
   { method: 'GET', path: '/api/employees', handler: getEmployees },
   { method: 'POST', path: '/api/employees', handler: addEmployee },
   { method: 'PATCH', path: '/api/employees/:id', handler: modifyEmployee },

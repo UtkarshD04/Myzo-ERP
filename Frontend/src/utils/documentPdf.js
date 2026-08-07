@@ -424,10 +424,15 @@ export function downloadSalaryDisbursementPdf({ monthLabel, rows = [], employees
 
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(15);
-  pdf.setTextColor(30, 41, 59);
+  pdf.setTextColor(30, 64, 175);
   pdf.text('Annexure-A', center, 44, { align: 'center' });
+  const annexureWidth = pdf.getTextWidth('Annexure-A');
+  pdf.setDrawColor(30, 64, 175);
+  pdf.setLineWidth(0.75);
+  pdf.line(center - annexureWidth / 2, 47, center + annexureWidth / 2, 47);
 
   pdf.setFontSize(12);
+  pdf.setTextColor(30, 41, 59);
   pdf.text('SALARY DISBURSEMENT SHEET', center, 62, { align: 'center' });
 
   pdf.setFont('helvetica', 'normal');
@@ -435,7 +440,15 @@ export function downloadSalaryDisbursementPdf({ monthLabel, rows = [], employees
   pdf.setTextColor(71, 85, 105);
   pdf.text(`MONTH: ${String(monthLabel).toUpperCase()}`, center, 78, { align: 'center' });
 
-  const todayLabel = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+  // Each employee's own actual payment date (stamped server-side when HR
+  // marks that payroll record Paid — see payrollController.modifyPayroll),
+  // not a single "today" repeated for the whole batch: rows paid on
+  // different days (e.g. a correction added a day or two later) must show
+  // their own date, and rows not yet paid show blank rather than a
+  // premature/inaccurate date on what is effectively a bank instruction sheet.
+  const formatPaymentDate = (d) => d
+    ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()
+    : '--';
 
   const body = rows.map((p, i) => {
     const emp = employees.find(e => e.id === p.employeeId) || {};
@@ -449,7 +462,7 @@ export function downloadSalaryDisbursementPdf({ monthLabel, rows = [], employees
       emp.bankName || '--',
       emp.accountNo ? `*${emp.accountNo}` : '--',
       emp.ifscCode || '--',
-      todayLabel,
+      p.status === 'Paid' ? formatPaymentDate(p.paidAt) : '--',
       ''
     ];
   });

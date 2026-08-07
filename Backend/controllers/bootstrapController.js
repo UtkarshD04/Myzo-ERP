@@ -1,5 +1,6 @@
 import { Employee, sanitizeEmployeeForViewer } from '../models/employeeModel.js';
 import { Attendance, filterAttendanceForViewer } from '../models/attendanceModel.js';
+import { findAllLateCheckoutRequests, filterLateCheckoutRequestsForViewer } from '../models/lateCheckoutRequestModel.js';
 import { findAllTasks, filterTasksForViewer } from '../models/taskModel.js';
 import { findAllReports, filterReportsForViewer } from '../models/reportModel.js';
 import { findAllNotifications } from '../models/notificationModel.js';
@@ -33,6 +34,7 @@ export async function getBootstrapData(req, res) {
   }, req.user));
 
   const attendance = filterAttendanceForViewer(await Attendance.find({}).lean(), req.user);
+  const lateCheckoutRequests = filterLateCheckoutRequestsForViewer(await findAllLateCheckoutRequests(), req.user);
   const tasks = filterTasksForViewer(await findAllTasks(), req.user);
   const reports = filterReportsForViewer(await findAllReports(), req.user, employees);
   const notifications = await findAllNotifications();
@@ -65,6 +67,7 @@ export async function getBootstrapData(req, res) {
   res.json({
     employees,
     attendance,
+    lateCheckoutRequests,
     tasks,
     reports,
     notifications,

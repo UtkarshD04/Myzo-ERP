@@ -141,6 +141,25 @@ function buildLateCheckoutEmailHtml(employee, reason, time) {
   `;
 }
 
+function buildLateCheckoutRequestReviewedEmailHtml(request) {
+  const isApproved = request.status === 'Approved';
+  const color = isApproved ? '#059669' : '#dc2626';
+
+  return `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#1e293b;">
+      <h2 style="color:${color};margin-bottom:4px;">Late Punch-Out Request ${esc(request.status)}</h2>
+      <p>Dear ${esc(request.employeeName || 'Employee')},</p>
+      <p>Your late punch-out request for ${esc(request.date)} has been <strong style="color:${color};">${esc((request.status || '').toLowerCase())}</strong> by your reporting manager.</p>
+      <table style="width:100%;margin-top:16px;border-collapse:collapse;">
+        <tr><td style="padding:6px 0;color:#64748b;">Reason given:</td><td style="padding:6px 0;font-weight:bold;">${esc(request.reason)}</td></tr>
+        ${request.reviewComments ? `<tr><td style="padding:6px 0;color:#64748b;">Remarks:</td><td style="padding:6px 0;">${esc(request.reviewComments)}</td></tr>` : ''}
+      </table>
+      ${isApproved ? '<p style="margin-top:16px;">Your punch-out has been recorded.</p>' : '<p style="margin-top:16px;">You are still punched in — please reach out to your manager directly.</p>'}
+      <p style="margin-top:24px;">Regards,<br/>MYZO ERP</p>
+    </div>
+  `;
+}
+
 // Best-effort by design: recipients is the current HR/Admin roster, looked up
 // fresh by the caller (attendanceService) rather than hardcoded, and a
 // missing SMTP config or empty roster should never block the punch-out itself.
@@ -216,6 +235,50 @@ export async function sendQuotationEmail(quotation) {
     to: quotation.customerEmail,
     subject: `Quotation ${quotation.id} from MYZO`,
     html: buildQuotationEmailHtml(quotation)
+  });
+}
+
+function buildLateCheckoutRequestSubmittedEmailHtml(request) {
+  return `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#1e293b;">
+      <h2 style="color:#2563eb;margin-bottom:4px;">Late Punch-Out Approval Needed</h2>
+      <p><strong>${esc(request.employeeName)}</strong> is requesting approval to punch out late today (${esc(request.date)}), past the 6:30 PM cutoff.</p>
+      <table style="width:100%;margin-top:16px;border-collapse:collapse;">
+        <tr><td style="padding:6px 0;color:#64748b;">Reason given:</td><td style="padding:6px 0;font-weight:bold;">${esc(request.reason)}</td></tr>
+      </table>
+      <p style="margin-top:16px;">Please review this request in the ERP to approve or reject it — the employee's punch-out won't be recorded until you do.</p>
+      <p style="margin-top:24px;">Regards,<br/>MYZO ERP</p>
+    </div>
+  `;
+}
+
+// Best-effort: notifies the reporting manager a request is waiting on them.
+// Manager may not have SMTP configured / an official email on file — that
+// should never block the request itself from being created.
+export async function sendLateCheckoutRequestSubmittedEmail(request, manager) {
+  const t = getTransporter();
+  const recipientEmail = manager?.officialEmail || manager?.email;
+  if (!t || !recipientEmail) return;
+
+  await t.sendMail({
+    from: `"MYZO ERP" <${process.env.SMTP_USER}>`,
+    to: recipientEmail,
+    subject: `Approval Needed: ${request.employeeName || request.employeeId} late punch-out`,
+    html: buildLateCheckoutRequestSubmittedEmailHtml(request)
+  });
+}
+
+// Best-effort like sendLateCheckoutEmail — a review decision should never
+// fail (or roll back) because SMTP is unconfigured.
+export async function sendLateCheckoutRequestReviewedEmail(request, employee) {
+  const t = getTransporter();
+  if (!t || !employee?.officialEmail) return;
+
+  await t.sendMail({
+    from: `"MYZO ERP" <${process.env.SMTP_USER}>`,
+    to: employee.officialEmail,
+    subject: `Late Punch-Out Request ${request.status} - ${request.date}`,
+    html: buildLateCheckoutRequestReviewedEmailHtml(request)
   });
 }
 

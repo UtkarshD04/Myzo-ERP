@@ -1,13 +1,19 @@
-import React from 'react';
-import { Clock, MapPin, Activity, HelpCircle, AlertTriangle, Download } from 'lucide-react';
+import React, { useState } from 'react';
+import { Clock, MapPin, Activity, HelpCircle, AlertTriangle, Download, Check, X } from 'lucide-react';
 import { exportToCsv } from '../../utils/exportCsv';
 
 export default function AttendanceView({
   employee,
+  employees = [],
   attendanceHistory = [],
+  lateCheckoutRequests = [],
   onCheckIn,
-  onCheckOut
+  onCheckOut,
+  onReviewLateCheckoutRequest
 }) {
+  const [reviewingId, setReviewingId] = useState(null);
+  const [reviewComments, setReviewComments] = useState('');
+
   const myAttendance = attendanceHistory.filter(a => a.employeeId === employee.id);
 
   const todayStr = new Date().toISOString().split('T')[0];
@@ -16,7 +22,30 @@ export default function AttendanceView({
   const isCompletedToday = todayRecord && todayRecord.checkIn && todayRecord.checkOut;
   const currentLocation = todayRecord?.checkOutLocation || todayRecord?.checkInLocation;
 
+  const myPendingCheckoutRequest = lateCheckoutRequests.find(
+    r => r.employeeId === employee.id && r.date === todayStr && r.status === 'Pending'
+  );
+
   const visibleHistory = myAttendance;
+
+  // Anyone with a direct report pending a late-checkout decision sees the
+  // review card, mirroring reportController's reportsTo-based manager check
+  // rather than a role-based approver list.
+  const isManager = employees.some(e => e.reportsTo === employee.id);
+  const pendingApprovals = lateCheckoutRequests
+    .filter(r => r.status === 'Pending' && r.managerId === employee.id)
+    .slice()
+    .reverse();
+
+  const handleReview = async (request, status) => {
+    try {
+      await onReviewLateCheckoutRequest(request.id, status, reviewComments);
+      setReviewingId(null);
+      setReviewComments('');
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
   const handleExport = () => {
     exportToCsv(`Attendance-${employee.name}`, [
@@ -67,7 +96,11 @@ export default function AttendanceView({
             </div>
           )}
 
-          {isCheckedIn ? (
+          {myPendingCheckoutRequest ? (
+            <span className="px-5 py-2.5 bg-amber-50 text-amber-700 font-bold text-xs rounded-xl border border-amber-200 cursor-not-allowed">
+              Awaiting Manager Approval
+            </span>
+          ) : isCheckedIn ? (
             <button
               onClick={onCheckOut}
               className="px-5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs rounded-xl border border-red-200 transition-all cursor-pointer active:scale-95 shadow-sm"
@@ -88,6 +121,76 @@ export default function AttendanceView({
           )}
         </div>
       </div>
+
+      {/* Pending late punch-out approvals (reporting managers only) */}
+      {isManager && (
+        <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Late Punch-Out Approvals</h3>
+            <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-100 rounded-md">
+              {pendingApprovals.length}
+            </span>
+          </div>
+
+          {pendingApprovals.length === 0 ? (
+            <p className="text-xs text-slate-400 font-semibold py-6 text-center">No pending punch-out requests from your team.</p>
+          ) : (
+            <div className="space-y-3">
+              {pendingApprovals.map(r => (
+                <div key={r.id} className="border border-slate-100 rounded-xl p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-bold text-xs text-slate-800">{r.employeeName || r.employeeId}</p>
+                      <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Requested to punch out late on {r.date}</p>
+                      {r.reason && <p className="text-[11px] text-slate-500 mt-1.5 italic">"{r.reason}"</p>}
+                    </div>
+                    <div className="flex items-center space-x-2 shrink-0">
+                      {reviewingId === r.id ? (
+                        <>
+                          <input
+                            type="text"
+                            placeholder="Remarks (optional)"
+                            value={reviewComments}
+                            onChange={(e) => setReviewComments(e.target.value)}
+                            className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] text-slate-800 focus:outline-none focus:border-blue-500 w-40"
+                          />
+                          <button
+                            onClick={() => handleReview(r, 'Approved')}
+                            className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg border border-emerald-200 cursor-pointer transition-all active:scale-95"
+                            title="Approve"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleReview(r, 'Rejected')}
+                            className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg border border-red-200 cursor-pointer transition-all active:scale-95"
+                            title="Reject"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => { setReviewingId(null); setReviewComments(''); }}
+                            className="text-[10px] font-bold text-slate-400 hover:text-slate-600 cursor-pointer px-1"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => setReviewingId(r.id)}
+                          className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold text-[10px] rounded-lg border border-blue-200 cursor-pointer transition-all active:scale-95"
+                        >
+                          Review
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Grid: Live location indicator & logs summary */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

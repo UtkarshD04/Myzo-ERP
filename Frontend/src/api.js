@@ -67,6 +67,16 @@ export const api = {
     body: JSON.stringify({ employeeId, location, reason }),
   }),
 
+  getLateCheckoutRequests: () => request('/attendance/late-checkout-requests'),
+  requestLateCheckout: (employeeId, location, reason) => request('/attendance/late-checkout-requests', {
+    method: 'POST',
+    body: JSON.stringify({ employeeId, location, reason }),
+  }),
+  updateLateCheckoutRequest: (id, updates) => request(`/attendance/late-checkout-requests/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  }),
+
   // Employees
   getEmployees: () => request('/employees'),
   addEmployee: (payload) => request('/employees', {
