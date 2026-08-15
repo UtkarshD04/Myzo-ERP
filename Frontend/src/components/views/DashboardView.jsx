@@ -5,6 +5,8 @@ import SalesManagerDashboard from '../dashboards/SalesManagerDashboard';
 import BDEDashboard from '../dashboards/BDEDashboard';
 import HRDashboard from '../dashboards/HRDashboard';
 import GeneralDashboard from '../dashboards/GeneralDashboard';
+import IndependenceDayBanner from '../common/IndependenceDayBanner';
+import { isIndependenceDaySeason } from '../../utils/festiveSeason';
 
 const TONE = {
   blue: { chip: 'bg-blue-50 text-blue-600', bar: 'bg-blue-600' },
@@ -107,6 +109,8 @@ export default function DashboardView({
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto font-sans text-slate-800 animate-in fade-in duration-200">
+
+      {isIndependenceDaySeason(now) && <IndependenceDayBanner />}
 
       {/* Command Header */}
       <div className="bg-white border border-slate-200 rounded-2xl px-6 py-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">

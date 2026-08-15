@@ -34,7 +34,7 @@ import ExpenseClaimsView from './components/views/ExpenseClaimsView';
 import AssetTrackingView from './components/views/AssetTrackingView';
 import VendorDirectoryView from './components/views/VendorDirectoryView';
 import WebsiteActivityView from './components/views/WebsiteActivityView';
-import LateCheckoutRequestModal from './components/attendance/LateCheckoutRequestModal';
+import LateCheckoutRequestPage from './components/attendance/LateCheckoutRequestPage';
 
 export default function App() {
   // ─── Persistent State ───────────────────────────────────────────────────────
@@ -305,12 +305,14 @@ export default function App() {
       try {
         state = await api.checkOut(employee.id, location);
       } catch (err) {
-        // Office employees punching out after 6:30 PM need their reporting
-        // manager to approve first — open the request form instead of
-        // finalizing the punch-out here. Field Employees never hit this;
-        // they're exempt from the 6:30 PM gate (see attendanceService.checkOut).
+        // Office employees punching out after 6:30 PM need an IT department
+        // Admin to approve first — navigate to the dedicated request page
+        // instead of finalizing the punch-out here. Field Employees never
+        // hit this; they're exempt from the 6:30 PM gate (see
+        // attendanceService.checkOut).
         if (err.requiresApproval) {
           setLateCheckoutPrompt({ location });
+          setActiveTab('late-checkout-request');
           return;
         }
         throw err;
@@ -325,6 +327,12 @@ export default function App() {
     const state = await api.requestLateCheckout(employee.id, lateCheckoutPrompt.location, reason);
     applyServerState(state);
     setLateCheckoutPrompt(null);
+    setActiveTab('attendance');
+  };
+
+  const handleCancelLateCheckoutRequest = () => {
+    setLateCheckoutPrompt(null);
+    setActiveTab('attendance');
   };
 
   const handleReviewLateCheckoutRequest = async (id, status, reviewComments) => {
@@ -639,12 +647,18 @@ export default function App() {
           {activeTab === 'attendance' && (
             <AttendanceView
               employee={employee}
-              employees={employees}
               attendanceHistory={myAttendance}
               lateCheckoutRequests={lateCheckoutRequests}
               onCheckIn={handleCheckIn}
               onCheckOut={handleCheckOut}
               onReviewLateCheckoutRequest={handleReviewLateCheckoutRequest}
+            />
+          )}
+
+          {activeTab === 'late-checkout-request' && lateCheckoutPrompt && (
+            <LateCheckoutRequestPage
+              onSubmit={handleSubmitLateCheckoutRequest}
+              onCancel={handleCancelLateCheckoutRequest}
             />
           )}
 
@@ -879,13 +893,6 @@ export default function App() {
         </nav>
 
       </div>
-
-      {lateCheckoutPrompt && (
-        <LateCheckoutRequestModal
-          onSubmit={handleSubmitLateCheckoutRequest}
-          onCancel={() => setLateCheckoutPrompt(null)}
-        />
-      )}
     </div>
   );
 }

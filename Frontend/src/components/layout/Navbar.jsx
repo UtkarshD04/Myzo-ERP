@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { LogOut, Menu, Settings, User, FileText, ChevronDown } from 'lucide-react';
+import { isIndependenceDaySeason } from '../../utils/festiveSeason';
 
 export default function Navbar({
   employee,
@@ -19,7 +20,15 @@ export default function Navbar({
   };
 
   return (
-    <header className="h-16 bg-white border-b border-slate-100 px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm shadow-slate-100/40">
+    <header className="bg-white border-b border-slate-100 sticky top-0 z-30 shadow-sm shadow-slate-100/40">
+      {isIndependenceDaySeason() && (
+        <div className="h-1 flex">
+          <div className="flex-1 bg-[#FF9933]" />
+          <div className="flex-1 bg-white" />
+          <div className="flex-1 bg-[#138808]" />
+        </div>
+      )}
+      <div className="h-16 px-6 flex items-center justify-between">
       {/* Left section: Hamburger (mobile) & Title */}
       <div className="flex items-center space-x-4">
         <button
@@ -121,6 +130,7 @@ export default function Navbar({
           )}
         </div>
 
+      </div>
       </div>
     </header>
   );

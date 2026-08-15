@@ -4,7 +4,6 @@ import { exportToCsv } from '../../utils/exportCsv';
 
 export default function AttendanceView({
   employee,
-  employees = [],
   attendanceHistory = [],
   lateCheckoutRequests = [],
   onCheckIn,
@@ -28,12 +27,11 @@ export default function AttendanceView({
 
   const visibleHistory = myAttendance;
 
-  // Anyone with a direct report pending a late-checkout decision sees the
-  // review card, mirroring reportController's reportsTo-based manager check
-  // rather than a role-based approver list.
-  const isManager = employees.some(e => e.reportsTo === employee.id);
+  // Only IT department Admins (role 'Admin' + department 'IT') can review
+  // late punch-out requests — see attendanceService.reviewLateCheckoutRequest.
+  const isITAdmin = employee.role === 'Admin' && (employee.department || '').trim().toLowerCase() === 'it';
   const pendingApprovals = lateCheckoutRequests
-    .filter(r => r.status === 'Pending' && r.managerId === employee.id)
+    .filter(r => r.status === 'Pending')
     .slice()
     .reverse();
 
@@ -98,7 +96,7 @@ export default function AttendanceView({
 
           {myPendingCheckoutRequest ? (
             <span className="px-5 py-2.5 bg-amber-50 text-amber-700 font-bold text-xs rounded-xl border border-amber-200 cursor-not-allowed">
-              Awaiting Manager Approval
+              Awaiting IT Approval
             </span>
           ) : isCheckedIn ? (
             <button
@@ -122,8 +120,8 @@ export default function AttendanceView({
         </div>
       </div>
 
-      {/* Pending late punch-out approvals (reporting managers only) */}
-      {isManager && (
+      {/* Pending late punch-out approvals (IT department Admins only) */}
+      {isITAdmin && (
         <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider">Late Punch-Out Approvals</h3>
@@ -133,7 +131,7 @@ export default function AttendanceView({
           </div>
 
           {pendingApprovals.length === 0 ? (
-            <p className="text-xs text-slate-400 font-semibold py-6 text-center">No pending punch-out requests from your team.</p>
+            <p className="text-xs text-slate-400 font-semibold py-6 text-center">No pending office employee punch-out requests.</p>
           ) : (
             <div className="space-y-3">
               {pendingApprovals.map(r => (

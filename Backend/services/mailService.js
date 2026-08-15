@@ -224,12 +224,13 @@ function buildLateCheckoutRequestSubmittedEmailHtml(request) {
   `;
 }
 
-// Best-effort: notifies the reporting manager a request is waiting on them.
-// Manager may not have SMTP configured / an official email on file — that
+// Best-effort: notifies an IT department Admin a request is waiting on them.
+// Called once per IT Admin (see attendanceService.requestLateCheckout). The
+// recipient may not have SMTP configured / an official email on file — that
 // should never block the request itself from being created.
-export async function sendLateCheckoutRequestSubmittedEmail(request, manager) {
+export async function sendLateCheckoutRequestSubmittedEmail(request, recipient) {
   const t = getTransporter();
-  const recipientEmail = manager?.officialEmail || manager?.email;
+  const recipientEmail = recipient?.officialEmail || recipient?.email;
   if (!t || !recipientEmail) return;
 
   await t.sendMail({

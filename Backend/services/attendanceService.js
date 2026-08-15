@@ -20,6 +20,18 @@ function isExemptFromAttendanceRules(emp) {
   return emp?.role === 'Admin' || !!emp?.isSuperAdmin;
 }
 
+// Late punch-out requests are reviewed by IT department Admins specifically
+// (not an employee's own reporting manager) — department is a free-text
+// field on Employee, so this is compared case-insensitively.
+function isITAdmin(emp) {
+  return emp?.role === 'Admin' && (emp?.department || '').trim().toLowerCase() === 'it';
+}
+
+async function findITAdmins() {
+  const admins = await Employee.find({ role: 'Admin' }, { id: 1, name: 1, department: 1, officialEmail: 1, email: 1 }).lean();
+  return admins.filter(a => (a.department || '').trim().toLowerCase() === 'it');
+}
+
 export async function checkIn({ employeeId, location } = {}) {
   const date = getTodayDate();
   const time = getCurrentTimeLabel();
@@ -192,7 +204,7 @@ export async function checkOut({ employeeId, location } = {}) {
   const isPastCutoff = isPastLateCheckoutCutoff(now);
 
   // Office (non-Field) employees past 6:30 PM can't self-serve a reason —
-  // their punch-out only records once their reporting manager approves a
+  // their punch-out only records once an IT department Admin approves a
   // late-checkout request (see requestLateCheckout/reviewLateCheckoutRequest
   // below). Field Employees are exempt from this gate entirely: they run
   // past 6:30 PM as a matter of course and, if they never manually punch
@@ -201,7 +213,7 @@ export async function checkOut({ employeeId, location } = {}) {
   if (!exempt && !emp?.isField && isPastCutoff) {
     const approved = await LateCheckoutRequest.findOne({ employeeId, date, status: 'Approved' }).lean();
     if (!approved) {
-      const error = new Error('It\'s past 6:30 PM. Please submit a punch-out request to your reporting manager for approval.');
+      const error = new Error('It\'s past 6:30 PM. Please submit a punch-out request with a reason — it needs approval from the IT department before your punch-out is recorded.');
       error.statusCode = 428;
       error.requiresApproval = true;
       throw error;
@@ -213,12 +225,12 @@ export async function checkOut({ employeeId, location } = {}) {
 }
 
 // Office (non-Field) employee submits a reason once past the 6:30 PM cutoff;
-// it's routed to their direct reporting manager (employee.reportsTo),
-// mirroring the direct-manager review pattern in reportController.modifyReport
-// rather than leave's role-based approver — the spec here is "goes to their
-// manager," not a role class. Field Employees don't use this at all — they're
-// exempt from the 6:30 PM gate and instead force-closed at 11:59 PM if they
-// never manually punch out (see autoPunchOutOpenRecords/checkOut above).
+// it's routed to IT department Admins (role 'Admin' + department 'IT') for
+// review, not the employee's reporting manager — this is a role class, not a
+// direct-manager approval like reportController.modifyReport. Field
+// Employees don't use this at all — they're exempt from the 6:30 PM gate and
+// instead force-closed at 11:59 PM if they never manually punch out (see
+// autoPunchOutOpenRecords/checkOut above).
 export async function requestLateCheckout({ employeeId, location, reason } = {}) {
   if (!reason?.trim()) {
     const error = new Error('Please provide a reason for the late punch-out request.');
@@ -259,7 +271,6 @@ export async function requestLateCheckout({ employeeId, location, reason } = {})
     id: buildId('LCR'),
     employeeId,
     employeeName: emp?.name || null,
-    managerId: emp?.reportsTo || null,
     date,
     reason: reason.trim(),
     location: location || null,
@@ -269,7 +280,7 @@ export async function requestLateCheckout({ employeeId, location, reason } = {})
   const notifications = await addNotification({
     id: buildId('NOT'),
     title: 'Late Punch-Out Request Submitted',
-    message: `${emp?.name || employeeId} requested approval to punch out late today, awaiting manager review.`,
+    message: `${emp?.name || employeeId} requested approval to punch out late today, awaiting IT department review.`,
     time: 'Just now',
     read: false,
     category: 'Attendance'
@@ -277,21 +288,22 @@ export async function requestLateCheckout({ employeeId, location, reason } = {})
 
   const lateCheckoutRequests = await findAllLateCheckoutRequests();
 
-  if (emp?.reportsTo) {
-    const manager = await Employee.findOne({ id: emp.reportsTo }).lean();
+  const itAdmins = await findITAdmins();
+  for (const admin of itAdmins) {
     sendLateCheckoutRequestSubmittedEmail(
       { employeeId, employeeName: emp?.name, date, reason: reason.trim() },
-      manager
+      admin
     ).catch(() => {});
   }
 
   return { notifications, lateCheckoutRequests };
 }
 
-// Only the request's direct reporting manager (or Admin) may approve/reject —
-// same authorization shape as reportController.modifyReport's isTheirManager
-// check. Approval performs the actual punch-out write; rejection leaves the
-// employee still punched in so they can raise it with their manager directly.
+// Only an IT department Admin (role 'Admin' + department 'IT') may
+// approve/reject — this is the org's IT desk reviewing the request, not the
+// employee's own reporting manager. Approval performs the actual punch-out
+// write; rejection leaves the employee still punched in so they can raise it
+// with IT directly.
 export async function reviewLateCheckoutRequest(id, { status, reviewComments } = {}, requester) {
   const request = await LateCheckoutRequest.findOne({ id }).lean();
   if (!request) {
@@ -310,9 +322,11 @@ export async function reviewLateCheckoutRequest(id, { status, reviewComments } =
     throw error;
   }
 
-  const isTheirManager = request.managerId === requester.id;
-  if (!isTheirManager && requester.role !== 'Admin') {
-    const error = new Error('Only the requester\'s reporting manager (or Admin) can review this request.');
+  // department isn't carried in the JWT (see tokenService.signToken), so the
+  // requester's own record is read fresh rather than trusting a stale claim.
+  const reviewer = await Employee.findOne({ id: requester.id }).lean();
+  if (!isITAdmin(reviewer)) {
+    const error = new Error('Only an IT department Admin can review this request.');
     error.statusCode = 403;
     throw error;
   }
