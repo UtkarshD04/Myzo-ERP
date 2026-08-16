@@ -50,6 +50,26 @@ export async function checkIn({ employeeId, location } = {}) {
 
   const emp = await Employee.findOne({ id: employeeId }).lean();
 
+  // A prior day's punch-out that never got recorded (missed the 6:30 PM
+  // window and no late-checkout request was ever approved) blocks any new
+  // punch-in — see flagUnresolvedCheckouts, which puts these in front of an
+  // IT department Admin automatically at day's end. Without this gate an
+  // employee could keep punching in day after day while yesterday's shift
+  // (and the day before, ...) sits open forever.
+  if (!isExemptFromAttendanceRules(emp)) {
+    const unresolved = await Attendance.findOne({ employeeId, checkOut: null, date: { $ne: date } })
+      .sort({ date: 1 })
+      .lean();
+    if (unresolved) {
+      const error = new Error(
+        `You still have an unresolved punch-out from ${unresolved.date}. It needs IT department approval before you can punch in again.`
+      );
+      error.statusCode = 428;
+      error.requiresApproval = true;
+      throw error;
+    }
+  }
+
   await createAttendanceRecord({
     employeeId,
     name:       emp?.name       || null,
@@ -136,6 +156,75 @@ export async function autoPunchOutOpenRecords() {
   }
 
   return openRecords.length;
+}
+
+// Office (non-Field) employees are never force-closed like Field Employees
+// are — their punch-out has to go through IT department approval (see
+// checkOut below). But if an employee never gets around to submitting a
+// late-checkout request themselves, that record would otherwise stay open
+// forever, silently blocking their next punch-in (see the unresolved-record
+// check in checkIn) with no way for anyone to clear it. Run alongside
+// autoPunchOutOpenRecords at the same 23:59 IST daily tick: for every
+// still-open record that isn't already covered by a Pending/Approved
+// request, file one automatically so it lands in the IT Admin queue exactly
+// like a self-submitted one. Also sweeps any older stale records (e.g. from
+// before this gate existed, or a day the cron missed) so nothing is stuck
+// unrecoverably.
+export async function flagUnresolvedCheckouts() {
+  const today = getTodayDate();
+
+  const exemptEmployees = await Employee.find(
+    { $or: [{ role: 'Admin' }, { isSuperAdmin: true }] },
+    { id: 1 }
+  ).lean();
+  const exemptIds = exemptEmployees.map(e => e.id);
+
+  const openRecords = await Attendance.find({
+    checkOut: null,
+    employeeId: { $nin: exemptIds }
+  }).lean();
+
+  let flagged = 0;
+  for (const record of openRecords) {
+    const alreadyHandled = await LateCheckoutRequest.findOne({
+      employeeId: record.employeeId,
+      date: record.date,
+      status: { $in: ['Pending', 'Approved'] }
+    }).lean();
+    if (alreadyHandled) continue;
+
+    const emp = await Employee.findOne({ id: record.employeeId }).lean();
+
+    await createLateCheckoutRequestRecord({
+      id: buildId('LCR'),
+      employeeId: record.employeeId,
+      employeeName: record.name || emp?.name || null,
+      date: record.date,
+      reason: 'No punch-out recorded by end of day (auto-flagged).',
+      location: record.checkInLocation || null,
+      status: 'Pending'
+    });
+    flagged++;
+
+    await addNotification({
+      id: buildId('NOT'),
+      title: 'Late Punch-Out Auto-Flagged',
+      message: `${record.name || record.employeeId} never punched out on ${record.date}. Flagged for IT department review.`,
+      time: 'Just now',
+      read: false,
+      category: 'Attendance'
+    });
+
+    const itAdmins = await findITAdmins();
+    for (const admin of itAdmins) {
+      sendLateCheckoutRequestSubmittedEmail(
+        { employeeId: record.employeeId, employeeName: record.name || emp?.name, date: record.date, reason: 'No punch-out recorded by end of day (auto-flagged).' },
+        admin
+      ).catch(() => {});
+    }
+  }
+
+  return flagged;
 }
 
 const LATE_CHECKOUT_HOUR = 18;
