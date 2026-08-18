@@ -5,7 +5,7 @@ const stockMovementSchema = new mongoose.Schema({
   productId: { type: String, required: true },
   productName: String,
   model: String,
-  type: { type: String, required: true }, // 'Sale' | 'Purchase' | 'Adjustment'
+  type: { type: String, required: true }, // 'Sale' | 'Purchase' | 'Adjustment' | 'Reservation' | 'Release'
   quantity: { type: Number, required: true }, // signed: negative for sale, positive for purchase/increase
   balanceAfter: { type: Number, default: null },
   reference: { type: String, default: null }, // invoice id or purchase order id

@@ -255,6 +255,45 @@ export async function sendLateCheckoutRequestReviewedEmail(request, employee) {
   });
 }
 
+function buildPayrollToBankEmailHtml({ bankManagerName, monthLabel, totalAmount, chequeNumber }) {
+  return `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#1e293b;">
+      <h2 style="color:#2563eb;margin-bottom:4px;">Salary Disbursement — ${esc(monthLabel)}</h2>
+      <p>Dear ${esc(bankManagerName || 'Bank Manager')},</p>
+      <p>Please find attached Cheque #${esc(chequeNumber)} for <strong>${money(totalAmount)}</strong> towards this month's salary disbursement, along with the Annexure-A sheet detailing the per-employee credit amounts and account details for processing.</p>
+      <table style="width:100%;margin-top:16px;border-collapse:collapse;">
+        <tr><td style="padding:6px 0;color:#64748b;">Cheque Number:</td><td style="padding:6px 0;font-weight:bold;">${esc(chequeNumber)}</td></tr>
+        <tr><td style="padding:6px 0;color:#64748b;">Total Amount:</td><td style="padding:6px 0;font-weight:bold;">${money(totalAmount)}</td></tr>
+        <tr><td style="padding:6px 0;color:#64748b;">Month:</td><td style="padding:6px 0;font-weight:bold;">${esc(monthLabel)}</td></tr>
+      </table>
+      <p style="margin-top:20px;font-size:13px;color:#64748b;">Kindly process the credit to each employee's account as per the attached Annexure-A.</p>
+      <p style="margin-top:24px;">Regards,<br/>MYZO ERP</p>
+    </div>
+  `;
+}
+
+export async function sendPayrollToBankEmail({ bankManagerName, bankManagerEmail, monthLabel, totalAmount, chequeNumber, attachments }) {
+  const t = getTransporter();
+  if (!t) {
+    const error = new Error('Email service is not configured (missing SMTP credentials).');
+    error.statusCode = 500;
+    throw error;
+  }
+  if (!bankManagerEmail) {
+    const error = new Error("The bank manager's email is required to send this payroll.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  await t.sendMail({
+    from: `"MYZO ERP" <${process.env.SMTP_USER}>`,
+    to: bankManagerEmail,
+    subject: `Salary Disbursement Cheque #${chequeNumber} — ${monthLabel}`,
+    html: buildPayrollToBankEmailHtml({ bankManagerName, monthLabel, totalAmount, chequeNumber }),
+    attachments
+  });
+}
+
 export async function sendQuotationFollowUpEmail(quotation) {
   const t = getTransporter();
   if (!t) {

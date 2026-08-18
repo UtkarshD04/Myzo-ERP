@@ -56,6 +56,7 @@ export async function addProduct(req, res) {
       specs: Array.isArray(req.body.specs) ? req.body.specs : [],
       useCases: Array.isArray(req.body.useCases) ? req.body.useCases : [],
       stock: Number(stock) || 0,
+      reservedStock: 0,
       discount: Number(req.body.discount) || 0,
       status: req.body.status || 'Active',
       isPublished: req.body.isPublished !== false
@@ -77,6 +78,11 @@ export async function modifyProduct(req, res) {
 
   const { id } = req.params;
   const updates = { ...req.body };
+  // reservedStock is only ever touched by the sanctioned reserve/release/
+  // fulfill mutators (see productModel.js) — never by a routine product edit,
+  // or a form that round-trips the full product object could silently
+  // overwrite an open sales order's reservation.
+  delete updates.reservedStock;
   if (updates.discount !== undefined) updates.discount = Number(updates.discount) || 0;
   if (Array.isArray(updates.images)) {
     updates.images = updates.images.filter(Boolean);
@@ -88,6 +94,13 @@ export async function modifyProduct(req, res) {
     const existing = await findProductById(id);
     previousStock = existing ? Number(existing.stock) || 0 : null;
     updates.stock = Number(updates.stock) || 0;
+
+    const reserved = existing ? Number(existing.reservedStock) || 0 : 0;
+    if (updates.stock < reserved) {
+      const error = new Error(`Cannot set stock below the ${reserved} unit(s) already reserved for open sales orders.`);
+      error.statusCode = 400;
+      throw error;
+    }
   }
 
   try {

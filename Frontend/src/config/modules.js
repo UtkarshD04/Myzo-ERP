@@ -62,6 +62,7 @@ export function getModules(employee) {
       tabs: [
         { id: 'customers', label: 'Customers' },
         { id: 'quotations', label: 'Quotes' },
+        { id: 'sales-orders', label: 'Orders' },
         { id: 'invoices', label: 'Invoices' },
         ...(canSeeTargets ? [{ id: 'targets', label: 'Targets' }] : []),
       ],

@@ -22,6 +22,7 @@ import ProfileView from './components/views/ProfileView';
 import SettingsView from './components/views/SettingsView';
 import EmployeeManagementView from './components/views/EmployeeManagementView';
 import QuotationsView from './components/views/QuotationsView';
+import SalesOrdersView from './components/views/SalesOrdersView';
 import CustomersView from './components/views/CustomersView';
 import InvoicesView from './components/views/InvoicesView';
 import ProductsManagementView from './components/views/ProductsManagementView';
@@ -56,9 +57,11 @@ export default function App() {
   const [products, setProducts] = useState([]);
   const [manageProducts, setManageProducts] = useState([]);
   const [quotations, setQuotations] = useState([]);
+  const [salesOrders, setSalesOrders] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [payrolls, setPayrolls] = useState([]);
+  const [companyBank, setCompanyBank] = useState(null);
   const [leaves, setLeaves] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [onboarding, setOnboarding] = useState([]);
@@ -96,9 +99,11 @@ export default function App() {
     if (state.products)     setProducts(state.products);
     if (state.manageProducts) setManageProducts(state.manageProducts);
     if (state.quotations)   setQuotations(state.quotations);
+    if (state.salesOrders)  setSalesOrders(state.salesOrders);
     if (state.invoices)     setInvoices(state.invoices);
     if (state.customers)    setCustomers(state.customers);
     if (state.payrolls)     setPayrolls(state.payrolls);
+    if (state.companyBank)  setCompanyBank(state.companyBank);
     if (state.leaves)       setLeaves(state.leaves);
     if (state.candidates)   setCandidates(state.candidates);
     if (state.onboarding)   setOnboarding(state.onboarding);
@@ -224,9 +229,11 @@ export default function App() {
     setProducts([]);
     setManageProducts([]);
     setQuotations([]);
+    setSalesOrders([]);
     setInvoices([]);
     setCustomers([]);
     setPayrolls([]);
+    setCompanyBank(null);
     setLeaves([]);
     setCandidates([]);
     setOnboarding([]);
@@ -384,16 +391,33 @@ export default function App() {
     return response;
   };
 
-  // ─── Invoice Handlers ────────────────────────────────────────────────────────
-  const handleConvertQuotationToInvoice = async (quotationId) => {
-    const response = await api.convertQuotationToInvoice(quotationId);
-    setInvoices(response.invoices);
+  // ─── Sales Order Handlers ───────────────────────────────────────────────────
+  const handleCreateSalesOrderFromQuotation = async (quotationId) => {
+    const response = await api.createSalesOrderFromQuotation(quotationId);
+    setSalesOrders(response.salesOrders);
     setQuotations(response.quotations);
+    if (response.products) setProducts(response.products);
+    if (response.manageProducts) setManageProducts(response.manageProducts);
+    return response.salesOrder;
+  };
+
+  const handleUpdateSalesOrder = async (id, updates) => {
+    const response = await api.updateSalesOrder(id, updates);
+    setSalesOrders(response.salesOrders);
+    if (response.products) setProducts(response.products);
+    if (response.manageProducts) setManageProducts(response.manageProducts);
+  };
+
+  const handleConvertSalesOrderToInvoice = async (salesOrderId) => {
+    const response = await api.convertSalesOrderToInvoice(salesOrderId);
+    setInvoices(response.invoices);
+    setSalesOrders(response.salesOrders);
     if (response.products) setProducts(response.products);
     if (response.manageProducts) setManageProducts(response.manageProducts);
     return response.invoice;
   };
 
+  // ─── Invoice Handlers ────────────────────────────────────────────────────────
   const handleUpdateInvoice = async (id, updates) => {
     const { invoices: updated } = await api.updateInvoice(id, updates);
     setInvoices(updated);
@@ -448,6 +472,19 @@ export default function App() {
   const handleUpdatePayroll = async (id, updates) => {
     const { payrolls: updated } = await api.updatePayroll(id, updates);
     setPayrolls(updated);
+  };
+
+  const handleSendPayrollToBank = async (month, payload) => {
+    const response = await api.sendPayrollToBank(month, payload);
+    setPayrolls(response.payrolls);
+    setCompanyBank(response.companyBank);
+    return response;
+  };
+
+  // ─── Company Bank Handlers ──────────────────────────────────────────────────
+  const handleUpdateCompanyBank = async (updates) => {
+    const { companyBank: updated } = await api.updateCompanyBank(updates);
+    setCompanyBank(updated);
   };
 
   // ─── Leave Management Handlers ──────────────────────────────────────────────
@@ -740,6 +777,8 @@ export default function App() {
             <SettingsView
               employee={employee}
               onUpdateEmployee={handleUpdateEmployee}
+              companyBank={companyBank}
+              onUpdateCompanyBank={handleUpdateCompanyBank}
             />
           )}
 
@@ -768,7 +807,17 @@ export default function App() {
               onUpdateQuotation={handleUpdateQuotation}
               onSendFollowUp={handleSendQuotationFollowUp}
               onAddCustomer={handleAddCustomer}
-              onConvertToInvoice={handleConvertQuotationToInvoice}
+              onCreateSalesOrder={handleCreateSalesOrderFromQuotation}
+              setActiveTab={setActiveTab}
+            />
+          )}
+
+          {activeTab === 'sales-orders' && (
+            <SalesOrdersView
+              employee={employee}
+              salesOrders={salesOrders}
+              onUpdateSalesOrder={handleUpdateSalesOrder}
+              onConvertToInvoice={handleConvertSalesOrderToInvoice}
               setActiveTab={setActiveTab}
             />
           )}
@@ -860,8 +909,10 @@ export default function App() {
             <PayrollView
               payrolls={payrolls}
               employees={employees}
+              companyBank={companyBank}
               onGeneratePayroll={handleGeneratePayroll}
               onUpdatePayroll={handleUpdatePayroll}
+              onSendPayrollToBank={handleSendPayrollToBank}
             />
           )}
         </main>

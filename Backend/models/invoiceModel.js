@@ -16,6 +16,7 @@ const invoiceItemSchema = new mongoose.Schema({
 const invoiceSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   sourceQuotationId: String,
+  sourceSalesOrderId: String,
   referenceNumber: String,
   invoiceDate: String,
   dueDate: String,

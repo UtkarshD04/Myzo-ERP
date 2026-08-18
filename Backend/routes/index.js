@@ -12,10 +12,12 @@ import { addEmployee, getEmployees, modifyEmployee, removeEmployee } from '../co
 import { deleteOne, markAllRead, markOneRead } from '../controllers/notificationController.js';
 import { addProduct, getManageProducts, getProducts, modifyProduct, removeProduct } from '../controllers/productController.js';
 import { addQuotation, getQuotations, modifyQuotation, sendQuotationFollowUp } from '../controllers/quotationController.js';
-import { convertQuotationToInvoice, getInvoices, modifyInvoice } from '../controllers/invoiceController.js';
+import { convertSalesOrderToInvoice, getInvoices, modifyInvoice } from '../controllers/invoiceController.js';
+import { addSalesOrderFromQuotation, getSalesOrders, modifySalesOrder } from '../controllers/salesOrderController.js';
 import { addReport, getReports, modifyReport } from '../controllers/reportController.js';
 import { addTask, getTasks, modifyTask } from '../controllers/taskController.js';
-import { getPayrolls, generatePayroll, modifyPayroll } from '../controllers/payrollController.js';
+import { getPayrolls, generatePayroll, modifyPayroll, sendPayrollToBank } from '../controllers/payrollController.js';
+import { getCompanyBankSettings, updateCompanyBankSettings } from '../controllers/companyBankController.js';
 import { getLeaves, requestLeave, modifyLeaveStatus } from '../controllers/leaveController.js';
 import { getCandidates, addCandidate, modifyCandidate } from '../controllers/candidateController.js';
 import { getOnboarding, modifyOnboarding } from '../controllers/onboardingController.js';
@@ -66,8 +68,11 @@ export const routes = [
   { method: 'POST', path: '/api/quotations', handler: addQuotation },
   { method: 'PATCH', path: '/api/quotations/:id', handler: modifyQuotation },
   { method: 'POST', path: '/api/quotations/:id/follow-up', handler: sendQuotationFollowUp },
+  { method: 'GET', path: '/api/sales-orders', handler: getSalesOrders },
+  { method: 'POST', path: '/api/sales-orders/from-quotation/:quotationId', handler: addSalesOrderFromQuotation },
+  { method: 'PATCH', path: '/api/sales-orders/:id', handler: modifySalesOrder },
   { method: 'GET', path: '/api/invoices', handler: getInvoices },
-  { method: 'POST', path: '/api/invoices/from-quotation/:quotationId', handler: convertQuotationToInvoice },
+  { method: 'POST', path: '/api/invoices/from-sales-order/:salesOrderId', handler: convertSalesOrderToInvoice },
   { method: 'PATCH', path: '/api/invoices/:id', handler: modifyInvoice },
   { method: 'GET', path: '/api/customers', handler: getCustomers },
   { method: 'POST', path: '/api/customers', handler: addCustomer },
@@ -76,6 +81,9 @@ export const routes = [
   { method: 'GET', path: '/api/payroll', handler: getPayrolls },
   { method: 'POST', path: '/api/payroll/generate', handler: generatePayroll },
   { method: 'PATCH', path: '/api/payroll/:id', handler: modifyPayroll },
+  { method: 'POST', path: '/api/payroll/:month/send-to-bank', handler: sendPayrollToBank },
+  { method: 'GET', path: '/api/company-bank', handler: getCompanyBankSettings },
+  { method: 'PATCH', path: '/api/company-bank', handler: updateCompanyBankSettings },
   { method: 'GET', path: '/api/leaves', handler: getLeaves },
   { method: 'POST', path: '/api/leaves', handler: requestLeave },
   { method: 'PATCH', path: '/api/leaves/:id', handler: modifyLeaveStatus },

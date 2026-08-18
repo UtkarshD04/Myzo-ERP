@@ -413,10 +413,11 @@ export async function downloadDocumentPdf({ type, doc }) {
 }
 
 /**
- * Builds and downloads the "Annexure-A / Salary Disbursement Sheet" bank
- * transfer instruction letter for a month's payroll run.
+ * Builds the "Annexure-A / Salary Disbursement Sheet" bank transfer
+ * instruction letter for a month's payroll run and returns the jsPDF
+ * instance (caller decides whether to .save() it or read out its bytes).
  */
-export function downloadSalaryDisbursementPdf({ monthLabel, rows = [], employees = [] }) {
+function buildSalaryDisbursementPdf({ monthLabel, rows = [], employees = [] }) {
   const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const margin = 36;
@@ -512,7 +513,216 @@ export function downloadSalaryDisbursementPdf({ monthLabel, rows = [], employees
   pdf.text('Date: ______________________', col2, y);
   pdf.text('Date: ______________________', col3, y);
 
-  pdf.save(`Salary-Disbursement-${monthLabel.replace(/\s+/g, '-')}.pdf`);
+  return pdf;
+}
+
+export function downloadSalaryDisbursementPdf({ monthLabel, rows = [], employees = [] }) {
+  buildSalaryDisbursementPdf({ monthLabel, rows, employees }).save(`Salary-Disbursement-${monthLabel.replace(/\s+/g, '-')}.pdf`);
+}
+
+// Base64 body only (no data: URI prefix) — used to upload this PDF as an
+// email attachment via the send-to-bank endpoint (see payrollController.js
+// / mailService.js on the backend, which has no PDF library of its own).
+export function buildSalaryDisbursementPdfBase64({ monthLabel, rows = [], employees = [] }) {
+  return buildSalaryDisbursementPdf({ monthLabel, rows, employees }).output('datauristring').split(',')[1];
+}
+
+function getImageSize(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+function imageFormatFromDataUrl(dataUrl) {
+  const match = /^data:image\/(\w+);/i.exec(dataUrl);
+  return (match ? match[1] : 'png').toUpperCase();
+}
+
+// Defaults used for any field the admin hasn't calibrated yet in Settings →
+// Company Bank, so an incomplete calibration never crashes or silently
+// drops a field from the printed cheque.
+const DEFAULT_CHEQUE_FIELD_POSITIONS = {
+  date: { x: 0.82, y: 0.18 },
+  payee: { x: 0.15, y: 0.45 },
+  amountWords: { x: 0.15, y: 0.6 },
+  amountFigure: { x: 0.78, y: 0.62 }
+};
+
+/**
+ * Draws the dynamic fields (date, payee, amount in words, amount figure) on
+ * top of the company's real, uploaded cheque-leaf scan — positions come from
+ * Settings → Company Bank's calibration panel, as percentages of the image's
+ * width/height so they map onto the PDF page regardless of the scan's size.
+ */
+async function buildImageBackedChequePdf({ bank, chequeNumber, chequeDate, amount }) {
+  const { width: imgWidth, height: imgHeight } = await getImageSize(bank.chequeLeafImage);
+  const pageWidth = 580;
+  const pageHeight = pageWidth / (imgWidth / imgHeight);
+  const pdf = new jsPDF({ unit: 'pt', format: [pageWidth, pageHeight] });
+  const ink = [20, 20, 20];
+
+  pdf.addImage(bank.chequeLeafImage, imageFormatFromDataUrl(bank.chequeLeafImage), 0, 0, pageWidth, pageHeight);
+
+  const positions = { ...DEFAULT_CHEQUE_FIELD_POSITIONS, ...(bank.chequeFieldPositions || {}) };
+  const at = (field) => {
+    const pos = positions[field] || DEFAULT_CHEQUE_FIELD_POSITIONS[field];
+    return { x: pos.x * pageWidth, y: pos.y * pageHeight };
+  };
+
+  pdf.setTextColor(...ink);
+
+  const datePt = at('date');
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(10);
+  pdf.text(String(chequeDate), datePt.x, datePt.y);
+
+  const payeePt = at('payee');
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(10);
+  pdf.text('SELF — Salary Account Transfer (see attached Annexure-A)', payeePt.x, payeePt.y);
+
+  const wordsPt = at('amountWords');
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9.5);
+  const wordsWrapped = pdf.splitTextToSize(`${numberToIndianWords(amount)} Only`, pageWidth - wordsPt.x - 30);
+  pdf.text(wordsWrapped, wordsPt.x, wordsPt.y);
+
+  const figurePt = at('amountFigure');
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(12);
+  pdf.text(`Rs. ${Number(amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`, figurePt.x, figurePt.y);
+
+  return pdf;
+}
+
+/**
+ * Builds a single "pay to self" cheque-leaf PDF for a month's total payroll
+ * payout, sized roughly like a real Indian cheque leaf. This is an original
+ * layout (not a copy of any specific bank's proprietary security-printed
+ * template) — bank name/branch/account details are whatever the company
+ * configured in Settings → Company Bank.
+ */
+function buildHandDrawnChequePdf({ bank = {}, chequeNumber, chequeDate, amount }) {
+  const pageWidth = 580;
+  const pageHeight = 260;
+  const pdf = new jsPDF({ unit: 'pt', format: [pageWidth, pageHeight] });
+  const margin = 20;
+  const ink = [20, 20, 20];
+
+  pdf.setDrawColor(100, 100, 100);
+  pdf.setLineWidth(1);
+  pdf.rect(margin / 2, margin / 2, pageWidth - margin, pageHeight - margin);
+
+  // A/C Payee crossing mark, top-left
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(7.5);
+  pdf.setTextColor(...ink);
+  pdf.text('A/C PAYEE ONLY', margin + 4, margin + 6);
+  pdf.setLineWidth(0.75);
+  pdf.line(margin, margin + 12, margin + 90, margin);
+  pdf.line(margin, margin, margin + 90, margin + 12);
+
+  // Bank name / branch, below the crossing mark
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(12);
+  pdf.setTextColor(...ink);
+  pdf.text(bank.bankName || 'Bank Name Not Configured', margin, margin + 34);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8.5);
+  pdf.setTextColor(80, 80, 80);
+  if (bank.branch) pdf.text(bank.branch, margin, margin + 46);
+
+  // Cheque No / Date, top-right
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(9);
+  pdf.setTextColor(...ink);
+  pdf.text(`Cheque No: ${chequeNumber}`, pageWidth - margin, margin + 8, { align: 'right' });
+  pdf.text(`Date: ${chequeDate}`, pageWidth - margin, margin + 22, { align: 'right' });
+
+  // Pay line
+  let y = margin + 74;
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9.5);
+  pdf.text('Pay', margin, y);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('SELF — Salary Account Transfer (see attached Annexure-A)', margin + 30, y);
+  pdf.setLineWidth(0.5);
+  pdf.line(margin + 28, y + 3, pageWidth - margin - 100, y + 3);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(7.5);
+  pdf.setTextColor(120, 120, 120);
+  pdf.text('OR BEARER', pageWidth - margin - 90, y);
+
+  // Amount in words
+  y += 26;
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9.5);
+  pdf.setTextColor(...ink);
+  pdf.text('Rupees', margin, y);
+  pdf.setFont('helvetica', 'bold');
+  const wordsWrapped = pdf.splitTextToSize(`${numberToIndianWords(amount)} Only`, pageWidth - margin - 190);
+  pdf.text(wordsWrapped, margin + 44, y);
+  const wordsBlockHeight = wordsWrapped.length * 11;
+  pdf.setLineWidth(0.5);
+  pdf.line(margin + 42, y + wordsBlockHeight - 6, pageWidth - margin - 150, y + wordsBlockHeight - 6);
+
+  // Amount box, right
+  const boxW = 130;
+  const boxH = 32;
+  const boxX = pageWidth - margin - boxW;
+  const boxY = margin + 58;
+  pdf.setLineWidth(1);
+  pdf.rect(boxX, boxY, boxW, boxH);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(13);
+  pdf.text(`Rs. ${Number(amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`, boxX + boxW / 2, boxY + boxH / 2 + 5, { align: 'center' });
+
+  // Footer: account details (left) + signatory line (right)
+  const footerY = pageHeight - margin - 12;
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(8);
+  pdf.setTextColor(90, 90, 90);
+  const accLine = [
+    bank.accountHolderName && `A/c Name: ${bank.accountHolderName}`,
+    bank.accountNumber && `A/c No: ${bank.accountNumber}`,
+    bank.ifscCode && `IFSC: ${bank.ifscCode}`
+  ].filter(Boolean).join('   ');
+  pdf.text(accLine || 'Company bank account not configured', margin, footerY);
+
+  pdf.setLineWidth(0.5);
+  pdf.setDrawColor(...ink);
+  pdf.line(pageWidth - margin - 140, footerY - 16, pageWidth - margin, footerY - 16);
+  pdf.setFontSize(8.5);
+  pdf.setTextColor(...ink);
+  pdf.text('Authorized Signatory', pageWidth - margin, footerY - 4, { align: 'right' });
+
+  return pdf;
+}
+
+// Uses the company's uploaded real cheque-leaf scan (Settings → Company
+// Bank) as the background when one is configured; falls back to the
+// hand-drawn layout above otherwise — no regression for anyone who hasn't
+// calibrated a real leaf yet.
+async function buildChequePdf({ bank = {}, chequeNumber, chequeDate, amount }) {
+  if (bank.chequeLeafImage) {
+    return buildImageBackedChequePdf({ bank, chequeNumber, chequeDate, amount });
+  }
+  return buildHandDrawnChequePdf({ bank, chequeNumber, chequeDate, amount });
+}
+
+export async function downloadChequePdf({ bank, chequeNumber, chequeDate, amount }) {
+  const pdf = await buildChequePdf({ bank, chequeNumber, chequeDate, amount });
+  pdf.save(`Cheque-${chequeNumber}.pdf`);
+}
+
+// Base64 body only, for the send-to-bank email attachment (same reasoning as
+// buildSalaryDisbursementPdfBase64 above).
+export async function buildChequePdfBase64({ bank, chequeNumber, chequeDate, amount }) {
+  const pdf = await buildChequePdf({ bank, chequeNumber, chequeDate, amount });
+  return pdf.output('datauristring').split(',')[1];
 }
 
 // Payslip line items print as plain figures — no currency symbol and no

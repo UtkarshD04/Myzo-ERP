@@ -5,8 +5,11 @@ import {
   findAllPayrolls,
   upsertPayrollForMonth,
   updatePayrollById,
+  markPayrollsSentToBank,
   filterPayrollsForViewer
 } from '../models/payrollModel.js';
+import { getOrCreateCompanyBank, consumeChequeNumber } from '../models/companyBankModel.js';
+import { sendPayrollToBankEmail } from '../services/mailService.js';
 import { buildId } from '../services/timeService.js';
 
 function requireAdminOrHR(req) {
@@ -35,6 +38,11 @@ function monthDateRange(month) {
     start: new Date(year, monthNum - 1, 1),
     end: new Date(year, monthNum, 1)
   };
+}
+
+function monthLabel(month) {
+  const [year, monthNum] = month.split('-').map(Number);
+  return new Date(year, monthNum - 1, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 }
 
 export async function getPayrolls(req, res) {
@@ -166,4 +174,59 @@ export async function modifyPayroll(req, res) {
 
   const payrolls = await updatePayrollById(id, updates);
   res.json({ payrolls });
+}
+
+export async function sendPayrollToBank(req, res) {
+  requireAdminOrHR(req);
+
+  const { month, chequeNumber } = req.body;
+  if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+    const error = new Error('A valid month (YYYY-MM) is required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const monthRows = (await findAllPayrolls()).filter(p => p.month === month);
+  if (monthRows.length === 0) {
+    const error = new Error('Generate payroll for this month before sending it to the bank.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const companyBank = await getOrCreateCompanyBank();
+  if (!companyBank.bankManagerEmail) {
+    const error = new Error("Configure the bank manager's email in Settings → Company Bank first.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const consumed = await consumeChequeNumber(Number(chequeNumber));
+  if (!consumed) {
+    const error = new Error('This cheque number was already used — refresh and try again.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const totalAmount = monthRows.reduce((sum, p) => sum + (Number(p.netPay) || 0), 0);
+
+  await sendPayrollToBankEmail({
+    bankManagerName: companyBank.bankManagerName,
+    bankManagerEmail: companyBank.bankManagerEmail,
+    monthLabel: monthLabel(month),
+    totalAmount,
+    chequeNumber,
+    attachments: [
+      { filename: `Cheque-${month}.pdf`, content: req.body.chequePdfBase64, encoding: 'base64' },
+      { filename: `Annexure-A-${month}.pdf`, content: req.body.disbursementPdfBase64, encoding: 'base64' }
+    ]
+  });
+
+  const payrolls = await markPayrollsSentToBank(month, {
+    sentToBankAt: new Date(),
+    sentToBankBy: req.user.id,
+    sentToBankByName: req.user.name,
+    chequeNumber
+  });
+
+  res.json({ payrolls, companyBank: await getOrCreateCompanyBank() });
 }

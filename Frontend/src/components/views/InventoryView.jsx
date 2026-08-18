@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Boxes, Plus, AlertTriangle, ArrowDownCircle, ArrowUpCircle, Settings2, Truck, ListOrdered, ArrowLeft } from 'lucide-react';
+import { Boxes, Plus, AlertTriangle, ArrowDownCircle, ArrowUpCircle, Settings2, Truck, ListOrdered, ArrowLeft, Lock, Unlock } from 'lucide-react';
 
 const LOW_STOCK_DEFAULT = 5;
 
@@ -13,7 +13,9 @@ const PO_STATUS_STYLES = {
 const MOVEMENT_STYLES = {
   Sale: { icon: ArrowDownCircle, className: 'text-red-500' },
   Purchase: { icon: ArrowUpCircle, className: 'text-emerald-500' },
-  Adjustment: { icon: Settings2, className: 'text-amber-500' }
+  Adjustment: { icon: Settings2, className: 'text-amber-500' },
+  Reservation: { icon: Lock, className: 'text-blue-500' },
+  Release: { icon: Unlock, className: 'text-slate-500' }
 };
 
 const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
@@ -31,7 +33,8 @@ export default function InventoryView({ employee, manageProducts = [], purchaseO
 
   const lowStockProducts = manageProducts.filter(p => {
     const threshold = p.lowStockThreshold ?? LOW_STOCK_DEFAULT;
-    return Number(p.stock ?? 0) <= threshold;
+    const available = (Number(p.stock) || 0) - (Number(p.reservedStock) || 0);
+    return available <= threshold;
   });
 
   const handleProductSelect = (index, productId) => {
@@ -202,7 +205,7 @@ export default function InventoryView({ employee, manageProducts = [], purchaseO
             <Boxes className="w-5 h-5 text-blue-600" />
             Inventory &amp; Stock Tracking
           </h2>
-          <p className="text-xs text-slate-500 mt-1">Stock levels, purchase orders, and movement history — linked to quotation-to-invoice sales.</p>
+          <p className="text-xs text-slate-500 mt-1">Stock levels, purchase orders, and movement history — linked to the quotation → sales order → invoice pipeline.</p>
         </div>
         <button
           onClick={() => setShowPoModal(true)}
@@ -219,7 +222,7 @@ export default function InventoryView({ employee, manageProducts = [], purchaseO
           <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
           <div className="text-xs text-amber-800">
             <p className="font-bold">{lowStockProducts.length} product(s) at or below low-stock threshold:</p>
-            <p className="mt-1">{lowStockProducts.map(p => `${p.series} ${p.model} (${p.stock ?? 0})`).join(', ')}</p>
+            <p className="mt-1">{lowStockProducts.map(p => `${p.series} ${p.model} (${(Number(p.stock) || 0) - (Number(p.reservedStock) || 0)} available)`).join(', ')}</p>
           </div>
         </div>
       )}
@@ -254,22 +257,28 @@ export default function InventoryView({ employee, manageProducts = [], purchaseO
                   <th className="px-5 py-3 font-extrabold">Product</th>
                   <th className="px-5 py-3 font-extrabold">Type</th>
                   <th className="px-5 py-3 font-extrabold">Current Stock</th>
+                  <th className="px-5 py-3 font-extrabold">Reserved</th>
+                  <th className="px-5 py-3 font-extrabold">Available</th>
                   <th className="px-5 py-3 font-extrabold">Low Stock At</th>
                   <th className="px-5 py-3 font-extrabold">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 font-medium">
                 {manageProducts.length === 0 && (
-                  <tr><td colSpan={5} className="py-8 text-center text-slate-400 font-semibold">No products in catalog.</td></tr>
+                  <tr><td colSpan={7} className="py-8 text-center text-slate-400 font-semibold">No products in catalog.</td></tr>
                 )}
                 {manageProducts.map(p => {
                   const threshold = p.lowStockThreshold ?? LOW_STOCK_DEFAULT;
-                  const isLow = Number(p.stock ?? 0) <= threshold;
+                  const reserved = Number(p.reservedStock) || 0;
+                  const available = (Number(p.stock) || 0) - reserved;
+                  const isLow = available <= threshold;
                   return (
                     <tr key={p._id} className="hover:bg-slate-50/50">
                       <td className="px-5 py-3.5 text-slate-800 font-bold">{p.series} {p.model}</td>
                       <td className="px-5 py-3.5 text-slate-600">{p.type || '--'}</td>
                       <td className="px-5 py-3.5 font-mono text-slate-700">{p.stock ?? 0}</td>
+                      <td className="px-5 py-3.5 font-mono text-blue-500">{reserved}</td>
+                      <td className="px-5 py-3.5 font-mono text-slate-700 font-bold">{available}</td>
                       <td className="px-5 py-3.5 font-mono text-slate-400">{threshold}</td>
                       <td className="px-5 py-3.5">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${

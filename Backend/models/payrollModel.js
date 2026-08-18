@@ -48,7 +48,15 @@ const payrollSchema = new mongoose.Schema({
   approved: { type: Boolean, default: false },
   approvedAt: { type: Date, default: null },
   approvedBy: String,
-  approvedByName: String
+  approvedByName: String,
+
+  // Stamped across every record in a month's batch once HR sends that
+  // month's cheque + disbursement sheet to the bank manager (see
+  // payrollController.sendPayrollToBank).
+  sentToBankAt: { type: Date, default: null },
+  sentToBankBy: String,
+  sentToBankByName: String,
+  chequeNumber: String
 }, { timestamps: true });
 
 payrollSchema.index({ employeeId: 1, month: 1 }, { unique: true });
@@ -73,6 +81,11 @@ export async function upsertPayrollForMonth(employeeId, month, data) {
 
 export async function updatePayrollById(id, updates) {
   await Payroll.findOneAndUpdate({ id }, updates);
+  return findAllPayrolls();
+}
+
+export async function markPayrollsSentToBank(month, patch) {
+  await Payroll.updateMany({ month }, { $set: patch });
   return findAllPayrolls();
 }
 

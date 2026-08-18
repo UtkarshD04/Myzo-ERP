@@ -1,6 +1,6 @@
 import { createInvoice, findAllInvoices, findInvoiceById, updateInvoice } from '../models/invoiceModel.js';
-import { findQuotationById, updateQuotation } from '../models/quotationModel.js';
-import { findProductById, adjustProductStock, findAllProducts, findAllProductsForManagement } from '../models/productModel.js';
+import { findSalesOrderById, markSalesOrderInvoiced, findAllSalesOrders } from '../models/salesOrderModel.js';
+import { fulfillReservedStock, findAllProducts, findAllProductsForManagement } from '../models/productModel.js';
 import { createStockMovement } from '../models/stockMovementModel.js';
 import { buildId, getTodayDate } from '../services/timeService.js';
 import { requireOwnerOrRole } from '../middleware/auth.js';
@@ -20,61 +20,59 @@ export async function getInvoices(req, res) {
   res.json({ invoices });
 }
 
-export async function convertQuotationToInvoice(req, res) {
-  const { quotationId } = req.params;
+export async function convertSalesOrderToInvoice(req, res) {
+  const { salesOrderId } = req.params;
 
-  const quotation = await findQuotationById(quotationId);
-  if (!quotation) {
-    const error = new Error('Quotation not found.');
+  const salesOrder = await findSalesOrderById(salesOrderId);
+  if (!salesOrder) {
+    const error = new Error('Sales order not found.');
     error.statusCode = 404;
     throw error;
   }
 
-  if (quotation.invoiceId) {
-    const error = new Error(`This quote was already converted to invoice ${quotation.invoiceId}.`);
+  if (salesOrder.status !== 'Confirmed') {
+    const error = new Error(`This sales order is already ${salesOrder.status.toLowerCase()} and cannot be invoiced.`);
     error.statusCode = 409;
     throw error;
   }
 
-  requireOwnerOrRole(req, quotation.salesperson, ...INVOICE_OVERRIDE_ROLES);
+  requireOwnerOrRole(req, salesOrder.salesperson, ...INVOICE_OVERRIDE_ROLES);
 
-  // Only items linked to a catalog product participate in stock tracking —
-  // free-text/custom line items (no productId) skip validation entirely.
-  const shortages = [];
-  for (const item of quotation.items || []) {
-    if (!item.productId) continue;
-    const product = await findProductById(item.productId);
-    const available = product ? Number(product.stock) || 0 : 0;
-    if (product && available < (Number(item.quantity) || 0)) {
-      shortages.push(`${item.productName || item.model} (need ${item.quantity}, have ${available})`);
-    }
-  }
-  if (shortages.length > 0) {
-    const error = new Error(`Insufficient stock to invoice: ${shortages.join('; ')}`);
-    error.statusCode = 409;
-    throw error;
-  }
-
-  const { _id, id: quoteId, createdAt, updatedAt, __v, status, validUntil, invoiceId, ...rest } = quotation;
+  const { _id, id: soId, createdAt, updatedAt, __v, status, expectedDeliveryDate, invoiceId, confirmedAt, invoicedAt, cancelledAt, ...rest } = salesOrder;
   const invoiceDate = getTodayDate();
   const id = buildId('INV');
+
+  // Atomically claim this sales order for invoicing *before* creating the
+  // invoice or touching stock — the status match in the filter means only
+  // one of two concurrent requests for the same order can win here. The
+  // loser gets null back and is rejected with no side effects at all,
+  // instead of both racing past the earlier status check above and each
+  // creating an invoice + double-decrementing stock for one reservation.
+  const claimed = await markSalesOrderInvoiced(soId, id);
+  if (!claimed) {
+    const error = new Error('This sales order was already invoiced or cancelled by another request.');
+    error.statusCode = 409;
+    throw error;
+  }
 
   const invoice = {
     ...rest,
     id,
-    sourceQuotationId: quoteId,
+    sourceSalesOrderId: soId,
     invoiceDate,
     dueDate: addDays(invoiceDate, 15),
     status: 'Unpaid'
   };
 
   const invoices = await createInvoice(invoice);
-  const quotations = await updateQuotation(quoteId, { invoiceId: id });
+  const salesOrders = await findAllSalesOrders();
 
-  for (const item of quotation.items || []) {
+  // Reservation is fulfilled here: stock and reservedStock drop together,
+  // since the quantity was already held aside when the order was confirmed.
+  for (const item of salesOrder.items || []) {
     if (!item.productId) continue;
     const quantity = Number(item.quantity) || 0;
-    const updated = await adjustProductStock(item.productId, -quantity);
+    const updated = await fulfillReservedStock(item.productId, quantity);
     if (updated) {
       await createStockMovement({
         id: buildId('STK'),
@@ -86,7 +84,7 @@ export async function convertQuotationToInvoice(req, res) {
         balanceAfter: updated.stock,
         reference: id,
         note: `Invoice ${id}`,
-        createdBy: quotation.salespersonName || null
+        createdBy: salesOrder.salespersonName || null
       });
     }
   }
@@ -94,7 +92,7 @@ export async function convertQuotationToInvoice(req, res) {
   const products = await findAllProducts();
   const manageProducts = await findAllProductsForManagement();
 
-  res.status(201).json({ invoices, quotations, invoice, products, manageProducts });
+  res.status(201).json({ invoices, salesOrders, invoice, products, manageProducts });
 }
 
 export async function modifyInvoice(req, res) {

@@ -138,9 +138,19 @@ export const api = {
     method: 'POST',
   }),
 
+  // Sales Orders
+  getSalesOrders: () => request('/sales-orders'),
+  createSalesOrderFromQuotation: (quotationId) => request(`/sales-orders/from-quotation/${quotationId}`, {
+    method: 'POST',
+  }),
+  updateSalesOrder: (id, updates) => request(`/sales-orders/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  }),
+
   // Invoices
   getInvoices: () => request('/invoices'),
-  convertQuotationToInvoice: (quotationId) => request(`/invoices/from-quotation/${quotationId}`, {
+  convertSalesOrderToInvoice: (salesOrderId) => request(`/invoices/from-sales-order/${salesOrderId}`, {
     method: 'POST',
   }),
   updateInvoice: (id, updates) => request(`/invoices/${id}`, {
@@ -171,6 +181,17 @@ export const api = {
     body: JSON.stringify({ month, generatedBy: requesterRole, generatedByName }),
   }),
   updatePayroll: (id, updates) => request(`/payroll/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  }),
+  sendPayrollToBank: (month, payload) => request(`/payroll/${month}/send-to-bank`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+
+  // Company Bank Account (Settings)
+  getCompanyBank: () => request('/company-bank'),
+  updateCompanyBank: (updates) => request('/company-bank', {
     method: 'PATCH',
     body: JSON.stringify(updates),
   }),

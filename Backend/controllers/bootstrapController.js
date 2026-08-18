@@ -6,9 +6,11 @@ import { findAllReports, filterReportsForViewer } from '../models/reportModel.js
 import { findAllNotifications } from '../models/notificationModel.js';
 import { findAllProducts, findAllProductsForManagement } from '../models/productModel.js';
 import { findAllQuotations } from '../models/quotationModel.js';
+import { findAllSalesOrders } from '../models/salesOrderModel.js';
 import { findAllInvoices } from '../models/invoiceModel.js';
 import { findAllCustomers } from '../models/customerModel.js';
 import { findAllPayrolls, filterPayrollsForViewer } from '../models/payrollModel.js';
+import { getOrCreateCompanyBank } from '../models/companyBankModel.js';
 import { findAllLeaves, filterLeavesForViewer } from '../models/leaveModel.js';
 import { findAllCandidates, filterCandidatesForViewer } from '../models/candidateModel.js';
 import { findAllOnboarding, filterOnboardingForViewer } from '../models/onboardingModel.js';
@@ -41,9 +43,11 @@ export async function getBootstrapData(req, res) {
   const products = await findAllProducts();
   const manageProducts = await findAllProductsForManagement();
   const quotations = await findAllQuotations();
+  const salesOrders = await findAllSalesOrders();
   const invoices = await findAllInvoices();
   const customers = await findAllCustomers();
   const payrolls = filterPayrollsForViewer(await findAllPayrolls(), req.user);
+  const companyBank = (req.user.role === 'Admin' || req.user.role === 'HR') ? await getOrCreateCompanyBank() : null;
   const leaves = filterLeavesForViewer(await findAllLeaves(), req.user);
   const candidates = filterCandidatesForViewer(await findAllCandidates(), req.user);
   const onboarding = filterOnboardingForViewer(await findAllOnboarding(), req.user);
@@ -74,9 +78,11 @@ export async function getBootstrapData(req, res) {
     products,
     manageProducts,
     quotations,
+    salesOrders,
     invoices,
     customers,
     payrolls,
+    companyBank,
     leaves,
     candidates,
     onboarding,

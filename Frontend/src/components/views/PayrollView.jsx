@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Wallet, Users, IndianRupee, CheckCircle2, Clock, PlayCircle, FileText, Download } from 'lucide-react';
-import { downloadSalaryDisbursementPdf } from '../../utils/documentPdf';
+import { Wallet, Users, IndianRupee, CheckCircle2, Clock, PlayCircle, FileText, Download, Landmark, X } from 'lucide-react';
+import { downloadSalaryDisbursementPdf, buildSalaryDisbursementPdfBase64, buildChequePdfBase64 } from '../../utils/documentPdf';
 import { exportToCsv } from '../../utils/exportCsv';
 
 const STATUS_STYLES = {
@@ -21,11 +21,16 @@ function monthLabel(monthKey) {
   return new Date(year, month - 1, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 }
 
-export default function PayrollView({ payrolls = [], employees = [], onGeneratePayroll, onUpdatePayroll }) {
+export default function PayrollView({ payrolls = [], employees = [], companyBank, onGeneratePayroll, onUpdatePayroll, onSendPayrollToBank }) {
   const [selectedMonth, setSelectedMonth] = useState(currentMonthKey());
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
   const [markingPaidId, setMarkingPaidId] = useState(null);
+  const [showBankModal, setShowBankModal] = useState(false);
+  const [bankChequeNumber, setBankChequeNumber] = useState('');
+  const [bankChequeDate, setBankChequeDate] = useState('');
+  const [bankError, setBankError] = useState('');
+  const [sendingToBank, setSendingToBank] = useState(false);
 
   const monthRows = payrolls
     .filter(p => p.month === selectedMonth)
@@ -35,6 +40,7 @@ export default function PayrollView({ payrolls = [], employees = [], onGenerateP
   const totalCommission = monthRows.reduce((sum, p) => sum + (Number(p.commission) || 0), 0);
   const paidCount = monthRows.filter(p => p.status === 'Paid').length;
   const pendingCount = monthRows.length - paidCount;
+  const sentRow = monthRows.find(p => p.sentToBankAt);
 
   const handleGenerate = async () => {
     setError('');
@@ -63,6 +69,47 @@ export default function PayrollView({ payrolls = [], employees = [], onGenerateP
       { label: 'Net Pay', value: (p) => p.netPay || 0 },
       { label: 'Status', value: 'status' }
     ], monthRows);
+  };
+
+  const handleOpenBankModal = () => {
+    setBankError('');
+    setBankChequeNumber(String(companyBank?.nextChequeNumber ?? ''));
+    setBankChequeDate(new Date().toISOString().split('T')[0]);
+    setShowBankModal(true);
+  };
+
+  const handleSendToBank = async (e) => {
+    e.preventDefault();
+    setBankError('');
+    if (!companyBank?.bankManagerEmail) {
+      setBankError('Bank manager email is not configured. Set it up in Settings → Company Bank Account first.');
+      return;
+    }
+    setSendingToBank(true);
+    try {
+      const chequePdfBase64 = await buildChequePdfBase64({
+        bank: companyBank,
+        chequeNumber: bankChequeNumber,
+        chequeDate: bankChequeDate,
+        amount: totalNetPay
+      });
+      const disbursementPdfBase64 = buildSalaryDisbursementPdfBase64({
+        monthLabel: monthLabel(selectedMonth),
+        rows: monthRows,
+        employees
+      });
+      await onSendPayrollToBank(selectedMonth, {
+        chequeNumber: bankChequeNumber,
+        chequePdfBase64,
+        disbursementPdfBase64
+      });
+      setShowBankModal(false);
+      alert(`Cheque #${bankChequeNumber} and the disbursement sheet were emailed to ${companyBank.bankManagerEmail}.`);
+    } catch (err) {
+      setBankError(err.message || 'Failed to send payroll to the bank.');
+    } finally {
+      setSendingToBank(false);
+    }
   };
 
   const handleMarkPaid = async (payroll) => {
@@ -168,9 +215,23 @@ export default function PayrollView({ payrolls = [], employees = [], onGenerateP
                 <FileText className="w-3.5 h-3.5" />
                 Salary Disbursement Letter
               </button>
+              <button
+                onClick={handleOpenBankModal}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-[11px] cursor-pointer transition-all"
+              >
+                <Landmark className="w-3.5 h-3.5" />
+                Send to Bank
+              </button>
             </div>
           )}
         </div>
+
+        {sentRow && (
+          <div className="px-5 py-2.5 bg-emerald-50/60 border-t border-emerald-100 text-[11px] font-semibold text-emerald-700 flex items-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+            Sent to bank (Cheque #{sentRow.chequeNumber}) on {new Date(sentRow.sentToBankAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} by {sentRow.sentToBankByName || '--'}
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
@@ -231,6 +292,81 @@ export default function PayrollView({ payrolls = [], employees = [], onGenerateP
           </table>
         </div>
       </div>
+
+      {showBankModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <Landmark className="w-4 h-4 text-blue-600" />
+                Send Payroll to Bank
+              </h3>
+              <button onClick={() => setShowBankModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSendToBank} className="space-y-3.5">
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Month</p>
+                  <p className="font-bold text-slate-700 mt-0.5">{monthLabel(selectedMonth)}</p>
+                </div>
+                <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total Payout</p>
+                  <p className="font-bold text-blue-600 mt-0.5">{money(totalNetPay)}</p>
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs">
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Bank Manager</p>
+                {companyBank?.bankManagerEmail ? (
+                  <p className="font-bold text-slate-700 mt-0.5">{companyBank.bankManagerName || 'Bank Manager'} — {companyBank.bankManagerEmail}</p>
+                ) : (
+                  <p className="font-semibold text-red-500 mt-0.5">Not configured — set it up in Settings → Company Bank Account.</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Cheque Number</label>
+                  <input
+                    type="text" required value={bankChequeNumber}
+                    onChange={(e) => setBankChequeNumber(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Cheque Date</label>
+                  <input
+                    type="date" required value={bankChequeDate}
+                    onChange={(e) => setBankChequeDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {bankError && <p className="text-[11px] text-red-600 font-semibold bg-red-50 border border-red-100 rounded-xl px-3 py-2">{bankError}</p>}
+
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowBankModal(false)}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-xs cursor-pointer transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit" disabled={sendingToBank}
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-lg shadow-blue-500/10 cursor-pointer transition-all disabled:opacity-60"
+                >
+                  {sendingToBank ? 'Sending...' : 'Confirm & Send'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

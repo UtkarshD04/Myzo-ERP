@@ -102,14 +102,14 @@ const EMPTY_FORM = {
 
 const EMPTY_CUSTOMER_FORM = { name: '', email: '' };
 
-export default function QuotationsView({ employee, employees = [], quotations = [], products = [], customers = [], onAddQuotation, onUpdateQuotation, onSendFollowUp, onAddCustomer, onConvertToInvoice, setActiveTab }) {
+export default function QuotationsView({ employee, employees = [], quotations = [], products = [], customers = [], onAddQuotation, onUpdateQuotation, onSendFollowUp, onAddCustomer, onCreateSalesOrder, setActiveTab }) {
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(null);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [converting, setConverting] = useState(false);
+  const [creatingOrder, setCreatingOrder] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [followingUp, setFollowingUp] = useState(false);
   const [error, setError] = useState('');
@@ -379,16 +379,16 @@ export default function QuotationsView({ employee, employees = [], quotations = 
     }
   };
 
-  const handleConvertToInvoice = async (quotationId) => {
-    setConverting(true);
+  const handleCreateSalesOrder = async (quotationId) => {
+    setCreatingOrder(true);
     try {
-      const invoice = await onConvertToInvoice(quotationId);
-      setShowDetailModal(prev => (prev && prev.id === quotationId ? { ...prev, invoiceId: invoice.id } : prev));
-      alert(`Invoice ${invoice.id} created from this quote.`);
+      const salesOrder = await onCreateSalesOrder(quotationId);
+      setShowDetailModal(prev => (prev && prev.id === quotationId ? { ...prev, salesOrderId: salesOrder.id } : prev));
+      alert(`Sales order ${salesOrder.id} created from this quote.`);
     } catch (err) {
       alert(err.message);
     } finally {
-      setConverting(false);
+      setCreatingOrder(false);
     }
   };
 
@@ -1140,26 +1140,28 @@ export default function QuotationsView({ employee, employees = [], quotations = 
             <div className="flex items-center gap-2 text-xs font-bold text-blue-700">
               <Info className="w-4 h-4 shrink-0" />
               <span>
-                {q.invoiceId
-                  ? `Converted to invoice ${q.invoiceId}.`
-                  : "What's Next? Convert this quote to an invoice."}
+                {q.salesOrderId
+                  ? `Converted to sales order ${q.salesOrderId}.`
+                  : q.status === 'Accepted'
+                    ? "What's Next? Create a sales order to reserve stock and move toward invoicing."
+                    : 'Accept this quote to create a Sales Order.'}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              {q.invoiceId ? (
+              {q.salesOrderId ? (
                 <button
-                  onClick={() => setActiveTab && setActiveTab('invoices')}
+                  onClick={() => setActiveTab && setActiveTab('sales-orders')}
                   className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded-lg cursor-pointer transition-all flex items-center gap-1.5"
                 >
-                  <ArrowRightLeft className="w-3.5 h-3.5" /> View Invoice
+                  <ArrowRightLeft className="w-3.5 h-3.5" /> View Sales Order
                 </button>
               ) : (
                 <button
-                  onClick={() => handleConvertToInvoice(q.id)}
-                  disabled={converting}
-                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded-lg cursor-pointer transition-all disabled:opacity-60 flex items-center gap-1.5"
+                  onClick={() => handleCreateSalesOrder(q.id)}
+                  disabled={creatingOrder || q.status !== 'Accepted'}
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded-lg cursor-pointer transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
                 >
-                  <ArrowRightLeft className="w-3.5 h-3.5" /> {converting ? 'Converting...' : 'Convert to Invoice'}
+                  <ArrowRightLeft className="w-3.5 h-3.5" /> {creatingOrder ? 'Creating...' : 'Create Sales Order'}
                 </button>
               )}
             </div>

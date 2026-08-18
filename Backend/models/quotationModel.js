@@ -63,6 +63,7 @@ const quotationSchema = new mongoose.Schema({
   createdBy: String,
   createdByName: String,
   invoiceId: String,
+  salesOrderId: String,
   sentAt: Date,
   acceptedAt: Date,
   lastFollowUpAt: Date,
