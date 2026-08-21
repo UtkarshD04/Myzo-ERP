@@ -21,11 +21,21 @@ function requireAdminOrHR(req) {
   }
 }
 
-function workingDaysInMonth(month) {
+// Counts working (non-Sunday) days in `month`, up through `asOf` when asOf
+// falls inside that month — so generating payroll for the CURRENT, still-
+// in-progress month only counts days that have actually happened so far as
+// eligible for Loss-of-Pay, instead of treating the rest of the month (days
+// that haven't occurred yet, and so can have no attendance record) as
+// unpaid absences. For any completed month this is identical to counting
+// the whole month, since asOf falls outside it.
+function workingDaysInMonth(month, asOf = new Date()) {
   const [year, monthNum] = month.split('-').map(Number);
   const daysInMonth = new Date(year, monthNum, 0).getDate();
+  const lastDay = (asOf.getFullYear() === year && asOf.getMonth() + 1 === monthNum)
+    ? Math.min(asOf.getDate(), daysInMonth)
+    : daysInMonth;
   let workingDays = 0;
-  for (let day = 1; day <= daysInMonth; day++) {
+  for (let day = 1; day <= lastDay; day++) {
     const isSunday = new Date(year, monthNum - 1, day).getDay() === 0;
     if (!isSunday) workingDays++;
   }
