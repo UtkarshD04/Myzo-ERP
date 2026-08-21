@@ -78,14 +78,13 @@ export async function generatePayrollForMonth(month, { generatedBy, generatedByN
 
     // Mirrors employeeModel's schema defaults — this only matters for
     // records that predate those defaults (older documents saved before the
-    // field existed at all), so it must stay in sync with them: Gross
-    // Earnings equals Salary as-is unless HR explicitly configured a
-    // Basic/HRA/Medical split.
+    // field existed at all), so it must stay in sync with them: no implicit
+    // defaults, payroll builds strictly off what HR actually configured.
     const salary = Number(employee.salary) || 0;
     const basicPercent = employee.basicPercent ?? 100;
     const hraPercent = employee.hraPercent ?? 0;
     const medicalAllowance = employee.medicalAllowance ?? 0;
-    const pfPercent = employee.pfPercent ?? 12;
+    const pfPercent = employee.pfPercent ?? 0;
     const commissionPercent = employee.commissionPercent ?? 0;
 
     const basicPay = Math.round(salary * basicPercent / 100);

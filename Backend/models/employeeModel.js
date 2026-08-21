@@ -46,14 +46,14 @@ const employeeSchema = new mongoose.Schema({
   motherName: String,
   motherDob: String,
   salary: Number,
-  // Defaults make Gross Earnings equal Salary as-is when HR leaves these
-  // blank at add-employee time (100% Basic, no HRA/Medical split) — payroll
-  // must never silently invent a Basic/HRA/Medical breakdown HR never
-  // configured. PF stays a real statutory default since it isn't optional.
+  // No implicit defaults: payroll must build strictly off what HR actually
+  // configured for this employee, not an invented split or rate they never
+  // entered. Leaving these blank means 100% Basic (Gross Earnings = Salary,
+  // no HRA/Medical) and 0% PF — HR sets a real rate to deduct anything.
   basicPercent: { type: Number, default: 100 },
   hraPercent: { type: Number, default: 0 },
   medicalAllowance: { type: Number, default: 0 },
-  pfPercent: { type: Number, default: 12 },
+  pfPercent: { type: Number, default: 0 },
   // % of the total value of quotations this employee closed (status
   // "Accepted") in a given month, paid out as sales commission via payroll.
   commissionPercent: { type: Number, default: 0 },

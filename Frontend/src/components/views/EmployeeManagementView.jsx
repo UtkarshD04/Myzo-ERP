@@ -841,7 +841,7 @@ export default function EmployeeManagementView({ employee, employees = [], atten
               <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Basic % of Salary</label>
               <input
                 type="number"
-                placeholder="50"
+                placeholder="100 (i.e. Gross = Salary)"
                 value={form.basicPercent}
                 onChange={(e) => setForm({ ...form, basicPercent: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
@@ -851,7 +851,7 @@ export default function EmployeeManagementView({ employee, employees = [], atten
               <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">HRA % of Basic</label>
               <input
                 type="number"
-                placeholder="40"
+                placeholder="0"
                 value={form.hraPercent}
                 onChange={(e) => setForm({ ...form, hraPercent: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
@@ -864,7 +864,7 @@ export default function EmployeeManagementView({ employee, employees = [], atten
               <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Medical Allowance</label>
               <input
                 type="number"
-                placeholder="2000"
+                placeholder="0"
                 value={form.medicalAllowance}
                 onChange={(e) => setForm({ ...form, medicalAllowance: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
@@ -874,7 +874,7 @@ export default function EmployeeManagementView({ employee, employees = [], atten
               <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">PF % of Basic</label>
               <input
                 type="number"
-                placeholder="12"
+                placeholder="0"
                 value={form.pfPercent}
                 onChange={(e) => setForm({ ...form, pfPercent: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
