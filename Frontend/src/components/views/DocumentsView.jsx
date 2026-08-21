@@ -45,9 +45,12 @@ function buildPayslipFieldValues(employee, payslip, monthLbl) {
     medical: payslipAmount(payslip.medical),
     incentive: payslipAmount(payslip.commission),
     pfDeduction: payslipAmount(payslip.pf),
+    // extraDeductions is a display breakdown only — payslip.totalDeductions
+    // (from generatePayrollForMonth on the backend) already includes
+    // lopAmount + pf + otherDeductions, so it must not be added again here.
     advanceOrExtra: extraDeductions ? payslipAmount(extraDeductions) : undefined,
     totalEarning: payslipAmount(totalEarning),
-    totalDeductions: payslipAmount((Number(payslip.totalDeductions) || 0) + extraDeductions),
+    totalDeductions: payslipAmount(payslip.totalDeductions),
     netPay: payslipWhole(payslip.netPay),
     daysPayable: Number(payslip.presentDays || 0).toFixed(2),
     amountWords: `Indian rupee ${numberToIndianWords(payslip.netPay)} only`,

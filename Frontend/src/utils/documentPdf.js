@@ -870,13 +870,16 @@ export async function downloadPayslipPdf({ employee = {}, payslip, monthLabel })
 
   // The template's fixed Deductions rows have no spare line for Loss-of-Pay
   // or ad-hoc "other" deductions, so both fold into the Advance row — which
-  // is otherwise always 0 — rather than being dropped silently.
+  // is otherwise always 0 — rather than being dropped silently. This is
+  // purely a display breakdown: payslip.totalDeductions from the backend
+  // (generatePayrollForMonth) is already lopAmount + pf + otherDeductions,
+  // so the total below must NOT add extraDeductions again on top of it.
   const extraDeductions = (Number(payslip.lopAmount) || 0) + (Number(payslip.otherDeductions) || 0);
   if (extraDeductions) field('advanceOrExtra', payslipAmount(extraDeductions));
 
   const totalEarning = (Number(payslip.grossEarnings) || 0) + (Number(payslip.commission) || 0);
   field('totalEarning', payslipAmount(totalEarning));
-  field('totalDeductions', payslipAmount((Number(payslip.totalDeductions) || 0) + extraDeductions));
+  field('totalDeductions', payslipAmount(payslip.totalDeductions));
 
   field('netPay', payslipWhole(payslip.netPay));
   field('daysPayable', Number(payslip.presentDays || 0).toFixed(2));
