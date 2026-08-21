@@ -460,6 +460,13 @@ function buildSalaryDisbursementPdf({ monthLabel, rows = [], employees = [] }) {
     ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()
     : '--';
 
+  // "Salary" is the employee's configured base salary (Employee Details),
+  // shown as-is with no deductions applied. "Net Pay" is what's actually
+  // owed after PF/LOP/other deductions — the real transfer amount, and the
+  // one the TOTAL line and the accompanying cheque are built from (see
+  // PayrollView's totalNetPay). Keeping both columns means this sheet never
+  // misrepresents the wire amount as the full salary, while still letting
+  // HR/the bank see each employee's configured salary for reference.
   const body = rows.map((p, i) => {
     const emp = employees.find(e => e.id === p.employeeId) || {};
     return [
@@ -468,6 +475,7 @@ function buildSalaryDisbursementPdf({ monthLabel, rows = [], employees = [] }) {
       p.employeeId || '--',
       p.designation || emp.designation || '--',
       p.department || emp.department || '--',
+      Number(emp.salary || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }),
       Number(p.netPay || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }),
       emp.bankName || '--',
       emp.accountNo ? `*${emp.accountNo}` : '--',
@@ -480,7 +488,7 @@ function buildSalaryDisbursementPdf({ monthLabel, rows = [], employees = [] }) {
   autoTable(pdf, {
     startY: 92,
     margin: { left: margin, right: margin },
-    head: [['S.No', 'Employee Name', 'Emp.ID', 'Designation', 'Department', 'Salary', 'Bank Name', 'Account No', 'IFSC Code', 'Payment Date', 'Sign']],
+    head: [['S.No', 'Employee Name', 'Emp.ID', 'Designation', 'Department', 'Salary', 'Net Pay', 'Bank Name', 'Account No', 'IFSC Code', 'Payment Date', 'Sign']],
     body,
     theme: 'grid',
     styles: { font: 'helvetica', fontSize: 7.5, textColor: [30, 41, 59], cellPadding: 5, lineColor: [203, 213, 225], lineWidth: 0.5 },
@@ -488,18 +496,19 @@ function buildSalaryDisbursementPdf({ monthLabel, rows = [], employees = [] }) {
     columnStyles: {
       0: { cellWidth: 22, halign: 'center' },
       5: { halign: 'right' },
-      9: { halign: 'center', cellWidth: 55 },
-      10: { cellWidth: 30 }
+      6: { halign: 'right' },
+      10: { halign: 'center', cellWidth: 50 },
+      11: { cellWidth: 28 }
     }
   });
 
-  const totalSalary = rows.reduce((sum, p) => sum + (Number(p.netPay) || 0), 0);
+  const totalNetPay = rows.reduce((sum, p) => sum + (Number(p.netPay) || 0), 0);
   let y = pdf.lastAutoTable.finalY + 22;
 
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(10);
   pdf.setTextColor(30, 41, 59);
-  pdf.text(`TOTAL SALARY: ${totalSalary.toLocaleString('en-IN', { maximumFractionDigits: 0 })}/-`, margin, y);
+  pdf.text(`TOTAL NET PAYABLE: ${totalNetPay.toLocaleString('en-IN', { maximumFractionDigits: 0 })}/-`, margin, y);
 
   y += 44;
   const col1 = margin;
