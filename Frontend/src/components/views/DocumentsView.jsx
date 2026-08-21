@@ -1,19 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { Download, Printer, Shield, FolderOpen, ArrowRight, MapPin, Mail, Phone } from 'lucide-react';
-import { downloadPayslipPdf, numberToIndianWords, COMPANY_INFO } from '../../utils/documentPdf';
+import { Download, Printer, Shield, FolderOpen, ArrowRight } from 'lucide-react';
+import {
+  downloadPayslipPdf, numberToIndianWords, payslipAmount, payslipWhole,
+  PAYSLIP_TEMPLATE_URL, PAYSLIP_TEMPLATE_IMAGE_SIZE, PAYSLIP_TEMPLATE_FIELDS, PAYSLIP_PAGE_SIZE
+} from '../../utils/documentPdf';
 
-// Plain figures, no currency symbol or thousands grouping — matches the
-// company's standard printed pay slip: non-zero shows 2 decimals, zero
-// shows as a bare "0".
-const money = (n) => {
-  const num = Number(n) || 0;
-  return num === 0 ? '0' : num.toFixed(2);
-};
-
-// The reference payslip's Total Deductions summary prints a zero total as
-// "00" (unlike every individual deduction row, which prints a bare "0") —
-// replicated here only for that one summary field.
-const totalDeductionsMoney = (n) => (Number(n) || 0) === 0 ? '00' : money(n);
+// PDF font sizes (documentPdf.js's PAYSLIP_TEMPLATE_FIELDS) are in points at
+// the PDF's own page size; the on-screen SVG below renders in the template
+// image's pixel space instead, so a size in points converts to image pixels
+// at this ratio — keeping one field-position table as the source of truth
+// for both instead of two hand-tuned layouts drifting apart.
+const PX_PER_PT = PAYSLIP_TEMPLATE_IMAGE_SIZE.width / PAYSLIP_PAGE_SIZE.width;
 
 function monthLabel(monthKey) {
   if (!monthKey) return '--';
@@ -21,21 +18,79 @@ function monthLabel(monthKey) {
   return new Date(year, month - 1, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 }
 
-function InfoRow({ label, value }) {
-  return (
-    <div className="flex items-baseline gap-1.5 px-3 py-1.5">
-      <span className="font-bold text-slate-900 shrink-0">{label}:</span>
-      <span className="text-slate-900 font-semibold truncate">{value || '--'}</span>
-    </div>
-  );
+// Same value-computation as documentPdf.js's downloadPayslipPdf, so the
+// on-screen preview always shows exactly what the download button produces.
+// A value of `undefined` means "leave the template's own baked-in content
+// untouched" (see PAYSLIP_TEMPLATE_FIELDS' `white` doc comment).
+function buildPayslipFieldValues(employee, payslip, monthLbl) {
+  const totalEarning = (Number(payslip.grossEarnings) || 0) + (Number(payslip.commission) || 0);
+  const extraDeductions = (Number(payslip.lopAmount) || 0) + (Number(payslip.otherDeductions) || 0);
+  return {
+    email: employee.email || '',
+    phone: employee.phone || '',
+    month: monthLbl,
+    name: employee.name || '--',
+    employeeId: employee.id || employee.empId || '--',
+    designation: employee.designation || '--',
+    bankName: employee.bankName || '--',
+    accountNo: employee.accountNo || '--',
+    department: employee.department || '--',
+    pan: employee.pan || '--',
+    esiNo: employee.esiNo || '--',
+    pfNo: employee.pfNo || '--',
+    uanNo: employee.uanNo || '--',
+    location: employee.location || '--',
+    basicSalary: payslipAmount(payslip.basicPay),
+    hra: payslipAmount(payslip.hra),
+    medical: payslipAmount(payslip.medical),
+    incentive: payslipAmount(payslip.commission),
+    pfDeduction: payslipAmount(payslip.pf),
+    advanceOrExtra: extraDeductions ? payslipAmount(extraDeductions) : undefined,
+    totalEarning: payslipAmount(totalEarning),
+    totalDeductions: payslipAmount((Number(payslip.totalDeductions) || 0) + extraDeductions),
+    netPay: payslipWhole(payslip.netPay),
+    daysPayable: Number(payslip.presentDays || 0).toFixed(2),
+    amountWords: `Indian rupee ${numberToIndianWords(payslip.netPay)} only`,
+    fatherName: employee.fatherName || undefined,
+    fatherDob: employee.fatherName ? (employee.fatherDob || '--') : undefined
+  };
 }
 
-function AmountRow({ label, value }) {
+// Renders the exact company payslip letterhead as the SVG background, with
+// every dynamic value overlaid at the same coordinates documentPdf.js uses
+// for the downloaded PDF — so the on-screen preview and the download are
+// the same document, not two hand-maintained layouts.
+function PayslipSvg({ employee, payslip, monthLbl }) {
+  const { width: W, height: H } = PAYSLIP_TEMPLATE_IMAGE_SIZE;
+  const values = buildPayslipFieldValues(employee, payslip, monthLbl);
   return (
-    <div className="flex items-center justify-between px-3 py-1.5 gap-2">
-      <span className="text-slate-900 font-semibold">{label}:</span>
-      <span className="font-bold text-slate-900">{money(value)}</span>
-    </div>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto block" role="img" aria-label={`Payslip for ${employee.name || 'employee'}, ${monthLbl}`}>
+      <image href={PAYSLIP_TEMPLATE_URL} width={W} height={H} />
+      {Object.entries(PAYSLIP_TEMPLATE_FIELDS).map(([key, spec]) => {
+        const value = values[key];
+        if (value === undefined) return null;
+        return (
+          <React.Fragment key={key}>
+            {spec.white && (
+              <rect x={spec.white[0]} y={spec.white[1]} width={spec.white[2]} height={spec.white[3]} fill="#fff" />
+            )}
+            {value !== '' && (
+              <text
+                x={spec.text[0]}
+                y={spec.text[1]}
+                fontSize={(spec.size || 9) * PX_PER_PT}
+                fontWeight={spec.bold ? 700 : 400}
+                fontStyle={spec.italic ? 'italic' : 'normal'}
+                fontFamily="Helvetica, Arial, sans-serif"
+                fill="#141414"
+              >
+                {value}
+              </text>
+            )}
+          </React.Fragment>
+        );
+      })}
+    </svg>
   );
 }
 
@@ -61,8 +116,6 @@ export default function DocumentsView({ employee, payrolls = [] }) {
   const handleDownload = () => {
     downloadPayslipPdf({ employee, payslip: selectedSlip, monthLabel: monthLabel(selectedSlip.month) });
   };
-
-  const totalEarning = selectedSlip ? (Number(selectedSlip.grossEarnings) || 0) + (Number(selectedSlip.commission) || 0) : 0;
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto font-sans text-slate-800 animate-in fade-in duration-200">
@@ -146,134 +199,9 @@ export default function DocumentsView({ employee, payrolls = [] }) {
             </div>
           </div>
 
-          {/* Payslip document */}
-          <div className="border-2 border-slate-800 text-[11px] text-slate-900 bg-white">
-            {/* Header: 3-column letterhead strip — logo | company name | contact block with icons */}
-            <div className="grid grid-cols-[118px_1fr_195px] divide-x divide-slate-800">
-              <div className="flex flex-col items-center justify-center px-2 py-3 gap-1 text-center">
-                <img src={COMPANY_INFO.logoUrl} alt="Company logo" className="h-9 w-auto object-contain" />
-                {COMPANY_INFO.tagline && (
-                  <p className="text-[6.5px] font-semibold italic leading-tight text-blue-600">{COMPANY_INFO.tagline}</p>
-                )}
-              </div>
-              <div className="flex flex-col items-center justify-center px-2 py-3 text-center">
-                {(COMPANY_INFO.nameLines || [COMPANY_INFO.name]).map(line => (
-                  <h3 key={line} className="text-base font-black leading-tight tracking-tight text-blue-600">{line}</h3>
-                ))}
-              </div>
-              {/* Shows this employee's own registered email/phone, matching
-                  the reference letterhead which prints the slip-holder's own
-                  contact details here rather than a fixed company line. */}
-              <div className="flex flex-col justify-center px-3 py-3 text-[7.5px] font-semibold text-slate-700 space-y-1">
-                <div className="flex items-start gap-1">
-                  <MapPin className="w-2.5 h-2.5 shrink-0 mt-0.5 text-blue-600" />
-                  <span>{COMPANY_INFO.addressLines.join(', ')}</span>
-                </div>
-                {employee.email && (
-                  <div className="flex items-center gap-1">
-                    <Mail className="w-2.5 h-2.5 shrink-0 text-blue-600" />
-                    <span>{employee.email}</span>
-                  </div>
-                )}
-                {employee.phone && (
-                  <div className="flex items-center gap-1">
-                    <Phone className="w-2.5 h-2.5 shrink-0 text-blue-600" />
-                    <span>{employee.phone}</span>
-                  </div>
-                )}
-                {COMPANY_INFO.gstin && <p>GSTIN: {COMPANY_INFO.gstin}</p>}
-              </div>
-            </div>
-
-            {/* Pay Slip For Month */}
-            <div className="px-4 py-2 border-t border-slate-800 font-bold text-xs">
-              Pay Slip For Month : {monthLabel(selectedSlip.month)}
-            </div>
-
-            {/* Employee / statutory info grid */}
-            <div className="grid grid-cols-2 divide-x divide-slate-800 border-t border-slate-800">
-              <div>
-                <InfoRow label="Name" value={employee.name} />
-                <InfoRow label="Employee ID" value={employee.id || employee.empId} />
-                <InfoRow label="Designation" value={employee.designation} />
-                <InfoRow label="Bank Name" value={employee.bankName} />
-                <InfoRow label="Bank Account No" value={employee.accountNo} />
-                <InfoRow label="Department" value={employee.department} />
-              </div>
-              <div>
-                <InfoRow label="PAN" value={employee.pan} />
-                <InfoRow label="ESI No" value={employee.esiNo} />
-                <InfoRow label="PF No" value={employee.pfNo} />
-                <InfoRow label="UAN No" value={employee.uanNo} />
-                <InfoRow label="Location" value={employee.location} />
-                <InfoRow label="Mode of Payment" value="Bank Transfer" />
-              </div>
-            </div>
-
-            {/* Earnings / Deductions headers */}
-            <div className="grid grid-cols-2 divide-x divide-slate-800 border-t border-slate-800 font-extrabold text-[10px] uppercase tracking-wider">
-              <div className="flex justify-between px-3 py-2"><span>Earnings</span><span>Amount</span></div>
-              <div className="flex justify-between px-3 py-2"><span>Deductions</span><span>Amount</span></div>
-            </div>
-            <div className="grid grid-cols-2 divide-x divide-slate-800 border-t border-slate-800">
-              <div>
-                <AmountRow label="Basic Salary" value={selectedSlip.basicPay} />
-                <AmountRow label="HRA" value={selectedSlip.hra} />
-                <AmountRow label="Conveyance Allowance" value={0} />
-                <AmountRow label="Medical Allowance" value={selectedSlip.medical} />
-                {!!selectedSlip.commission && <AmountRow label="Incentive" value={selectedSlip.commission} />}
-              </div>
-              <div>
-                <AmountRow label="PF" value={selectedSlip.pf} />
-                <AmountRow label="ESI" value={0} />
-                <AmountRow label="TDS" value={0} />
-                <AmountRow label="Advance" value={0} />
-                {!!selectedSlip.lopAmount && <AmountRow label={`Loss of Pay (${selectedSlip.lopDays}d)`} value={selectedSlip.lopAmount} />}
-                {!!selectedSlip.otherDeductions && <AmountRow label="Other Deductions" value={selectedSlip.otherDeductions} />}
-              </div>
-            </div>
-
-            {/* Totals */}
-            <div className="grid grid-cols-2 divide-x divide-slate-800 border-t border-slate-800 font-bold text-xs">
-              <div className="flex justify-between px-3 py-2"><span>Total Earning</span><span>{money(totalEarning)}</span></div>
-              <div className="flex justify-between px-3 py-2"><span>Total Deductions</span><span>{totalDeductionsMoney(selectedSlip.totalDeductions)}</span></div>
-            </div>
-
-            {/* Net Pay (left) | Days Payable + Arrear Days (right) */}
-            <div className="grid grid-cols-2 border-t border-slate-800">
-              <div className="flex items-center gap-3 px-3 py-2.5 font-bold text-sm">
-                <span>Net Pay</span>
-                <span>{Math.round(Number(selectedSlip.netPay) || 0)}</span>
-              </div>
-              <div className="px-3 py-2 text-xs font-semibold space-y-1">
-                <p>Days payable: {Number(selectedSlip.presentDays || 0).toFixed(2)}</p>
-                <p>Arrear Days: 0.00</p>
-              </div>
-            </div>
-
-            {/* Amount in words */}
-            <div className="px-4 py-2 border-t border-slate-800 text-[11px] italic">
-              Indian rupee {numberToIndianWords(selectedSlip.netPay)} only
-            </div>
-
-            {/* Relation */}
-            <div className="grid grid-cols-3 gap-2 px-3 py-2 border-t border-slate-800 text-[10px] font-extrabold uppercase tracking-wider">
-              <span>Relation</span>
-              <span>Name</span>
-              <span>DOB</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 px-3 py-1 text-xs font-semibold">
-              <span>Father's Name:</span>
-              <span>{employee.fatherName || '--'}</span>
-              <span>{employee.fatherDob || '--'}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2 px-3 py-1 text-xs font-semibold">
-              <span>Mother's Name:</span>
-              <span>{employee.motherName || '--'}</span>
-              <span>{employee.motherDob || '--'}</span>
-            </div>
-
-            <div className="px-4 py-4 text-xs font-semibold">Authorized Signatory: ______________________</div>
+          {/* Payslip document — the company's own letterhead image with values overlaid, exact to the download */}
+          <div className="border border-slate-200 rounded-lg overflow-hidden">
+            <PayslipSvg employee={employee} payslip={selectedSlip} monthLbl={monthLabel(selectedSlip.month)} />
           </div>
 
           <div className="flex items-start space-x-2.5 p-3.5 bg-sky-50 border border-sky-100 text-sky-800 rounded-2xl text-[11px] font-semibold leading-relaxed">

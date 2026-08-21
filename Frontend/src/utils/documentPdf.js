@@ -738,11 +738,11 @@ export async function buildChequePdfBase64({ bank, chequeNumber, chequeDate, amo
 // thousands grouping — matching the company's standard printed pay slip:
 // non-zero amounts show 2 decimals, zero shows as a bare "0". Net Pay is
 // its own headline figure and always prints as a whole number.
-const payslipAmount = (n) => {
+export const payslipAmount = (n) => {
   const num = Number(n) || 0;
   return num === 0 ? '0' : num.toFixed(2);
 };
-const payslipWhole = (n) => String(Math.round(Number(n) || 0));
+export const payslipWhole = (n) => String(Math.round(Number(n) || 0));
 
 // The company's own blank payslip letterhead (Settings-free — it's a fixed
 // asset at Frontend/public/payslip-template.jpg), used as the PDF page
@@ -750,13 +750,14 @@ const payslipWhole = (n) => String(Math.round(Number(n) || 0));
 // template HR already uses. Fields are overlaid on top at coordinates
 // measured directly off that image (see PAYSLIP_TEMPLATE_FIELDS below);
 // PAYSLIP_TEMPLATE_IMAGE_SIZE is the template's own pixel dimensions
-// (an 8.5x11in page at ~568dpi), used only to convert those measured pixel
-// coordinates into PDF points at print time — it is not a calibration
-// panel like the cheque leaf's, since this template has one fixed source
-// image rather than a per-company upload.
-const PAYSLIP_TEMPLATE_URL = '/payslip-template.jpg';
-const PAYSLIP_TEMPLATE_IMAGE_SIZE = { width: 4830, height: 6250 };
-const PAYSLIP_PAGE_SIZE = { width: 612, height: 792 }; // US Letter, matching the template's own aspect ratio
+// (an 8.5x11in page at ~568dpi). It's not a calibration panel like the
+// cheque leaf's, since this template has one fixed source image rather
+// than a per-company upload. Exported so DocumentsView's on-screen
+// preview can render the exact same image + field coordinates in an SVG,
+// instead of drifting from the PDF as a separate hand-recreated layout.
+export const PAYSLIP_TEMPLATE_URL = '/payslip-template.jpg';
+export const PAYSLIP_TEMPLATE_IMAGE_SIZE = { width: 4830, height: 6250 };
+export const PAYSLIP_PAGE_SIZE = { width: 612, height: 792 }; // US Letter, matching the template's own aspect ratio
 
 // Every dynamic field's position, measured directly off the blank template
 // image (pixel coordinates, top-left origin). `white` is a rectangle wiped
@@ -765,7 +766,7 @@ const PAYSLIP_PAGE_SIZE = { width: 612, height: 792 }; // US Letter, matching th
 // employee's email/phone in the header, "CBH" under Designation, and the
 // "0" deduction figures) that would otherwise show through underneath the
 // real value. Fields with no baked-in text (most of the form) don't need it.
-const PAYSLIP_TEMPLATE_FIELDS = {
+export const PAYSLIP_TEMPLATE_FIELDS = {
   email: { white: [3390, 388, 1350, 80], text: [3399, 452] },
   phone: { white: [3380, 540, 900, 65], text: [3390, 588] },
   month: { text: [1460, 1245] },
