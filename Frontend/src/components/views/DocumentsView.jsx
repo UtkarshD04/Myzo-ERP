@@ -10,6 +10,11 @@ const money = (n) => {
   return num === 0 ? '0' : num.toFixed(2);
 };
 
+// The reference payslip's Total Deductions summary prints a zero total as
+// "00" (unlike every individual deduction row, which prints a bare "0") —
+// replicated here only for that one summary field.
+const totalDeductionsMoney = (n) => (Number(n) || 0) === 0 ? '00' : money(n);
+
 function monthLabel(monthKey) {
   if (!monthKey) return '--';
   const [year, month] = monthKey.split('-').map(Number);
@@ -146,6 +151,7 @@ export default function DocumentsView({ employee, payrolls = [] }) {
             {/* Header: logo top-left, company name/address centered independent of it */}
             <div className="relative px-4 pt-4 pb-3 text-center">
               <img src={COMPANY_INFO.logoUrl} alt="Company logo" className="absolute left-4 top-4 h-11 w-auto object-contain" />
+              <p className="absolute left-4 top-16 w-28 text-left text-[7px] font-semibold italic leading-tight text-blue-600">{COMPANY_INFO.tagline}</p>
               {/* Shows this employee's own registered email/phone, matching
                   the reference letterhead which prints the slip-holder's own
                   contact details here rather than a fixed company line. */}
@@ -154,7 +160,9 @@ export default function DocumentsView({ employee, payrolls = [] }) {
                 {employee.phone && <p>Contact No: {employee.phone}</p>}
                 {COMPANY_INFO.gstin && <p>GSTIN: {COMPANY_INFO.gstin}</p>}
               </div>
-              <h3 className="text-sm font-black tracking-tight">{COMPANY_INFO.name}</h3>
+              {(COMPANY_INFO.nameLines || [COMPANY_INFO.name]).map(line => (
+                <h3 key={line} className="text-base font-black leading-tight tracking-tight">{line}</h3>
+              ))}
               {COMPANY_INFO.addressLines.map(line => (
                 <p key={line} className="text-[10px] font-semibold">{line}</p>
               ))}
@@ -211,7 +219,7 @@ export default function DocumentsView({ employee, payrolls = [] }) {
             {/* Totals */}
             <div className="grid grid-cols-2 divide-x divide-slate-800 border-t border-slate-800 font-bold text-xs">
               <div className="flex justify-between px-3 py-2"><span>Total Earning</span><span>{money(totalEarning)}</span></div>
-              <div className="flex justify-between px-3 py-2"><span>Total Deductions</span><span>{money(selectedSlip.totalDeductions)}</span></div>
+              <div className="flex justify-between px-3 py-2"><span>Total Deductions</span><span>{totalDeductionsMoney(selectedSlip.totalDeductions)}</span></div>
             </div>
 
             {/* Net Pay (left) | Days Payable + Arrear Days (right) */}
@@ -238,12 +246,12 @@ export default function DocumentsView({ employee, payrolls = [] }) {
               <span>DOB</span>
             </div>
             <div className="grid grid-cols-3 gap-2 px-3 py-1 text-xs font-semibold">
-              <span>Father's Name</span>
+              <span>Father's Name:</span>
               <span>{employee.fatherName || '--'}</span>
               <span>{employee.fatherDob || '--'}</span>
             </div>
             <div className="grid grid-cols-3 gap-2 px-3 py-1 text-xs font-semibold">
-              <span>Mother's Name</span>
+              <span>Mother's Name:</span>
               <span>{employee.motherName || '--'}</span>
               <span>{employee.motherDob || '--'}</span>
             </div>
