@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Download, Printer, Shield, FolderOpen, ArrowRight } from 'lucide-react';
+import { Download, Printer, Shield, FolderOpen, ArrowRight, MapPin, Mail, Phone } from 'lucide-react';
 import { downloadPayslipPdf, numberToIndianWords, COMPANY_INFO } from '../../utils/documentPdf';
 
 // Plain figures, no currency symbol or thousands grouping — matches the
@@ -148,24 +148,41 @@ export default function DocumentsView({ employee, payrolls = [] }) {
 
           {/* Payslip document */}
           <div className="border-2 border-slate-800 text-[11px] text-slate-900 bg-white">
-            {/* Header: logo top-left, company name/address centered independent of it */}
-            <div className="relative px-4 pt-4 pb-3 text-center">
-              <img src={COMPANY_INFO.logoUrl} alt="Company logo" className="absolute left-4 top-4 h-11 w-auto object-contain" />
-              <p className="absolute left-4 top-16 w-28 text-left text-[7px] font-semibold italic leading-tight text-blue-600">{COMPANY_INFO.tagline}</p>
+            {/* Header: 3-column letterhead strip — logo | company name | contact block with icons */}
+            <div className="grid grid-cols-[118px_1fr_195px] divide-x divide-slate-800">
+              <div className="flex flex-col items-center justify-center px-2 py-3 gap-1 text-center">
+                <img src={COMPANY_INFO.logoUrl} alt="Company logo" className="h-9 w-auto object-contain" />
+                {COMPANY_INFO.tagline && (
+                  <p className="text-[6.5px] font-semibold italic leading-tight text-blue-600">{COMPANY_INFO.tagline}</p>
+                )}
+              </div>
+              <div className="flex flex-col items-center justify-center px-2 py-3 text-center">
+                {(COMPANY_INFO.nameLines || [COMPANY_INFO.name]).map(line => (
+                  <h3 key={line} className="text-base font-black leading-tight tracking-tight text-blue-600">{line}</h3>
+                ))}
+              </div>
               {/* Shows this employee's own registered email/phone, matching
                   the reference letterhead which prints the slip-holder's own
                   contact details here rather than a fixed company line. */}
-              <div className="absolute right-4 top-4 text-right text-[9px] font-semibold text-slate-700 space-y-0.5">
-                {employee.email && <p>Email: {employee.email}</p>}
-                {employee.phone && <p>Contact No: {employee.phone}</p>}
+              <div className="flex flex-col justify-center px-3 py-3 text-[7.5px] font-semibold text-slate-700 space-y-1">
+                <div className="flex items-start gap-1">
+                  <MapPin className="w-2.5 h-2.5 shrink-0 mt-0.5 text-blue-600" />
+                  <span>{COMPANY_INFO.addressLines.join(', ')}</span>
+                </div>
+                {employee.email && (
+                  <div className="flex items-center gap-1">
+                    <Mail className="w-2.5 h-2.5 shrink-0 text-blue-600" />
+                    <span>{employee.email}</span>
+                  </div>
+                )}
+                {employee.phone && (
+                  <div className="flex items-center gap-1">
+                    <Phone className="w-2.5 h-2.5 shrink-0 text-blue-600" />
+                    <span>{employee.phone}</span>
+                  </div>
+                )}
                 {COMPANY_INFO.gstin && <p>GSTIN: {COMPANY_INFO.gstin}</p>}
               </div>
-              {(COMPANY_INFO.nameLines || [COMPANY_INFO.name]).map(line => (
-                <h3 key={line} className="text-base font-black leading-tight tracking-tight">{line}</h3>
-              ))}
-              {COMPANY_INFO.addressLines.map(line => (
-                <p key={line} className="text-[10px] font-semibold">{line}</p>
-              ))}
             </div>
 
             {/* Pay Slip For Month */}

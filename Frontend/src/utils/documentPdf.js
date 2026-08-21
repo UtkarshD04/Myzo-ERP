@@ -743,238 +743,148 @@ const payslipAmount = (n) => {
   return num === 0 ? '0' : num.toFixed(2);
 };
 const payslipWhole = (n) => String(Math.round(Number(n) || 0));
-// The reference payslip's Total Deductions summary prints a zero total as
-// "00" (unlike every individual deduction row, which prints a bare "0") —
-// replicated here only for that one summary field.
-const totalDeductionsAmount = (n) => (Number(n) || 0) === 0 ? '00' : payslipAmount(n);
+
+// The company's own blank payslip letterhead (Settings-free — it's a fixed
+// asset at Frontend/public/payslip-template.jpg), used as the PDF page
+// background so every printed payslip is pixel-identical to the physical
+// template HR already uses. Fields are overlaid on top at coordinates
+// measured directly off that image (see PAYSLIP_TEMPLATE_FIELDS below);
+// PAYSLIP_TEMPLATE_IMAGE_SIZE is the template's own pixel dimensions
+// (an 8.5x11in page at ~568dpi), used only to convert those measured pixel
+// coordinates into PDF points at print time — it is not a calibration
+// panel like the cheque leaf's, since this template has one fixed source
+// image rather than a per-company upload.
+const PAYSLIP_TEMPLATE_URL = '/payslip-template.jpg';
+const PAYSLIP_TEMPLATE_IMAGE_SIZE = { width: 4830, height: 6250 };
+const PAYSLIP_PAGE_SIZE = { width: 612, height: 792 }; // US Letter, matching the template's own aspect ratio
+
+// Every dynamic field's position, measured directly off the blank template
+// image (pixel coordinates, top-left origin). `white` is a rectangle wiped
+// back to white before the value is drawn — needed only where the blank
+// template itself already has baked-in placeholder text (the sample
+// employee's email/phone in the header, "CBH" under Designation, and the
+// "0" deduction figures) that would otherwise show through underneath the
+// real value. Fields with no baked-in text (most of the form) don't need it.
+const PAYSLIP_TEMPLATE_FIELDS = {
+  email: { white: [3390, 388, 1350, 80], text: [3399, 452] },
+  phone: { white: [3380, 540, 900, 65], text: [3390, 588] },
+  month: { text: [1460, 1245] },
+  name: { text: [1000, 1335] },
+  employeeId: { text: [1250, 1560] },
+  designation: { white: [1180, 1708, 1200, 90], text: [1225, 1775] },
+  bankName: { text: [1210, 1975] },
+  accountNo: { text: [1405, 2188] },
+  department: { text: [1230, 2413] },
+  pan: { text: [2925, 1338] },
+  esiNo: { text: [3025, 1544] },
+  pfNo: { text: [3000, 1751] },
+  uanNo: { text: [3080, 1958] },
+  location: { text: [3090, 2166] },
+  basicSalary: { text: [1860, 2734] },
+  hra: { text: [1860, 2933] },
+  medical: { text: [1860, 3360] },
+  incentive: { text: [1860, 3573] },
+  pfDeduction: { white: [3550, 2663, 500, 70], text: [3564, 2716] },
+  advanceOrExtra: { white: [3550, 3285, 500, 70], text: [3564, 3338] },
+  totalEarning: { text: [1860, 3800] },
+  totalDeductions: { white: [3550, 3730, 500, 95], text: [3564, 3800] },
+  netPay: { text: [1040, 4140], size: 12, bold: true },
+  daysPayable: { text: [3270, 4015] },
+  amountWords: { text: [726, 4300], italic: true },
+  fatherName: { text: [1863, 4850] },
+  fatherDob: { text: [2715, 4850] }
+};
 
 /**
- * Builds and downloads an individual employee's monthly payslip, formatted
- * like the company's standard printed pay slip (header, employee/bank
- * details grid, Earnings vs Deductions table, net pay in words).
+ * Builds and downloads an individual employee's monthly payslip. The
+ * company's blank letterhead (see PAYSLIP_TEMPLATE_URL) is placed as the
+ * page background and every dynamic value is drawn on top at its measured
+ * position, so the printed slip is exact to the template rather than a
+ * hand-recreated approximation of it.
  */
 export async function downloadPayslipPdf({ employee = {}, payslip, monthLabel }) {
   if (!payslip) return;
 
-  const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const margin = 40;
-  const boxLeft = margin;
-  const boxRight = pageWidth - margin;
-  const boxWidth = boxRight - boxLeft;
-  const colMid = boxLeft + boxWidth / 2;
+  const pdf = new jsPDF({ unit: 'pt', format: [PAYSLIP_PAGE_SIZE.width, PAYSLIP_PAGE_SIZE.height] });
+  const sx = PAYSLIP_PAGE_SIZE.width / PAYSLIP_TEMPLATE_IMAGE_SIZE.width;
+  const sy = PAYSLIP_PAGE_SIZE.height / PAYSLIP_TEMPLATE_IMAGE_SIZE.height;
   const ink = [20, 20, 20];
-  const lineColor = [60, 60, 60];
 
-  let logoDataUrl = null;
+  let templateDataUrl = null;
   try {
-    logoDataUrl = await loadImageDataUrl(COMPANY_INFO.logoUrl);
+    templateDataUrl = await loadImageDataUrl(PAYSLIP_TEMPLATE_URL);
   } catch {
-    logoDataUrl = null;
+    templateDataUrl = null;
+  }
+  if (templateDataUrl) {
+    pdf.addImage(templateDataUrl, 'JPEG', 0, 0, PAYSLIP_PAGE_SIZE.width, PAYSLIP_PAGE_SIZE.height);
   }
 
-  // Logo sits top-left with its tagline underneath; the company name/address
-  // are centered on the full page width independent of it, matching the
-  // reference letterhead.
-  const logoWidth = 80;
-  const logoHeight = logoWidth / COMPANY_INFO.logoAspect;
-  const logoTop = 20;
-  if (logoDataUrl) {
-    pdf.addImage(logoDataUrl, 'PNG', boxLeft, logoTop, logoWidth, logoHeight);
-  }
-  if (COMPANY_INFO.tagline) {
-    pdf.setFont('helvetica', 'italic');
-    pdf.setFontSize(7);
-    pdf.setTextColor(37, 99, 235);
-    pdf.text(COMPANY_INFO.tagline, boxLeft, logoTop + logoHeight + 9);
-  }
-
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(14);
-  pdf.setTextColor(...ink);
-  let nameY = 32;
-  (COMPANY_INFO.nameLines || [COMPANY_INFO.name]).forEach(line => {
-    pdf.text(line, pageWidth / 2, nameY, { align: 'center' });
-    nameY += 16;
-  });
-
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(9);
-  pdf.setTextColor(...ink);
-  let headerY = nameY + 2;
-  COMPANY_INFO.addressLines.forEach(line => {
-    pdf.text(line, pageWidth / 2, headerY, { align: 'center' });
-    headerY += 13;
-  });
-
-  // Contact block, top-right — shows this employee's own registered
-  // email/phone (matching the reference letterhead, which prints the
-  // slip-holder's own contact details here rather than a fixed company line).
-  const contactLines = [
-    employee.email && `Email: ${employee.email}`,
-    employee.phone && `Contact No: ${employee.phone}`,
-    COMPANY_INFO.gstin && `GSTIN: ${COMPANY_INFO.gstin}`
-  ].filter(Boolean);
-  pdf.setFontSize(8);
-  let contactY = logoTop + 8;
-  contactLines.forEach(line => {
-    pdf.text(line, boxRight, contactY, { align: 'right' });
-    contactY += 12;
-  });
-
-  const boxTop = Math.max(headerY, logoTop + logoHeight, contactY) + 14;
-  pdf.setDrawColor(...lineColor);
-  pdf.setLineWidth(0.75);
-
-  // "Pay Slip For Month" bar
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(10);
-  pdf.setTextColor(...ink);
-  pdf.text(`Pay Slip For Month : ${monthLabel}`, boxLeft + 8, boxTop + 14);
-  let sectionY = boxTop + 20;
-  pdf.line(boxLeft, sectionY, boxRight, sectionY);
-
-  // Employee / statutory info grid — plain (no per-row lines), just the
-  // section separators drawn manually below.
-  const infoStartY = sectionY;
-  const infoRows = [
-    ['Name:', employee.name || '--', 'PAN:', employee.pan || '--'],
-    ['Employee ID:', employee.id || employee.empId || '--', 'ESI No:', employee.esiNo || '--'],
-    ['Designation:', employee.designation || '--', 'PF No:', employee.pfNo || '--'],
-    ['Bank Name:', employee.bankName || '--', 'UAN No:', employee.uanNo || '--'],
-    ['Bank Account No:', employee.accountNo || '--', 'Location:', employee.location || '--'],
-    ['Department:', employee.department || '--', 'Mode of Payment:', 'Bank Transfer']
-  ];
-  autoTable(pdf, {
-    startY: infoStartY,
-    margin: { left: boxLeft, right: margin },
-    body: infoRows,
-    theme: 'plain',
-    styles: { font: 'helvetica', fontSize: 8.5, cellPadding: { top: 4.5, bottom: 4.5, left: 8, right: 4 }, textColor: ink },
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 110 },
-      1: { cellWidth: boxWidth / 2 - 110 },
-      2: { fontStyle: 'bold', cellWidth: 110 },
-      3: { cellWidth: boxWidth / 2 - 110 }
+  // `value === undefined` skips the field entirely (leaves the template's
+  // own baked-in content untouched); `value === ''` still wipes a baked
+  // placeholder back to blank without writing new text over it — needed for
+  // the header email/phone, which must never leak the template's sample
+  // employee's contact details onto another employee's slip.
+  const field = (key, value) => {
+    if (value === undefined) return;
+    const spec = PAYSLIP_TEMPLATE_FIELDS[key];
+    if (spec.white) {
+      const [x, y, w, h] = spec.white;
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(x * sx, y * sy, w * sx, h * sy, 'F');
     }
-  });
-  sectionY = pdf.lastAutoTable.finalY;
-  pdf.line(boxLeft, sectionY, boxRight, sectionY);
+    if (value === '' || value === null) return;
+    pdf.setFont('helvetica', spec.bold ? 'bold' : (spec.italic ? 'italic' : 'normal'));
+    pdf.setFontSize(spec.size || 9);
+    pdf.setTextColor(...ink);
+    pdf.text(String(value), spec.text[0] * sx, spec.text[1] * sy);
+  };
 
-  // Earnings / Deductions header
-  autoTable(pdf, {
-    startY: sectionY,
-    margin: { left: boxLeft, right: margin },
-    body: [['Earnings', 'Amount', 'Deductions', 'Amount']],
-    theme: 'plain',
-    styles: { font: 'helvetica', fontSize: 9, fontStyle: 'bold', cellPadding: { top: 5, bottom: 5, left: 8, right: 8 }, textColor: ink },
-    columnStyles: { 1: { halign: 'right' }, 3: { halign: 'right' } }
-  });
-  sectionY = pdf.lastAutoTable.finalY;
-  pdf.line(boxLeft, sectionY, boxRight, sectionY);
+  // Header contact block — this employee's own registered email/phone,
+  // matching the reference letterhead which prints the slip-holder's own
+  // contact details here rather than a fixed company line. Always wiped
+  // even when blank, since the template's baked-in sample values must not
+  // leak onto another employee's slip.
+  field('email', employee.email || '');
+  field('phone', employee.phone || '');
 
-  // Earnings / Deductions body
-  const earnings = [
-    ['Basic Salary:', payslipAmount(payslip.basicPay)],
-    ['HRA:', payslipAmount(payslip.hra)],
-    ['Conveyance Allowance:', payslipAmount(0)],
-    ['Medical Allowance:', payslipAmount(payslip.medical)],
-    ['Incentive:', payslipAmount(payslip.commission)]
-  ];
-  const deductions = [
-    ['PF:', payslipAmount(payslip.pf)],
-    ['ESI:', payslipAmount(0)],
-    ['TDS:', payslipAmount(0)],
-    ['Advance:', payslipAmount(0)]
-  ];
-  if (payslip.lopAmount) deductions.push([`Loss of Pay (${payslip.lopDays}d):`, payslipAmount(payslip.lopAmount)]);
-  if (payslip.otherDeductions) deductions.push(['Other Deductions:', payslipAmount(payslip.otherDeductions)]);
+  field('month', monthLabel);
+  field('name', employee.name || '--');
+  field('employeeId', employee.id || employee.empId || '--');
+  field('designation', employee.designation || '--');
+  field('bankName', employee.bankName || '--');
+  field('accountNo', employee.accountNo || '--');
+  field('department', employee.department || '--');
+  field('pan', employee.pan || '--');
+  field('esiNo', employee.esiNo || '--');
+  field('pfNo', employee.pfNo || '--');
+  field('uanNo', employee.uanNo || '--');
+  field('location', employee.location || '--');
 
-  const rowCount = Math.max(earnings.length, deductions.length);
-  const earnDeductBody = Array.from({ length: rowCount }, (_, i) => [
-    earnings[i]?.[0] || '', earnings[i]?.[1] || '',
-    deductions[i]?.[0] || '', deductions[i]?.[1] || ''
-  ]);
-  autoTable(pdf, {
-    startY: sectionY,
-    margin: { left: boxLeft, right: margin },
-    body: earnDeductBody,
-    theme: 'plain',
-    styles: { font: 'helvetica', fontSize: 9, cellPadding: { top: 4.5, bottom: 4.5, left: 8, right: 8 }, textColor: ink },
-    columnStyles: { 1: { halign: 'right' }, 3: { halign: 'right' } }
-  });
-  sectionY = pdf.lastAutoTable.finalY;
-  pdf.line(boxLeft, sectionY, boxRight, sectionY);
+  field('basicSalary', payslipAmount(payslip.basicPay));
+  field('hra', payslipAmount(payslip.hra));
+  field('medical', payslipAmount(payslip.medical));
+  field('incentive', payslipAmount(payslip.commission));
+  field('pfDeduction', payslipAmount(payslip.pf));
 
-  // Totals
+  // The template's fixed Deductions rows have no spare line for Loss-of-Pay
+  // or ad-hoc "other" deductions, so both fold into the Advance row — which
+  // is otherwise always 0 — rather than being dropped silently.
+  const extraDeductions = (Number(payslip.lopAmount) || 0) + (Number(payslip.otherDeductions) || 0);
+  if (extraDeductions) field('advanceOrExtra', payslipAmount(extraDeductions));
+
   const totalEarning = (Number(payslip.grossEarnings) || 0) + (Number(payslip.commission) || 0);
-  autoTable(pdf, {
-    startY: sectionY,
-    margin: { left: boxLeft, right: margin },
-    body: [['Total Earning', payslipAmount(totalEarning), 'Total Deductions', totalDeductionsAmount(payslip.totalDeductions)]],
-    theme: 'plain',
-    styles: { font: 'helvetica', fontSize: 9.5, fontStyle: 'bold', cellPadding: { top: 5, bottom: 5, left: 8, right: 8 }, textColor: ink },
-    columnStyles: { 1: { halign: 'right' }, 3: { halign: 'right' } }
-  });
-  sectionY = pdf.lastAutoTable.finalY;
-  pdf.line(boxLeft, sectionY, boxRight, sectionY);
+  field('totalEarning', payslipAmount(totalEarning));
+  field('totalDeductions', payslipAmount((Number(payslip.totalDeductions) || 0) + extraDeductions));
 
-  // Single vertical divider spanning the two-column section (info grid
-  // through totals) only — matches the reference, which doesn't carry the
-  // divider through the Net Pay / words / relation rows below.
-  pdf.line(colMid, infoStartY, colMid, sectionY);
+  field('netPay', payslipWhole(payslip.netPay));
+  field('daysPayable', Number(payslip.presentDays || 0).toFixed(2));
+  field('amountWords', `Indian rupee ${numberToIndianWords(payslip.netPay)} only`);
 
-  // Net Pay (left) | Days Payable + Arrear Days (right)
-  const netPayRowTop = sectionY;
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(11);
-  pdf.setTextColor(...ink);
-  pdf.text('Net Pay', boxLeft + 8, netPayRowTop + 16);
-  pdf.text(payslipWhole(payslip.netPay), boxLeft + 90, netPayRowTop + 16);
-
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8.5);
-  pdf.setTextColor(...ink);
-  pdf.text(`Days payable: ${Number(payslip.presentDays || 0).toFixed(2)}`, colMid + 8, netPayRowTop + 13);
-  pdf.text('Arrear Days: 0.00', colMid + 8, netPayRowTop + 26);
-
-  sectionY = netPayRowTop + 34;
-  pdf.line(boxLeft, sectionY, boxRight, sectionY);
-
-  // Amount in words
-  pdf.setFont('helvetica', 'italic');
-  pdf.setFontSize(9);
-  pdf.setTextColor(...ink);
-  pdf.text(`Indian rupee ${numberToIndianWords(payslip.netPay)} only`, boxLeft + 8, sectionY + 16);
-  sectionY += 24;
-  pdf.line(boxLeft, sectionY, boxRight, sectionY);
-
-  // Relation (plain 3-column layout, no internal lines)
-  autoTable(pdf, {
-    startY: sectionY,
-    margin: { left: boxLeft, right: margin },
-    head: [['Relation', 'Name', 'DOB']],
-    body: [
-      ["Father's Name:", employee.fatherName || '--', employee.fatherDob || '--'],
-      ["Mother's Name:", employee.motherName || '--', employee.motherDob || '--']
-    ],
-    theme: 'plain',
-    styles: { font: 'helvetica', fontSize: 8.5, cellPadding: { top: 4.5, bottom: 4.5, left: 8, right: 8 }, textColor: ink },
-    headStyles: { fontStyle: 'bold' }
-  });
-  sectionY = pdf.lastAutoTable.finalY;
-
-  // Signatory
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(9);
-  pdf.setTextColor(...ink);
-  const signatoryY = sectionY + 26;
-  pdf.text('Authorized Signatory: ______________________', boxLeft + 8, signatoryY);
-  const boxBottom = signatoryY + 14;
-
-  // Outer border around the whole form
-  pdf.setLineWidth(1);
-  pdf.rect(boxLeft, boxTop, boxWidth, boxBottom - boxTop);
+  if (employee.fatherName) {
+    field('fatherName', employee.fatherName);
+    field('fatherDob', employee.fatherDob || '--');
+  }
 
   pdf.save(`Payslip-${(employee.name || 'Employee').replace(/\s+/g, '-')}-${monthLabel.replace(/\s+/g, '-')}.pdf`);
 }
