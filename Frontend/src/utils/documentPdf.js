@@ -786,8 +786,8 @@ export const PAYSLIP_PAGE_SIZE = { width: 612, height: 792 }; // US Letter, matc
 // "0" deduction figures) that would otherwise show through underneath the
 // real value. Fields with no baked-in text (most of the form) don't need it.
 export const PAYSLIP_TEMPLATE_FIELDS = {
-  email: { white: [3390, 388, 1350, 80], text: [3399, 452] },
-  phone: { white: [3380, 540, 900, 65], text: [3390, 588] },
+  email: { white: [3390, 388, 1350, 80], text: [3399, 452], bold: true },
+  phone: { white: [3380, 540, 900, 65], text: [3390, 588], bold: true },
   month: { text: [1460, 1245] },
   name: { text: [1000, 1335] },
   employeeId: { text: [1250, 1560] },
