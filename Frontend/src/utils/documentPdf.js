@@ -480,15 +480,14 @@ function buildSalaryDisbursementPdf({ monthLabel, rows = [], employees = [] }) {
       emp.bankName || '--',
       emp.accountNo ? `*${emp.accountNo}` : '--',
       emp.ifscCode || '--',
-      p.status === 'Paid' ? formatPaymentDate(p.paidAt) : '--',
-      ''
+      p.status === 'Paid' ? formatPaymentDate(p.paidAt) : '--'
     ];
   });
 
   autoTable(pdf, {
     startY: 92,
     margin: { left: margin, right: margin },
-    head: [['S.No', 'Employee Name', 'Emp.ID', 'Designation', 'Department', 'Salary', 'Net Pay', 'Bank Name', 'Account No', 'IFSC Code', 'Payment Date', 'Sign']],
+    head: [['S.No', 'Employee Name', 'Emp.ID', 'Designation', 'Department', 'Salary', 'Net Pay', 'Bank Name', 'Account No', 'IFSC Code', 'Payment Date']],
     body,
     theme: 'grid',
     styles: { font: 'helvetica', fontSize: 7.5, textColor: [30, 41, 59], cellPadding: 5, lineColor: [203, 213, 225], lineWidth: 0.5 },
@@ -497,8 +496,7 @@ function buildSalaryDisbursementPdf({ monthLabel, rows = [], employees = [] }) {
       0: { cellWidth: 22, halign: 'center' },
       5: { halign: 'right' },
       6: { halign: 'right' },
-      10: { halign: 'center', cellWidth: 50 },
-      11: { cellWidth: 28 }
+      10: { halign: 'center', cellWidth: 55 }
     }
   });
 
