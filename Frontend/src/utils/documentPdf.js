@@ -17,6 +17,14 @@ export const COMPANY_INFO = {
   logoAspect: 677 / 369
 };
 
+// Payslip header's contact line is one fixed HR contact for every employee's
+// slip — not each employee's own personal email/phone — so it prints the
+// same on every payslip regardless of whose it is.
+export const PAYSLIP_CONTACT = {
+  email: 'hr@mmyzo.com',
+  phone: '8756992444'
+};
+
 // Letterhead/contact details for the Quotation & Invoice PDFs — these are
 // customer-facing sales documents branded as "Myzo", separate from the
 // registered entity name used on payslips above. Email/website/phone/GSTIN
@@ -852,13 +860,10 @@ export async function downloadPayslipPdf({ employee = {}, payslip, monthLabel })
     pdf.text(String(value), spec.text[0] * sx, spec.text[1] * sy);
   };
 
-  // Header contact block — this employee's own registered email/phone,
-  // matching the reference letterhead which prints the slip-holder's own
-  // contact details here rather than a fixed company line. Always wiped
-  // even when blank, since the template's baked-in sample values must not
-  // leak onto another employee's slip.
-  field('email', employee.email || '');
-  field('phone', employee.phone || '');
+  // Header contact block — one fixed HR contact on every payslip, not each
+  // employee's own email/phone.
+  field('email', PAYSLIP_CONTACT.email);
+  field('phone', PAYSLIP_CONTACT.phone);
 
   field('month', monthLabel);
   field('name', employee.name || '--');

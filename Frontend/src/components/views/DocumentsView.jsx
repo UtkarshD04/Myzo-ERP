@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Download, Printer, Shield, FolderOpen, ArrowRight } from 'lucide-react';
 import {
   downloadPayslipPdf, numberToIndianWords, payslipAmount, payslipWhole,
-  PAYSLIP_TEMPLATE_URL, PAYSLIP_TEMPLATE_IMAGE_SIZE, PAYSLIP_TEMPLATE_FIELDS, PAYSLIP_PAGE_SIZE
+  PAYSLIP_TEMPLATE_URL, PAYSLIP_TEMPLATE_IMAGE_SIZE, PAYSLIP_TEMPLATE_FIELDS, PAYSLIP_PAGE_SIZE, PAYSLIP_CONTACT
 } from '../../utils/documentPdf';
 
 // PDF font sizes (documentPdf.js's PAYSLIP_TEMPLATE_FIELDS) are in points at
@@ -26,8 +26,8 @@ function buildPayslipFieldValues(employee, payslip, monthLbl) {
   const totalEarning = (Number(payslip.grossEarnings) || 0) + (Number(payslip.commission) || 0);
   const extraDeductions = (Number(payslip.lopAmount) || 0) + (Number(payslip.otherDeductions) || 0);
   return {
-    email: employee.email || '',
-    phone: employee.phone || '',
+    email: PAYSLIP_CONTACT.email,
+    phone: PAYSLIP_CONTACT.phone,
     month: monthLbl,
     name: employee.name || '--',
     employeeId: employee.id || employee.empId || '--',
