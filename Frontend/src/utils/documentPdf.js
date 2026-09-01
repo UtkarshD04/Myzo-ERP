@@ -93,7 +93,14 @@ function threeDigitWords(n) {
 
 // Indian numbering (crore/lakh/thousand groups), for the "amount in words" line.
 export function numberToIndianWords(amount) {
-  let num = Math.round(Number(amount) || 0);
+  const rounded = Math.round(Number(amount) || 0);
+  const isNegative = rounded < 0;
+  // Everything below assumes a non-negative num — JS's % and Math.floor both
+  // go negative on a negative dividend (e.g. -1 % 100 === -1), which fed
+  // ONES[-1] (undefined) into every unit and printed literal "undefined"s
+  // whenever Net Pay itself went negative (e.g. deductions exceeding
+  // earnings). Sign is handled separately below instead.
+  let num = Math.abs(rounded);
   if (num === 0) return 'Zero';
 
   const hundred = num % 1000;
@@ -114,7 +121,8 @@ export function numberToIndianWords(amount) {
   // company's own printed documents write amounts in words, e.g. "Twenty
   // five thousand" rather than "Twenty Five Thousand".
   const words = parts.join(' ');
-  return words.charAt(0) + words.slice(1).toLowerCase();
+  const result = words.charAt(0) + words.slice(1).toLowerCase();
+  return isNegative ? `Minus ${result}` : result;
 }
 
 /**
@@ -788,7 +796,7 @@ export const PAYSLIP_PAGE_SIZE = { width: 612, height: 792 }; // US Letter, matc
 export const PAYSLIP_TEMPLATE_FIELDS = {
   email: { white: [3390, 388, 1350, 80], text: [3399, 452], bold: true },
   phone: { white: [3380, 540, 900, 65], text: [3390, 588], bold: true },
-  month: { text: [1460, 1245] },
+  month: { text: [1520, 1245] },
   name: { text: [1000, 1335] },
   employeeId: { text: [1250, 1560] },
   designation: { white: [1180, 1708, 1200, 90], text: [1225, 1775] },
@@ -800,10 +808,15 @@ export const PAYSLIP_TEMPLATE_FIELDS = {
   pfNo: { text: [3000, 1751] },
   uanNo: { text: [3080, 1958] },
   location: { text: [3090, 2166] },
-  basicSalary: { text: [1860, 2734] },
-  hra: { text: [1860, 2933] },
-  medical: { text: [1860, 3360] },
-  incentive: { text: [1860, 3573] },
+  // Basic Salary/Incentive are blank in the template so don't strictly need
+  // whiteout, but HRA/Medical have a baked-in "0" placeholder — any real
+  // (non-"0") value drawn over that without clearing it first collides with
+  // the old glyph (e.g. "4000.00" over a template "0" reads as garbled
+  // digits). Whiteout on all four keeps this robust regardless of value.
+  basicSalary: { white: [1845, 2666, 500, 85], text: [1860, 2734] },
+  hra: { white: [1845, 2880, 500, 70], text: [1860, 2933] },
+  medical: { white: [1845, 3296, 500, 80], text: [1860, 3360] },
+  incentive: { white: [1845, 3520, 500, 70], text: [1860, 3573] },
   pfDeduction: { white: [3550, 2663, 500, 70], text: [3564, 2716] },
   advanceOrExtra: { white: [3550, 3285, 500, 70], text: [3564, 3338] },
   totalEarning: { text: [1860, 3800] },
