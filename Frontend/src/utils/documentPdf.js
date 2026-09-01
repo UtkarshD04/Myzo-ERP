@@ -456,9 +456,13 @@ function buildSalaryDisbursementPdf({ monthLabel, rows = [], employees = [] }) {
   // different days (e.g. a correction added a day or two later) must show
   // their own date, and rows not yet paid show blank rather than a
   // premature/inaccurate date on what is effectively a bank instruction sheet.
-  const formatPaymentDate = (d) => d
-    ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()
-    : '--';
+  const formatPaymentDate = (d) => {
+    if (!d) return '--';
+    const date = new Date(d);
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${date.getFullYear()}`;
+  };
 
   // "Salary" is the employee's configured base salary (Employee Details),
   // shown as-is with no deductions applied. "Net Pay" is what's actually
