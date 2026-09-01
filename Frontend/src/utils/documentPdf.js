@@ -891,7 +891,10 @@ export async function downloadPayslipPdf({ employee = {}, payslip, monthLabel })
   field('totalDeductions', payslipAmount(payslip.totalDeductions));
 
   field('netPay', payslipWhole(payslip.netPay));
-  field('daysPayable', Number(payslip.presentDays || 0).toFixed(2));
+  // Net Pay is no longer prorated by attendance (see generatePayrollForMonth),
+  // so the days actually paid for is the month's full working days, not
+  // presentDays — attendance is tracked separately but doesn't reduce pay.
+  field('daysPayable', Number(payslip.workingDays || 0).toFixed(2));
   field('amountWords', `Indian rupee ${numberToIndianWords(payslip.netPay)} only`);
 
   if (employee.fatherName) {

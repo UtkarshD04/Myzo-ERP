@@ -52,7 +52,10 @@ function buildPayslipFieldValues(employee, payslip, monthLbl) {
     totalEarning: payslipAmount(totalEarning),
     totalDeductions: payslipAmount(payslip.totalDeductions),
     netPay: payslipWhole(payslip.netPay),
-    daysPayable: Number(payslip.presentDays || 0).toFixed(2),
+    // Net Pay is no longer prorated by attendance (see generatePayrollForMonth),
+    // so the days actually paid for is the month's full working days, not
+    // presentDays — attendance is tracked separately but doesn't reduce pay.
+    daysPayable: Number(payslip.workingDays || 0).toFixed(2),
     amountWords: `Indian rupee ${numberToIndianWords(payslip.netPay)} only`,
     fatherName: employee.fatherName || undefined,
     fatherDob: employee.fatherName ? (employee.fatherDob || '--') : undefined

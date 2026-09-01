@@ -92,13 +92,18 @@ export async function generatePayrollForMonth(month, { generatedBy, generatedByN
     const medical = medicalAllowance;
     const grossEarnings = basicPay + hra + medical;
 
+    // presentDays/lopDays are still tracked and stored for reporting, but no
+    // longer reduce pay — Loss-of-Pay deduction was zeroing out (or going
+    // negative on) most of the payslip for anyone whose attendance wasn't
+    // being logged in the app, which isn't attendance actually driving
+    // salary, just an artifact of missing check-in data. Net Pay now comes
+    // from Gross Earnings + Commission and real deductions (PF, other) only.
     const presentDays = await Attendance.countDocuments({
       employeeId: employee.id,
       date: { $regex: `^${month}` }
     });
     const lopDays = Math.max(workingDays - presentDays, 0);
-    const perDayGross = workingDays > 0 ? grossEarnings / workingDays : 0;
-    const lopAmount = Math.round(perDayGross * lopDays);
+    const lopAmount = 0;
 
     // Commission is earned on quotations this employee closed ("Accepted")
     // during the month, attributed by acceptedAt rather than quoteDate so a
