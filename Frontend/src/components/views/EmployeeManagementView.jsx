@@ -132,15 +132,23 @@ export default function EmployeeManagementView({ employee, employees = [], atten
     setError('');
     setSubmitting(true);
 
+    // Numeric fields always resolve to a real number here, never `undefined`
+    // — JSON.stringify drops undefined-valued keys entirely, so on an EDIT
+    // that silently left the field's old stored value untouched in the DB
+    // no matter what the form showed (clearing HRA/Medical/PF and saving
+    // looked like it "did nothing"/"auto re-added" the old value, because
+    // the clear never actually reached the server). Blank now explicitly
+    // sends the same value the field would default to on a fresh employee,
+    // so clearing it in Edit actually resets it.
     const payload = {
       ...form,
       ...(editingId ? {} : { password }),
-      salary: form.salary ? Number(form.salary) : undefined,
-      basicPercent: form.basicPercent !== '' ? Number(form.basicPercent) : undefined,
-      hraPercent: form.hraPercent !== '' ? Number(form.hraPercent) : undefined,
-      medicalAllowance: form.medicalAllowance !== '' ? Number(form.medicalAllowance) : undefined,
-      pfPercent: form.pfPercent !== '' ? Number(form.pfPercent) : undefined,
-      commissionPercent: form.commissionPercent !== '' ? Number(form.commissionPercent) : undefined
+      salary: form.salary ? Number(form.salary) : 0,
+      basicPercent: form.basicPercent !== '' ? Number(form.basicPercent) : 100,
+      hraPercent: form.hraPercent !== '' ? Number(form.hraPercent) : 0,
+      medicalAllowance: form.medicalAllowance !== '' ? Number(form.medicalAllowance) : 0,
+      pfPercent: form.pfPercent !== '' ? Number(form.pfPercent) : 0,
+      commissionPercent: form.commissionPercent !== '' ? Number(form.commissionPercent) : 0
     };
 
     try {
