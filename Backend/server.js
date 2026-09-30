@@ -12,6 +12,10 @@ const FOLLOW_UP_CHECK_INTERVAL_MS = 60 * 60 * 1000; // hourly is frequent enough
 const PAYROLL_AUTO_GEN_CHECK_INTERVAL_MS = 60 * 60 * 1000; // hourly; the service itself only acts once, on the 5th
 const AUTO_PUNCH_OUT_CHECK_INTERVAL_MS = 60 * 1000; // minutely so the 11:59 PM cutoff is caught promptly
 
+if (process.env.NODE_ENV === 'production' && !process.env.CORS_ORIGIN) {
+  console.warn('WARNING: CORS_ORIGIN is not set — the API accepts requests from any origin. Set it to the frontend URL.');
+}
+
 connectDB()
   .then(() => Employee.init())
   .then(() => {

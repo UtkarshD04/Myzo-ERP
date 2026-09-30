@@ -19,6 +19,12 @@ export async function login({ email, password }) {
     throw error;
   }
 
+  if (!password) {
+    const error = new Error('Password is required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
   const normalizedEmail = email.trim().toLowerCase();
 
   // Support both officialEmail and email fields
@@ -30,7 +36,9 @@ export async function login({ email, password }) {
   }).lean();
 
   if (!employee) {
-    const error = new Error('No account found with this email.');
+    // Same message as a wrong password so the endpoint can't be used to
+    // discover which emails have accounts.
+    const error = new Error('Incorrect email or password.');
     error.statusCode = 401;
     throw error;
   }
@@ -61,9 +69,15 @@ export async function login({ email, password }) {
     : password === storedPassword;
 
   if (!passwordMatch) {
-    const error = new Error('Incorrect password.');
+    const error = new Error('Incorrect email or password.');
     error.statusCode = 401;
     throw error;
+  }
+
+  // Legacy plaintext record (from the shared collection's other app): it just
+  // matched, so upgrade it to bcrypt now rather than leave it readable at rest.
+  if (!isBcrypt) {
+    await Employee.updateOne({ _id: employee._id }, { password: await bcrypt.hash(password, 10) });
   }
 
   // Normalize employee object (support email or officialEmail, missing fields)

@@ -2,6 +2,10 @@ import { parse } from 'node:url';
 import { routes } from '../routes/index.js';
 import { handleError, notFound } from '../middleware/errorHandler.js';
 import { authenticate } from '../middleware/auth.js';
+import { rateLimit } from '../middleware/rateLimit.js';
+
+const MAX_BODY_BYTES = 2 * 1024 * 1024; // photos are sent as data URLs, so leave headroom
+const AUTH_RATE_LIMIT = { max: 10, windowMs: 15 * 60 * 1000 };
 
 function compilePath(routePath) {
   const keys = [];
@@ -20,8 +24,15 @@ function compilePath(routePath) {
 async function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let body = '';
+    let size = 0;
 
     req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > MAX_BODY_BYTES) {
+        req.destroy();
+        reject(Object.assign(new Error('Request body too large.'), { statusCode: 413 }));
+        return;
+      }
       body += chunk;
     });
 
@@ -86,6 +97,9 @@ export async function requestHandler(req, rawRes) {
   try {
     const match = pathname.match(route.regex);
     req.params = Object.fromEntries(route.keys.map((key, index) => [key, match[index + 1]]));
+    if (route.public) {
+      rateLimit(`${pathname}:${req.socket.remoteAddress}`, AUTH_RATE_LIMIT);
+    }
     req.body = ['POST', 'PUT', 'PATCH'].includes(req.method) ? await readJsonBody(req) : {};
     if (!route.public) {
       authenticate(req);
