@@ -27,6 +27,7 @@ import CustomersView from './components/views/CustomersView';
 import InvoicesView from './components/views/InvoicesView';
 import ProductsManagementView from './components/views/ProductsManagementView';
 import PayrollView from './components/views/PayrollView';
+import OfferLetterView from './components/views/OfferLetterView';
 import LeaveManagementView from './components/views/LeaveManagementView';
 import RecruitmentView from './components/views/RecruitmentView';
 import OnboardingView from './components/views/OnboardingView';
@@ -914,6 +915,10 @@ export default function App() {
               onUpdatePayroll={handleUpdatePayroll}
               onSendPayrollToBank={handleSendPayrollToBank}
             />
+          )}
+
+          {activeTab === 'offer-letter' && (
+            <OfferLetterView candidates={candidates} employees={employees} />
           )}
         </main>
 

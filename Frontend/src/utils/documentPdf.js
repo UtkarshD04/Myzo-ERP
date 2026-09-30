@@ -924,3 +924,252 @@ export async function downloadPayslipPdf({ employee = {}, payslip, monthLabel })
 
   pdf.save(`Payslip-${(employee.name || 'Employee').replace(/\s+/g, '-')}-${monthLabel.replace(/\s+/g, '-')}.pdf`);
 }
+
+// ─── Offer letter ────────────────────────────────────────────────────────────
+// Page 1 is laid over the company letterhead image (public/offer-letter-template.jpg,
+// header + footer only — body blanked); page 2 is the plain Annexure-A salary
+// table. Wording mirrors HR's approved "Full time offer letter" draft.
+export const OFFER_LETTER_TEMPLATE_URL = '/offer-letter-template.jpg';
+
+export const OFFER_ANNEXURE_EARNINGS = [
+  ['basic', 'Basic'],
+  ['hra', 'HRA'],
+  ['statutoryBonus', 'Statutory Bonus'],
+  ['otherAllowance', 'Other Allowance (Consolidated)']
+];
+export const OFFER_ANNEXURE_DEDUCTIONS = [
+  ['employeePf', "Employee's PF Contribution"],
+  ['professionalTax', 'Professional Tax'],
+  ['employeeEsic', "Employee's ESIC Contribution"]
+];
+export const OFFER_ANNEXURE_BENEFITS = [
+  ['employerPf', 'PF'],
+  ['employerEsic', 'ESIC'],
+  ['gratuity', 'Gratuity'],
+  ['leaveBenefits', 'Leave Benefits']
+];
+
+const sumOf = (rows, values) => rows.reduce((t, [k]) => t + (Number(values[k]) || 0), 0);
+
+// Annexure amounts are entered per month; totals and CTC are derived here so
+// the on-screen preview and the PDF can't disagree.
+export function computeOfferAnnexure(values) {
+  const gross = sumOf(OFFER_ANNEXURE_EARNINGS, values);
+  const deductions = sumOf(OFFER_ANNEXURE_DEDUCTIONS, values);
+  const benefits = sumOf(OFFER_ANNEXURE_BENEFITS, values);
+  const monthlyCtc = gross + benefits;
+  return { gross, deductions, net: gross - deductions, benefits, monthlyCtc, annualCtc: monthlyCtc * 12 };
+}
+
+export async function downloadOfferLetterPdf(data) {
+  const {
+    candidateName, position, location, joiningDate, reportingTo, issueDate,
+    probationMonths, noticeDays, acceptanceHours, reportingTime,
+    signatoryName, signatoryTitle
+  } = data;
+  const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const left = 86;
+  const right = 500;
+  const textW = right - left;
+  const top = 140;
+  const bottomLimit = 755; // footer artwork starts below this
+  const size = 10;
+  const lineH = 13.5;
+  const ink = [15, 15, 15];
+
+  let template = null;
+  try { template = await loadImageDataUrl(OFFER_LETTER_TEMPLATE_URL); } catch { template = null; }
+  const drawLetterhead = () => {
+    if (template) pdf.addImage(template, 'JPEG', 0, 0, pageW, pageH);
+  };
+  drawLetterhead();
+  pdf.setTextColor(...ink);
+
+  const fmtDate = (value) => {
+    if (!value) return '..........';
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+  };
+
+  let y = top;
+  const newPage = () => { pdf.addPage(); drawLetterhead(); y = top; };
+
+  // Mixed bold/normal runs, word-wrapped and justified like the source letter.
+  // runs: [{ t: 'text', b: true }, ...]
+  const flow = (runs, { justify = true, gap = 12, indent = 0 } = {}) => {
+    // A "word" may span runs (e.g. bold "hours" + plain "."), so punctuation
+    // that follows a styled run stays attached instead of floating after a gap.
+    const words = [];
+    let attach = false; // carried across runs: did the previous run end mid-word?
+    runs.forEach(({ t, b }) => {
+      const pieces = t.split(/(\s+)/);
+      pieces.forEach((piece) => {
+        if (!piece) return;
+        if (/^\s+$/.test(piece)) { attach = false; return; }
+        const seg = { w: piece, b: !!b };
+        if (attach) words[words.length - 1].segs.push(seg);
+        else words.push({ segs: [seg] });
+        attach = true;
+      });
+    });
+    const segWidth = ({ w, b }) => { pdf.setFont('helvetica', b ? 'bold' : 'normal'); pdf.setFontSize(size); return pdf.getTextWidth(w); };
+    pdf.setFontSize(size);
+    pdf.setFont('helvetica', 'normal');
+    const space = pdf.getTextWidth(' ');
+
+    const lines = [];
+    let cur = [];
+    let curW = 0;
+    words.forEach((word) => {
+      word.width = word.segs.reduce((t, sg) => t + segWidth(sg), 0);
+      if (cur.length && curW + space + word.width > textW - indent) {
+        lines.push({ words: cur, width: curW });
+        cur = [];
+        curW = 0;
+      }
+      curW += (cur.length ? space : 0) + word.width;
+      cur.push(word);
+    });
+    if (cur.length) lines.push({ words: cur, width: curW });
+
+    lines.forEach((line, idx) => {
+      if (y + lineH > bottomLimit) newPage();
+      const isLast = idx === lines.length - 1;
+      const gaps = line.words.length - 1;
+      const gapW = justify && !isLast && gaps > 0 ? (textW - indent - line.words.reduce((t, x) => t + x.width, 0)) / gaps : space;
+      let x = left + indent;
+      line.words.forEach((word) => {
+        let sx = x;
+        word.segs.forEach((sg) => {
+          pdf.setFont('helvetica', sg.b ? 'bold' : 'normal');
+          pdf.text(sg.w, sx, y);
+          sx += segWidth(sg);
+        });
+        x += word.width + gapW;
+      });
+      y += lineH;
+    });
+    y += gap;
+  };
+
+  const heading = (text, { underline = false, gap = 10 } = {}) => {
+    if (y + lineH > bottomLimit) newPage();
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(size);
+    pdf.text(text, left, y);
+    if (underline) {
+      const w = pdf.getTextWidth(text);
+      pdf.setLineWidth(0.7);
+      pdf.line(left, y + 1.8, left + w, y + 1.8);
+    }
+    y += lineH + gap;
+  };
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(size);
+  pdf.text(`Date: ${fmtDate(issueDate)}`, left, y);
+  y += lineH;
+  heading('Subject: Offer Letter', { underline: true, gap: 14 });
+  heading(`Dear ${candidateName}`, { gap: 0 });
+
+  flow([{ t: 'We, MZOBS, are thrilled to welcome you to our team! We are confident that your skills and experience will be valuable assets to our organization.' }], { gap: 12 });
+  flow([
+    { t: 'Following our recent discussions and interview, we are pleased to confirm your appointment as ' },
+    { t: position, b: true },
+    { t: ` effective ${fmtDate(joiningDate)}, ` },
+    { t: `Reporting to ${reportingTo || '..........'},`, b: true },
+    { t: ' at our ' },
+    { t: location || 'Lucknow', b: true },
+    { t: ' office. Below are the details of your employment:' }
+  ], { gap: 12 });
+
+  heading('Offer Acceptance & Resignation Submission', { underline: true });
+  flow([
+    { t: 'Please ' },
+    { t: 'accept the Offer Letter', b: true },
+    { t: ' and submit your resignation to your current employer, sharing the resignation confirmation with us within ' },
+    { t: `${acceptanceHours || 48} hours`, b: true },
+    { t: '. If these steps are not completed within the specified time frame, this offer may no longer remain valid.' }
+  ], { gap: 12 });
+
+  heading('Employment Terms:');
+  flow([
+    { t: 'Probation', b: true },
+    { t: `: You will be on probation for a period of ${probationMonths || '..........'} months from your joining date. This period may be extended or reduced at the sole discretion of the management. Unless otherwise notified in writing, you will be deemed confirmed upon completion of the probation period.` }
+  ]);
+  flow([
+    { t: 'Notice Period:', b: true },
+    { t: ` A notice period of ${noticeDays || '.....'} days is mandatory, Failure to serve the full notice period will result in the recovery of the gross salary amount corresponding to the shortfall in notice period days.` }
+  ]);
+  flow([{ t: 'Salary will be given as per Annexure A.', b: true }]);
+  flow([{ t: 'A detailed appointment letter, including other employment terms, will be provided upon joining.', b: true }]);
+  flow([
+    { t: 'Documents Required on the Day of Joining,', b: true },
+    { t: ' to facilitate a smooth onboarding process, please bring the following documents on your first day, ' },
+    { t: `Office reporting time is ${reportingTime || '10:00 AM'}.`, b: true }
+  ], { gap: 14 });
+
+  [
+    '1. Updated CV',
+    '2. Original and self-attested copies of all educational certificates',
+    '3. Aadhaar Card, PAN Card, and Driving License.',
+    '4. Two passport-sized photographs',
+    '5. Salary slips for the last three months',
+    '6. Appointment letter, relieving/experience letter, and resignation acceptance from your last company.',
+    '7. Two professional references',
+    '8. Cancelled cheque.'
+  ].forEach(item => flow([{ t: item, b: true }], { gap: 1, justify: false }));
+
+  // ── Page 2: Annexure A (plain page, no letterhead — as in the source) ──
+  pdf.addPage();
+  pdf.setTextColor(...ink);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(10.5);
+  pdf.text('Salary Annexure', left - 18, 80);
+
+  const a = computeOfferAnnexure(data.annexure || {});
+  const amt = (v) => (v === '' || v === undefined || v === null ? '' : Math.round(Number(v) || 0).toLocaleString('en-IN'));
+  const val = (k) => amt((data.annexure || {})[k]);
+  const B = { fontStyle: 'bold' };
+  const body = [
+    [{ content: 'Particulars' }, { content: 'Amt', styles: { halign: 'left' } }, { content: 'Notes' }],
+    [{ content: 'Annexure - A' }, '', ''],
+    [{ content: 'Employee Name' }, { content: candidateName, colSpan: 2, styles: { halign: 'left' } }],
+    [{ content: 'Particulars' }, { content: 'Amt', styles: { halign: 'left' } }, ''],
+    ...OFFER_ANNEXURE_EARNINGS.map(([k, label]) => [label, val(k), '']),
+    [{ content: 'Gross Salary (A)', styles: B }, { content: amt(a.gross), styles: B }, ''],
+    ['', '', ''],
+    [{ content: 'Deductions:' }, '', ''],
+    ...OFFER_ANNEXURE_DEDUCTIONS.map(([k, label]) => [label, val(k), '']),
+    [{ content: 'Total Deductions (B)', styles: B }, { content: amt(a.deductions), styles: B }, ''],
+    [{ content: 'Net Take Home (A) - (B)', styles: B }, { content: amt(a.net), styles: B }, ''],
+    ['', '', ''],
+    [{ content: 'Employer Contribution & Benefits' }, '', ''],
+    ...OFFER_ANNEXURE_BENEFITS.map(([k, label]) => [label, val(k), '']),
+    [{ content: 'Total Benefits (C)', styles: B }, { content: amt(a.benefits), styles: B }, ''],
+    ['', '', ''],
+    [{ content: 'CTC (A) + (C)', styles: B }, { content: amt(a.monthlyCtc), styles: B }, ''],
+    [{ content: 'CTC p.a.', styles: B }, { content: amt(a.annualCtc), styles: B }, '']
+  ];
+  autoTable(pdf, {
+    startY: 92,
+    body,
+    theme: 'grid',
+    styles: { font: 'helvetica', fontSize: 9, cellPadding: { top: 5, bottom: 5, left: 5, right: 5 }, lineColor: [40, 40, 40], lineWidth: 0.6, textColor: ink },
+    columnStyles: { 0: { cellWidth: 300 }, 1: { cellWidth: 80, halign: 'right' }, 2: { cellWidth: 'auto' } },
+    margin: { left: left - 18, right: left - 18 }
+  });
+
+  let fy = pdf.lastAutoTable.finalY + 34;
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(10);
+  pdf.text(`Employee Name: ${candidateName}`, left - 18, fy);
+  pdf.text('Date & Place: ......................................', left - 18, fy + 22);
+  pdf.text('With Best Wishes', left - 18, fy + 44);
+  pdf.text(signatoryName || 'Aseem Mishra', left - 18, fy + 66);
+  pdf.text(`(${signatoryTitle || 'Circle Business Head'})`, left - 18, fy + 82);
+
+  pdf.save(`Offer-Letter-${candidateName.replace(/[^a-z0-9]+/gi, '-')}.pdf`);
+}
