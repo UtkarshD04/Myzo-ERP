@@ -930,6 +930,7 @@ export async function downloadPayslipPdf({ employee = {}, payslip, monthLabel })
 // header + footer only — body blanked); page 2 is the plain Annexure-A salary
 // table. Wording mirrors HR's approved "Full time offer letter" draft.
 export const OFFER_LETTER_TEMPLATE_URL = '/offer-letter-template.jpg';
+export const OFFER_LETTER_STAMP_URL = '/offer-letter-stamp.png';
 
 export const OFFER_ANNEXURE_EARNINGS = [
   ['basic', 'Basic'],
@@ -961,26 +962,25 @@ export function computeOfferAnnexure(values) {
   return { gross, deductions, net: gross - deductions, benefits, monthlyCtc, annualCtc: monthlyCtc * 12 };
 }
 
-export async function downloadOfferLetterPdf(data) {
-  const {
-    candidateName, position, location, joiningDate, reportingTo, issueDate,
-    probationMonths, noticeDays, acceptanceHours, reportingTime,
-    signatoryName, signatoryTitle
-  } = data;
+// Shared letterhead page + text-flow helpers for the offer-style letters.
+// `w.y` is the running cursor so callers can keep laying out after the helpers.
+async function createLetterWriter() {
   const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
-  const left = 86;
-  const right = 500;
+  const left = 72;
+  const right = 513;
   const textW = right - left;
-  const top = 140;
-  const bottomLimit = 755; // footer artwork starts below this
-  const size = 10;
-  const lineH = 13.5;
+  const top = 150;
+  const bottomLimit = 750; // footer artwork starts below this
+  const size = 11;
+  const lineH = 14.7;
   const ink = [15, 15, 15];
 
   let template = null;
   try { template = await loadImageDataUrl(OFFER_LETTER_TEMPLATE_URL); } catch { template = null; }
+  let stamp = null;
+  try { stamp = await loadImageDataUrl(OFFER_LETTER_STAMP_URL); } catch { stamp = null; }
   const drawLetterhead = () => {
     if (template) pdf.addImage(template, 'JPEG', 0, 0, pageW, pageH);
   };
@@ -1067,60 +1067,96 @@ export async function downloadOfferLetterPdf(data) {
     y += lineH + gap;
   };
 
+
+  return {
+    pdf, flow, heading, fmtDate, newPage, stamp, left, lineH, size, ink, pageW, pageH,
+    get y() { return y; },
+    set y(v) { y = v; }
+  };
+}
+
+export async function downloadOfferLetterPdf(data) {
+  const {
+    candidateName, position, location, joiningDate, reportingTo, issueDate,
+    probationDays, noticeDays, acceptanceHours, reportingTime,
+    signatoryName, signatoryTitle
+  } = data;
+  const w = await createLetterWriter();
+  const { pdf, flow, heading, fmtDate, newPage, stamp, left, lineH, size, ink } = w;
+
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(size);
-  pdf.text(`Date: ${fmtDate(issueDate)}`, left, y);
-  y += lineH;
-  heading('Subject: Offer Letter', { underline: true, gap: 14 });
-  heading(`Dear ${candidateName}`, { gap: 0 });
+  pdf.text(`Date: ${fmtDate(issueDate)}`, left, w.y);
+  w.y += lineH + 16;
+  heading('Subject: Offer Letter', { underline: true, gap: 16 });
+  heading(`Dear ${candidateName},`, { gap: 6 });
 
-  flow([{ t: 'We, MZOBS, are thrilled to welcome you to our team! We are confident that your skills and experience will be valuable assets to our organization.' }], { gap: 12 });
+  flow([{ t: 'We, MZOBS, are thrilled to welcome you to our team! We are confident that your skills and experience will be valuable assets to our organization.' }], { gap: 12, justify: false });
   flow([
     { t: 'Following our recent discussions and interview, we are pleased to confirm your appointment as ' },
     { t: position, b: true },
-    { t: ` effective ${fmtDate(joiningDate)}, ` },
-    { t: `Reporting to ${reportingTo || '..........'},`, b: true },
-    { t: ' at our ' },
+    { t: ` effective date ${fmtDate(joiningDate)}, Reporting to ` },
+    { t: reportingTo || 'Circle Business Head', b: true },
+    { t: ', at our ' },
     { t: location || 'Lucknow', b: true },
     { t: ' office. Below are the details of your employment:' }
-  ], { gap: 12 });
+  ], { gap: 24, justify: false });
 
-  heading('Offer Acceptance & Resignation Submission', { underline: true });
+  heading('Offer Acceptance & Resignation Submission', { gap: 8 });
   flow([
-    { t: 'Please ' },
-    { t: 'accept the Offer Letter', b: true },
-    { t: ' and submit your resignation to your current employer, sharing the resignation confirmation with us within ' },
-    { t: `${acceptanceHours || 48} hours`, b: true },
-    { t: '. If these steps are not completed within the specified time frame, this offer may no longer remain valid.' }
-  ], { gap: 12 });
+    { t: `Please accept the Offer Letter and submit your resignation to your current employer, sharing the resignation confirmation with us within ${acceptanceHours || 48} hours. If these steps are not completed within the specified time frame, this offer may no longer remain valid.` }
+  ], { gap: 20, justify: false });
 
-  heading('Employment Terms:');
+  heading('Employment Terms:', { gap: 8 });
   flow([
-    { t: 'Probation', b: true },
-    { t: `: You will be on probation for a period of ${probationMonths || '..........'} months from your joining date. This period may be extended or reduced at the sole discretion of the management. Unless otherwise notified in writing, you will be deemed confirmed upon completion of the probation period.` }
-  ]);
+    { t: 'Probation: You will be on probation for a period of ' },
+    { t: `${probationDays || 30} days`, b: true },
+    { t: ' from your joining date. This period may be extended or reduced at the sole discretion of the management. Unless otherwise notified in writing, you will be deemed confirmed upon completion of the probation period.' }
+  ], { gap: 20, justify: false });
+  heading('Notice Period:', { gap: 8 });
   flow([
-    { t: 'Notice Period:', b: true },
-    { t: ` A notice period of ${noticeDays || '.....'} days is mandatory, Failure to serve the full notice period will result in the recovery of the gross salary amount corresponding to the shortfall in notice period days.` }
-  ]);
-  flow([{ t: 'Salary will be given as per Annexure A.', b: true }]);
-  flow([{ t: 'A detailed appointment letter, including other employment terms, will be provided upon joining.', b: true }]);
+    { t: 'A notice period of ' },
+    { t: `${noticeDays || 30} days`, b: true },
+    { t: ' is mandatory, Failure to serve the full notice period will result in the recovery of the gross salary amount corresponding to the shortfall in notice period days.' }
+  ], { gap: 20, justify: false });
+  heading('Salary will be given as per Annexure A.', { gap: 8 });
+  flow([{ t: 'A detailed appointment letter, including other employment terms, will be provided upon joining.' }], { justify: false });
+
+  // ── Page 2: documents list + sign-off, still on the letterhead ──
+  newPage();
+  w.y += 30;
   flow([
-    { t: 'Documents Required on the Day of Joining,', b: true },
-    { t: ' to facilitate a smooth onboarding process, please bring the following documents on your first day, ' },
-    { t: `Office reporting time is ${reportingTime || '10:00 AM'}.`, b: true }
-  ], { gap: 14 });
+    { t: 'Documents Required on the Day of Joining, to facilitate a smooth onboarding process, please bring the following documents on your first day, ' },
+    { t: `Office reporting time is ${reportingTime || '10:00 AM'}`, b: true },
+    { t: '.' }
+  ], { gap: 16, justify: false });
 
   [
-    '1. Updated CV',
-    '2. Original and self-attested copies of all educational certificates',
-    '3. Aadhaar Card, PAN Card, and Driving License.',
-    '4. Two passport-sized photographs',
-    '5. Salary slips for the last three months',
-    '6. Appointment letter, relieving/experience letter, and resignation acceptance from your last company.',
-    '7. Two professional references',
-    '8. Cancelled cheque.'
-  ].forEach(item => flow([{ t: item, b: true }], { gap: 1, justify: false }));
+    'Updated CV',
+    'Original and self-attested copies of all educational certificates.',
+    'Aadhaar Card, PAN Card, and Driving License.',
+    'Two passport-sized photographs.',
+    'Salary slips for the last three months.',
+    'Appointment letter, relieving/experience letter, and resignation acceptance from your last company.',
+    'Two professional references',
+    'Cancelled cheque.'
+  ].forEach((item, i) => {
+    const yStart = w.y;
+    flow([{ t: item }], { gap: 1, justify: false, indent: 36 });
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`${i + 1}.`, left, yStart);
+  });
+
+  w.y += 48;
+  [
+    `Employee Name: ${candidateName}`,
+    'Date: ..............................',
+    'Place: Lucknow',
+    'With Best Wishes',
+    signatoryName || 'Aseem Mishra',
+    `(${signatoryTitle || 'Circle Business Head'})`
+  ].forEach((line) => heading(line, { gap: -lineH + 12 }));
+  if (stamp) pdf.addImage(stamp, 'PNG', left + 12, w.y - 4, 66, 67);
 
   // ── Page 2: Annexure A (plain page, no letterhead — as in the source) ──
   pdf.addPage();
@@ -1162,14 +1198,63 @@ export async function downloadOfferLetterPdf(data) {
     margin: { left: left - 18, right: left - 18 }
   });
 
-  let fy = pdf.lastAutoTable.finalY + 34;
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(10);
-  pdf.text(`Employee Name: ${candidateName}`, left - 18, fy);
-  pdf.text('Date & Place: ......................................', left - 18, fy + 22);
-  pdf.text('With Best Wishes', left - 18, fy + 44);
-  pdf.text(signatoryName || 'Aseem Mishra', left - 18, fy + 66);
-  pdf.text(`(${signatoryTitle || 'Circle Business Head'})`, left - 18, fy + 82);
-
   pdf.save(`Offer-Letter-${candidateName.replace(/[^a-z0-9]+/gi, '-')}.pdf`);
+}
+
+// Internship offer letter: single page on the same letterhead, wording follows
+// HR's approved "Internship offer letter" draft.
+export async function downloadInternshipOfferLetterPdf(data) {
+  const {
+    candidateName, role, department, startDate, durationMonths, stipend,
+    leavesPerMonth, noticeDays, issueDate, signatoryName, signatoryTitle
+  } = data;
+  const w = await createLetterWriter();
+  const { pdf, flow, fmtDate, stamp, left, lineH, size } = w;
+  const months = durationMonths || 3;
+  const monthsLabel = `${months} month${Number(months) === 1 ? '' : 's'}`;
+  const stipendLabel = stipend ? Math.round(Number(stipend) || 0).toLocaleString('en-IN') : '..........';
+
+  const line = (text, { bold = true, gap = 0 } = {}) => {
+    pdf.setFont('helvetica', bold ? 'bold' : 'normal');
+    pdf.setFontSize(size);
+    pdf.text(text, left, w.y);
+    w.y += lineH + gap;
+  };
+
+  line(`Date: ${fmtDate(issueDate)}`, { gap: 14 });
+  flow([
+    { t: 'Congratulations! We are pleased to offer you the role of ' },
+    { t: `${role || '..........'}.`, b: true }
+  ], { justify: false });
+  flow([{ t: 'The internship is a significant step in your development into a qualified professional. We hope you will use this opportunity to create mutual value for yourself and the organization.' }], { justify: false });
+  flow([{ t: 'Please find the details regarding your internship below:' }], { justify: false, gap: 14 });
+
+  line(`Title: ${role || '..........'} Intern`);
+  line(`Department: ${department || '..........'}`);
+  line(`Internship Start Date: ${fmtDate(startDate)}`);
+  line(`Duration: ${monthsLabel}`);
+  line(`Stipend: ${stipendLabel}/- PER MONTH`, { gap: 14 });
+
+  flow([{ t: 'Please note the below clauses' }], { justify: false, gap: 2 });
+  [
+    `As an Intern, you will be entitled to ${leavesPerMonth || 2} paid leave/month which is subject to approval from the Immediate Reporting Manager.`,
+    `Your internship is expected to end after ${monthsLabel}. However, your performance will be tracked on a daily basis and the company may terminate your internship if performance is found unsatisfactory.`,
+    `If you wish not to complete your internship to the stipulated internship period, then you can do so by giving ${noticeDays || 15} days of notice period which is mandatory.`,
+    'The notice period shall become effective from the date of receipt by the Company, of the internship resignation. If you do not serve the notice period mentioned, the Company shall be entitled to set off from any payments to be made to you by the Company upon termination of the proportionate salary for the notice period not served by you.',
+    'If you leave within the first month of internship, there will be no stipend you will be eligible for. During the term of the internship, you shall not engage in any other employment outside business activity. We look forward to welcoming you to our ever-growing team.'
+  ].forEach(item => flow([{ t: `• ${item}` }], { justify: false, gap: 2 }));
+
+  w.y += 12;
+  line('We hope your time will be very fruitful and fulfilling.');
+  line('For MZOBS,');
+  line(`Name: ${candidateName}`);
+  line('Date: ..............................');
+  line('Place: Lucknow', { gap: 16 });
+  const signY = w.y;
+  line('With Best Wishes');
+  line(signatoryName || 'Aseem Mishra');
+  line(`(${signatoryTitle || 'Circle Business Head'})`);
+  if (stamp) pdf.addImage(stamp, 'PNG', left + 160, signY - 12, 66, 67);
+
+  pdf.save(`Internship-Offer-Letter-${candidateName.replace(/[^a-z0-9]+/gi, '-')}.pdf`);
 }
