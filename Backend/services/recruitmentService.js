@@ -19,6 +19,7 @@ const DEFAULT_CHECKLIST = [
   'Laptop / Assets Assigned',
   'Bank Details Collected',
   'Induction & Policy Briefing',
+  'Code of Conduct & HR Policy Acknowledged',
   'Workstation Setup'
 ];
 

@@ -32,6 +32,7 @@ import { getProductEnquiries, modifyProductEnquiryStatus } from '../controllers/
 import { getAfterSalesServices, modifyAfterSalesServiceStatus } from '../controllers/afterSalesServiceController.js';
 import { getBecomePartners, modifyBecomePartnerStatus } from '../controllers/becomePartnerController.js';
 import { getCareerApplications, modifyCareerApplicationStatus } from '../controllers/careerApplicationController.js';
+import { getPolicyAcknowledgements, addPolicyAcknowledgement } from '../controllers/policyController.js';
 
 export const routes = [
   // Only the login route is reachable without a valid session token — every
@@ -103,6 +104,8 @@ export const routes = [
   { method: 'GET', path: '/api/assets', handler: getAssets },
   { method: 'POST', path: '/api/assets', handler: addAsset },
   { method: 'PATCH', path: '/api/assets/:id', handler: modifyAsset },
+  { method: 'GET', path: '/api/policy-acknowledgements', handler: getPolicyAcknowledgements },
+  { method: 'POST', path: '/api/policies/:policyId/acknowledge', handler: addPolicyAcknowledgement },
   { method: 'GET', path: '/api/vendors', handler: getVendors },
   { method: 'POST', path: '/api/vendors', handler: addVendor },
   { method: 'PATCH', path: '/api/vendors/:id', handler: modifyVendor },
