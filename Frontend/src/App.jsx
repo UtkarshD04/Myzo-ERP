@@ -36,6 +36,7 @@ import ExpenseClaimsView from './components/views/ExpenseClaimsView';
 import AssetTrackingView from './components/views/AssetTrackingView';
 import VendorDirectoryView from './components/views/VendorDirectoryView';
 import WebsiteActivityView from './components/views/WebsiteActivityView';
+import PoliciesView from './components/views/PoliciesView';
 import LateCheckoutRequestPage from './components/attendance/LateCheckoutRequestPage';
 
 export default function App() {
@@ -76,6 +77,7 @@ export default function App() {
   const [afterSalesServices, setAfterSalesServices] = useState([]);
   const [becomePartners, setBecomePartners] = useState([]);
   const [careerApplications, setCareerApplications] = useState([]);
+  const [policyAcknowledgements, setPolicyAcknowledgements] = useState([]);
   const [apiStatus, setApiStatus] = useState('connecting');
   const [kpis, setKpis] = useState({});
 
@@ -118,6 +120,7 @@ export default function App() {
     if (state.afterSalesServices) setAfterSalesServices(state.afterSalesServices);
     if (state.becomePartners)    setBecomePartners(state.becomePartners);
     if (state.careerApplications) setCareerApplications(state.careerApplications);
+    if (state.policyAcknowledgements) setPolicyAcknowledgements(state.policyAcknowledgements);
   };
 
   // ─── Bootstrap from API on mount ────────────────────────────────────────────
@@ -248,6 +251,7 @@ export default function App() {
     setAfterSalesServices([]);
     setBecomePartners([]);
     setCareerApplications([]);
+    setPolicyAcknowledgements([]);
     setKpis({});
     setApiStatus('connecting');
     setActiveTab('dashboard');
@@ -571,6 +575,12 @@ export default function App() {
     setVendors(updated);
   };
 
+  // ─── Company Policy Handlers ─────────────────────────────────────────────────
+  const handleAcknowledgePolicy = async (policyId) => {
+    const { policyAcknowledgements: updated } = await api.acknowledgePolicy(policyId);
+    setPolicyAcknowledgements(updated);
+  };
+
   // ─── Website Activity Handlers ───────────────────────────────────────────────
   const handleUpdateProductEnquiryStatus = async (id, status) => {
     const { productEnquiries: updated } = await api.updateProductEnquiryStatus(id, status);
@@ -674,6 +684,7 @@ export default function App() {
               allAttendance={attendanceHistory}
               quotations={quotations}
               payrolls={payrolls}
+              policyAcknowledgements={policyAcknowledgements}
               reports={reports}
               kpis={kpis}
               setActiveTab={setActiveTab}
@@ -759,7 +770,21 @@ export default function App() {
           )}
 
           {activeTab === 'documents' && (
-            <DocumentsView employee={employee} payrolls={payrolls} />
+            <DocumentsView
+              employee={employee}
+              payrolls={payrolls}
+              policyAcknowledgements={policyAcknowledgements}
+              setActiveTab={setActiveTab}
+            />
+          )}
+
+          {activeTab === 'policies' && (
+            <PoliciesView
+              employee={employee}
+              employees={employees}
+              policyAcknowledgements={policyAcknowledgements}
+              onAcknowledgePolicy={handleAcknowledgePolicy}
+            />
           )}
 
           {activeTab === 'holidays' && (

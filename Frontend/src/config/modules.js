@@ -52,7 +52,7 @@ export function getModules(employee) {
             { id: 'recruitment', label: 'Recruitment' },
             { id: 'onboarding', label: 'Onboarding' },
             { id: 'payroll', label: 'Payroll' },
-            { id: 'offer-letter', label: 'Offer Letter' },
+            { id: 'offer-letter', label: 'Offer Letter & NDA' },
           ]
         : [],
     },
@@ -87,6 +87,7 @@ export function getModules(employee) {
       tabs: [
         ...(canSeeWebsiteActivity ? [{ id: 'website-activity', label: 'Website Activity' }] : []),
         { id: 'holidays', label: 'Holidays' },
+        { id: 'policies', label: 'Policies' },
       ],
     },
   ];

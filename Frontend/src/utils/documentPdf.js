@@ -964,7 +964,7 @@ export function computeOfferAnnexure(values) {
 
 // Shared letterhead page + text-flow helpers for the offer-style letters.
 // `w.y` is the running cursor so callers can keep laying out after the helpers.
-async function createLetterWriter() {
+async function createLetterWriter({ size = 11, lineH = 14.7 } = {}) {
   const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
@@ -973,8 +973,6 @@ async function createLetterWriter() {
   const textW = right - left;
   const top = 150;
   const bottomLimit = 750; // footer artwork starts below this
-  const size = 11;
-  const lineH = 14.7;
   const ink = [15, 15, 15];
 
   let template = null;
@@ -1257,4 +1255,91 @@ export async function downloadInternshipOfferLetterPdf(data) {
   if (stamp) pdf.addImage(stamp, 'PNG', left + 160, signY - 12, 66, 67);
 
   pdf.save(`Internship-Offer-Letter-${candidateName.replace(/[^a-z0-9]+/gi, '-')}.pdf`);
+}
+
+// ─── Non-Disclosure Agreement ────────────────────────────────────────────────
+// Same letterhead as the offer letters; clause wording is verbatim from HR's
+// approved "Format NDA" so the generated agreement matches the signed template.
+// Only the blanks (agreement date, employee name, effective date) are filled.
+export const NDA_CLAUSES = [
+  ['1. Parties', null], // body built from the form values below
+  ['2. Purpose', 'The Company wishes to disclose certain confidential information to the Receiving Party in connection with the employment.'],
+  ['3. Confidential Information', '“Confidential Information” means all non-public information disclosed by the Company to the Receiving Party, in any form and whether or not marked confidential, including trade secrets, source code, designs, know-how, business, financial, technical and customer information, and any notes or analyses derived from it.'],
+  ['4. Obligations of Confidentiality', 'The Receiving Party shall (a) keep the Confidential Information strictly confidential and protect it with at least reasonable care; (b) use it solely for the Purpose; and (c) not disclose it to any third party without prior written consent, except to its personnel or advisers who need to know it for the Purpose and who are bound by equivalent obligations.'],
+  ['5. Exclusions', 'These obligations do not apply to information that is or becomes public through no breach of this Agreement, was lawfully known to the Receiving Party before disclosure, is independently developed without use of the Confidential Information, or is lawfully received from a third party without restriction. Disclosure required by law or a court may be made, provided prompt written notice is given lawful.'],
+  ['6. Intellectual Property', 'All intellectual property, work product and inventions created by the Receiving Party in the course of the employment and relating to the Company’s business shall vest in and are hereby assigned to the Company, worldwide and for the full term of such rights. The Receiving Party shall execute such documents as may be necessary to give effect to this assignment.'],
+  ['7. Return of Materials', 'On the Company’s request or on termination of the employment, the Receiving Party shall return or destroy all Confidential Information and copies, and confirm the same in writing.'],
+  ['8. No License & No Warranty', 'No license or right in any intellectual property is granted except as needed for the Purpose. Confidential Information is provided “as is”, without warranty as to accuracy or completeness.'],
+  ['9. Term & Survival', null], // has the effective-date blank
+  ['10. Remedies', 'The parties acknowledge that a breach may cause irreparable harm for which damages alone are inadequate, and that the affected party is entitled to seek injunctive relief in addition to any other remedy available in law or equity.'],
+  ['11. Governing Law & Jurisdiction', 'This Agreement is governed by the laws of India and is subject to the exclusive jurisdiction of the courts at Lucknow, UP'],
+  ['12. General', 'This Agreement is the entire agreement on its subject matter and supplements, and does not replace, the Receiving Party’s employment agreement. Any amendment must be in writing and signed by both parties.\nthe remaining provisions continue in effect.']
+];
+
+export async function buildNdaPdf({ employeeName, agreementDate, effectiveDate, signatoryName, signatoryTitle } = {}) {
+  const w = await createLetterWriter({ size: 10.5, lineH: 13.4 });
+  const { pdf, flow, fmtDate, newPage, stamp, left, lineH, size, pageW } = w;
+  const blank = '__________';
+  const name = employeeName || blank;
+
+  // Centered, underlined title like the template.
+  w.y -= 6;
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(size);
+  const title = 'NON-DISCLOSURE AGREEMENT';
+  const titleW = pdf.getTextWidth(title);
+  pdf.text(title, (pageW - titleW) / 2, w.y);
+  pdf.setLineWidth(0.7);
+  pdf.line((pageW - titleW) / 2, w.y + 1.8, (pageW + titleW) / 2, w.y + 1.8);
+  w.y += lineH + 18;
+
+  const clauseHeading = (text) => {
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(size);
+    pdf.text(text, left, w.y);
+    w.y += lineH;
+  };
+
+  NDA_CLAUSES.forEach(([heading, body]) => {
+    // Template starts clause 10 on page 2.
+    if (heading.startsWith('10.')) { newPage(); w.y += 24; }
+    clauseHeading(heading);
+    if (heading.startsWith('1.')) {
+      flow([
+        { t: 'This Non-Disclosure Agreement is made on ' },
+        { t: agreementDate ? fmtDate(agreementDate) : blank, b: true },
+        { t: ' at ' }, { t: 'Lucknow', b: true },
+        { t: ', between ' }, { t: 'MZOBS', b: true },
+        { t: ', and ' }, { t: `${name}.`, b: true }
+      ], { justify: false, gap: 10 });
+    } else if (heading.startsWith('9.')) {
+      flow([
+        { t: 'This Agreement is effective from ' },
+        { t: effectiveDate ? fmtDate(effectiveDate) : blank, b: true },
+        { t: ' and the confidentiality obligations survive for as long as the information remains confidential (and indefinitely for trade secrets).' }
+      ], { justify: false, gap: 10 });
+    } else {
+      body.split('\n').forEach((para, i, all) => flow([{ t: para }], { justify: false, gap: i === all.length - 1 ? 10 : 0 }));
+    }
+  });
+
+  // Sign-off: company signatory + stamp on the left, employee on the right.
+  w.y += 30;
+  const rightX = 340;
+  const signY = w.y;
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(size);
+  pdf.text(signatoryName || 'Aseem Mishra', left + 6, signY);
+  pdf.text(`(${signatoryTitle || 'Circle Business Head'})`, left, signY + lineH);
+  pdf.text(`Employee Name: ${employeeName || '____________'}`, rightX, signY);
+  pdf.text('Employee Sign    :', rightX, signY + lineH * 2 + 4);
+  if (stamp) pdf.addImage(stamp, 'PNG', left + 6, signY + lineH + 2, 66, 67);
+
+  return pdf;
+}
+
+export async function downloadNdaPdf(data) {
+  const pdf = await buildNdaPdf(data);
+  const fileName = (data.employeeName || 'Employee').replace(/[^a-z0-9]+/gi, '-');
+  pdf.save(`NDA-${fileName}.pdf`);
 }

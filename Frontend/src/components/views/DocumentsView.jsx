@@ -4,6 +4,7 @@ import {
   downloadPayslipPdf, numberToIndianWords, payslipAmount, payslipWhole,
   PAYSLIP_TEMPLATE_URL, PAYSLIP_TEMPLATE_IMAGE_SIZE, PAYSLIP_TEMPLATE_FIELDS, PAYSLIP_PAGE_SIZE, PAYSLIP_CONTACT
 } from '../../utils/documentPdf';
+import { POLICIES, findAcknowledgement } from '../../config/policies';
 
 // PDF font sizes (documentPdf.js's PAYSLIP_TEMPLATE_FIELDS) are in points at
 // the PDF's own page size; the on-screen SVG below renders in the template
@@ -100,7 +101,7 @@ function PayslipSvg({ employee, payslip, monthLbl }) {
   );
 }
 
-export default function DocumentsView({ employee, payrolls = [] }) {
+export default function DocumentsView({ employee, payrolls = [], policyAcknowledgements = [], setActiveTab }) {
   const myPayslips = useMemo(
     () => payrolls
       // Non-admin/HR viewers only ever receive their own approved slips from
@@ -165,12 +166,28 @@ export default function DocumentsView({ employee, payrolls = [] }) {
 
           <div className="border-t border-slate-50 pt-4 space-y-3">
             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Manuals & Documents</h4>
-            {['Code of Conduct.pdf', 'Information Security Rules.pdf'].map(doc => (
-              <div key={doc} className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl text-[11px] font-semibold text-slate-600">
-                <span className="truncate">{doc}</span>
-                <span className="text-[9px] font-bold text-blue-600 hover:underline cursor-pointer">View</span>
-              </div>
-            ))}
+            {POLICIES.map(policy => {
+              const signed = findAcknowledgement(policyAcknowledgements, policy, employee.id);
+              return (
+                <div key={policy.id} className="flex items-center justify-between gap-2 p-2.5 bg-slate-50 rounded-xl text-[11px] font-semibold text-slate-600">
+                  <span className="truncate">{policy.title}</span>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    {!signed && (
+                      <span className="text-[9px] font-extrabold uppercase text-amber-600">Sign pending</span>
+                    )}
+                    <a href={policy.file} download={policy.downloadName} className="text-slate-400 hover:text-slate-600" title="Download">
+                      <Download className="w-3.5 h-3.5" />
+                    </a>
+                    <button
+                      onClick={() => setActiveTab('policies')}
+                      className="text-[9px] font-bold text-blue-600 hover:underline cursor-pointer"
+                    >
+                      View
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 

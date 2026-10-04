@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, Calendar, CheckSquare, Users, ArrowRight } from 'lucide-react';
+import { Clock, Calendar, CheckSquare, Users, ArrowRight, BookOpen } from 'lucide-react';
 import SalesAssociateDashboard from '../dashboards/SalesAssociateDashboard';
 import SalesManagerDashboard from '../dashboards/SalesManagerDashboard';
 import BDEDashboard from '../dashboards/BDEDashboard';
@@ -7,6 +7,7 @@ import HRDashboard from '../dashboards/HRDashboard';
 import GeneralDashboard from '../dashboards/GeneralDashboard';
 import IndependenceDayBanner from '../common/IndependenceDayBanner';
 import { isIndependenceDaySeason } from '../../utils/festiveSeason';
+import { pendingPolicies } from '../../config/policies';
 
 const TONE = {
   blue: { chip: 'bg-blue-50 text-blue-600', bar: 'bg-blue-600' },
@@ -46,6 +47,7 @@ export default function DashboardView({
   allAttendance,
   quotations = [],
   payrolls = [],
+  policyAcknowledgements = [],
   reports,
   kpis = {},
   setActiveTab,
@@ -64,6 +66,8 @@ export default function DashboardView({
   const nextHoliday = holidays
     .filter(h => new Date(h.date) >= new Date())
     .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+
+  const unsignedPolicies = pendingPolicies(policyAcknowledgements, employee.id);
 
   const todayTasks = tasks.filter(t => t.type === 'Today');
   const completedToday = todayTasks.filter(t => t.status === 'Completed').length;
@@ -111,6 +115,24 @@ export default function DashboardView({
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto font-sans text-slate-800 animate-in fade-in duration-200">
 
       {isIndependenceDaySeason(now) && <IndependenceDayBanner />}
+
+      {unsignedPolicies.length > 0 && (
+        <button
+          onClick={() => setActiveTab('policies')}
+          className="w-full flex items-center justify-between gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-left cursor-pointer hover:bg-amber-100/60 transition-colors"
+        >
+          <span className="flex items-start gap-2.5">
+            <BookOpen className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <span>
+              <span className="block text-xs font-bold text-amber-800">Please read and acknowledge company policies</span>
+              <span className="block text-[11px] font-semibold text-amber-700 mt-0.5">
+                Pending: {unsignedPolicies.map(p => p.title).join(', ')}
+              </span>
+            </span>
+          </span>
+          <ArrowRight className="w-4 h-4 text-amber-600 shrink-0" />
+        </button>
+      )}
 
       {/* Command Header */}
       <div className="bg-white border border-slate-200 rounded-2xl px-6 py-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">

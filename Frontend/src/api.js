@@ -261,6 +261,12 @@ export const api = {
     body: JSON.stringify(updates),
   }),
 
+  // Company Policies
+  getPolicyAcknowledgements: () => request('/policy-acknowledgements'),
+  acknowledgePolicy: (policyId) => request(`/policies/${policyId}/acknowledge`, {
+    method: 'POST',
+  }),
+
   // Vendor Directory
   getVendors: () => request('/vendors'),
   addVendor: (payload) => request('/vendors', {
