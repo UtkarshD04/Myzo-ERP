@@ -13,6 +13,7 @@ const STAGES = ['Applied', 'Screening', 'Interview', 'Offer', 'Hired', 'Rejected
 
 const DEFAULT_CHECKLIST = [
   'Offer Letter Signed',
+  'NDA Signed',
   'Documents Collected',
   'Employee ID Created',
   'Email & System Access Setup',
