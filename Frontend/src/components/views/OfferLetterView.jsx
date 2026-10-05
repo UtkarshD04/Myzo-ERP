@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
-import { FileText, Download } from 'lucide-react';
-import { downloadOfferLetterPdf, downloadInternshipOfferLetterPdf, downloadNdaPdf } from '../../utils/documentPdf';
+import { FileText, Download, Send } from 'lucide-react';
+import { api } from '../../api';
+import { buildOfferLetterPdf, buildInternshipOfferLetterPdf, downloadNdaPdf, pdfToBase64 } from '../../utils/documentPdf';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 const EMPTY_FORM = {
-  candidateName: '', position: '', location: 'Lucknow', reportingTo: '',
+  candidateName: '', candidateEmail: '', position: '', location: 'Lucknow', reportingTo: '',
   issueDate: today(), joiningDate: '', probationDays: 30, noticeDays: 30,
   acceptanceHours: 48, reportingTime: '10:00 AM',
   signatoryName: 'Aseem Mishra', signatoryTitle: 'Circle Business Head'
 };
 
 const EMPTY_INTERN = {
-  candidateName: '', role: '', department: '', startDate: '', durationMonths: 3,
+  candidateName: '', candidateEmail: '', role: '', department: '', startDate: '', durationMonths: 3,
   stipend: '', leavesPerMonth: 2, noticeDays: 15, issueDate: today(),
   signatoryName: 'Aseem Mishra', signatoryTitle: 'Circle Business Head'
 };
@@ -45,8 +46,8 @@ export default function OfferLetterView({ candidates = [], employees = [] }) {
   const prefillFromCandidate = (id) => {
     const c = candidates.find(x => x.id === id);
     if (!c) return;
-    setForm(f => ({ ...f, candidateName: c.name || '', position: c.position || '' }));
-    setIntern(f => ({ ...f, candidateName: c.name || '', role: c.position || '' }));
+    setForm(f => ({ ...f, candidateName: c.name || '', candidateEmail: c.email || '', position: c.position || '' }));
+    setIntern(f => ({ ...f, candidateName: c.name || '', candidateEmail: c.email || '', role: c.position || '' }));
     setNda(f => ({ ...f, employeeName: c.name || '' }));
   };
 
@@ -56,18 +57,56 @@ export default function OfferLetterView({ candidates = [], employees = [] }) {
     setNda(f => ({ ...f, employeeName: emp.name || '', effectiveDate: emp.joiningDate || f.effectiveDate }));
   };
 
-  const handleSubmit = (e) => {
+  const [sending, setSending] = useState(false);
+  const [status, setStatus] = useState(null); // { ok: boolean, message: string }
+
+  // Two ways out for an offer letter: "download" just saves the PDF; "send"
+  // emails it to the candidate from the HR mailbox (and needs their email).
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (type === 'nda') downloadNdaPdf(nda);
-    else if (type === 'intern') downloadInternshipOfferLetterPdf(intern);
-    else downloadOfferLetterPdf(form);
+    setStatus(null);
+    if (type === 'nda') { downloadNdaPdf(nda); return; }
+
+    const action = e.nativeEvent.submitter?.value === 'send' ? 'send' : 'download';
+    const isIntern = type === 'intern';
+    const data = isIntern ? intern : form;
+    const to = (data.candidateEmail || '').trim();
+    if (action === 'send' && !to) {
+      setStatus({ ok: false, message: "Enter the candidate's email address to send the offer letter." });
+      return;
+    }
+
+    setSending(true);
+    try {
+      const { pdf, fileName } = await (isIntern ? buildInternshipOfferLetterPdf(data) : buildOfferLetterPdf(data));
+      if (action === 'download') {
+        pdf.save(fileName);
+        setStatus({ ok: true, message: 'Offer letter downloaded.' });
+        return;
+      }
+      try {
+        await api.sendOfferLetter({
+          to,
+          candidateName: data.candidateName,
+          position: isIntern ? data.role : data.position,
+          isInternship: isIntern,
+          fileName,
+          pdfBase64: pdfToBase64(pdf)
+        });
+        setStatus({ ok: true, message: `Offer letter emailed to ${to} from hr@mzobs.com.` });
+      } catch (err) {
+        setStatus({ ok: false, message: `The email was not sent: ${err.message}` });
+      }
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
         <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><FileText size={18} /> Offer Letter</h3>
-        <p className="text-xs text-slate-500 mt-1">Generates the company offer letter or NDA (on letterhead) as a PDF.</p>
+        <p className="text-xs text-slate-500 mt-1">Generates the offer letter or NDA (on letterhead) as a PDF. You can download an offer letter, or send it straight to the candidate's email from hr@mzobs.com.</p>
       </div>
 
       <div className="inline-flex bg-slate-100 rounded-xl p-1 text-sm font-bold">
@@ -107,6 +146,7 @@ export default function OfferLetterView({ candidates = [], employees = [] }) {
           ) : type === 'intern' ? (
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Candidate name *"><input required className={inputClass} value={intern.candidateName} onChange={setI('candidateName')} /></Field>
+            <Field label="Candidate email (needed to send)"><input type="email" className={inputClass} placeholder="Offer letter is emailed here" value={intern.candidateEmail} onChange={setI('candidateEmail')} /></Field>
             <Field label="Role / title (shown as '… Intern') *"><input required className={inputClass} value={intern.role} onChange={setI('role')} /></Field>
             <Field label="Department *"><input required className={inputClass} value={intern.department} onChange={setI('department')} /></Field>
             <Field label="Internship start date *"><input required type="date" className={inputClass} value={intern.startDate} onChange={setI('startDate')} /></Field>
@@ -121,6 +161,7 @@ export default function OfferLetterView({ candidates = [], employees = [] }) {
           ) : (
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Candidate name *"><input required className={inputClass} value={form.candidateName} onChange={set('candidateName')} /></Field>
+            <Field label="Candidate email (needed to send)"><input type="email" className={inputClass} placeholder="Offer letter is emailed here" value={form.candidateEmail} onChange={set('candidateEmail')} /></Field>
             <Field label="Appointed as (position) *"><input required className={inputClass} value={form.position} onChange={set('position')} /></Field>
             <Field label="Effective date (joining) *"><input required type="date" className={inputClass} value={form.joiningDate} onChange={set('joiningDate')} /></Field>
             <Field label="Reporting to *">
@@ -139,9 +180,22 @@ export default function OfferLetterView({ candidates = [], employees = [] }) {
           )}
         </div>
 
-        <button type="submit" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700">
-          <Download size={14} /> {type === 'nda' ? 'Download NDA' : 'Download Offer Letter'}
-        </button>
+        {status && (
+          <div className={`text-xs font-semibold rounded-xl px-3 py-2 border ${status.ok ? 'text-emerald-700 bg-emerald-50 border-emerald-100' : 'text-red-600 bg-red-50 border-red-100'}`}>
+            {status.message}
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-3">
+          <button type="submit" value="download" disabled={sending} className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 text-white text-sm font-bold rounded-xl hover:bg-slate-900 disabled:opacity-50">
+            <Download size={14} /> {type === 'nda' ? 'Download NDA' : 'Download Offer Letter'}
+          </button>
+          {type !== 'nda' && (
+            <button type="submit" value="send" disabled={sending} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50">
+              <Send size={14} /> {sending ? 'Working…' : 'Send Offer Letter'}
+            </button>
+          )}
+        </div>
       </form>
     </div>
   );

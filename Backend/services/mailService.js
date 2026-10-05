@@ -314,3 +314,54 @@ export async function sendQuotationFollowUpEmail(quotation) {
     html: buildQuotationFollowUpEmailHtml(quotation)
   });
 }
+
+// Offer letters go out from the HR mailbox, not the general ERP sender. Uses
+// dedicated HR_SMTP_* credentials when set; otherwise falls back to the shared
+// SMTP account with the HR address as From/Reply-To (which Gmail only honours
+// if hr@mzobs.com is configured as a verified "Send mail as" alias).
+const HR_MAIL_ADDRESS = process.env.HR_MAIL_FROM || 'hr@mzobs.com';
+let hrTransporter = null;
+
+function getHrTransporter() {
+  if (hrTransporter) return hrTransporter;
+  if (process.env.HR_SMTP_USER && process.env.HR_SMTP_PASS) {
+    hrTransporter = nodemailer.createTransport(
+      process.env.HR_SMTP_HOST
+        ? { host: process.env.HR_SMTP_HOST, port: Number(process.env.HR_SMTP_PORT) || 465, secure: (Number(process.env.HR_SMTP_PORT) || 465) === 465, auth: { user: process.env.HR_SMTP_USER, pass: process.env.HR_SMTP_PASS } }
+        : { service: 'gmail', auth: { user: process.env.HR_SMTP_USER, pass: process.env.HR_SMTP_PASS } }
+    );
+    return hrTransporter;
+  }
+  return getTransporter();
+}
+
+function buildOfferLetterEmailHtml({ candidateName, position, isInternship }) {
+  return `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#1e293b;">
+      <h2 style="color:#1e3a8a;margin-bottom:4px;">${isInternship ? 'Internship ' : ''}Offer Letter</h2>
+      <p>Dear ${esc(candidateName || 'Candidate')},</p>
+      <p>Congratulations! We are pleased to offer you the ${isInternship ? 'internship' : 'position'}${position ? ` of <strong>${esc(position)}</strong>` : ''} at Mesho Solution Solar Park Pvt. Ltd. (MZOBS).</p>
+      <p>Please find your offer letter attached. Kindly review it, and revert with your acceptance as mentioned in the letter.</p>
+      <p>If you have any questions, simply reply to this email or contact us at ${esc(HR_MAIL_ADDRESS)} / 8756992444.</p>
+      <p style="margin-top:24px;">Regards,<br/>HR Team<br/>Mesho Solution Solar Park Pvt. Ltd.</p>
+    </div>
+  `;
+}
+
+export async function sendOfferLetterEmail({ to, candidateName, position, isInternship, fileName, pdfBase64 }) {
+  const t = getHrTransporter();
+  if (!t) {
+    const error = new Error('Email service is not configured (missing SMTP credentials).');
+    error.statusCode = 500;
+    throw error;
+  }
+
+  await t.sendMail({
+    from: `"MZOBS HR" <${HR_MAIL_ADDRESS}>`,
+    replyTo: HR_MAIL_ADDRESS,
+    to,
+    subject: `${isInternship ? 'Internship ' : ''}Offer Letter - ${candidateName} | MZOBS`,
+    html: buildOfferLetterEmailHtml({ candidateName, position, isInternship }),
+    attachments: [{ filename: fileName, content: pdfBase64, encoding: 'base64', contentType: 'application/pdf' }]
+  });
+}

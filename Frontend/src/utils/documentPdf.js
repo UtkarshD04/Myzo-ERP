@@ -1042,7 +1042,7 @@ async function createLetterWriter({ size = 11, lineH = 14.7 } = {}) {
   };
 }
 
-export async function downloadOfferLetterPdf(data) {
+export async function buildOfferLetterPdf(data) {
   const {
     candidateName, position, location, joiningDate, reportingTo, issueDate,
     probationDays, noticeDays, acceptanceHours, reportingTime,
@@ -1125,12 +1125,17 @@ export async function downloadOfferLetterPdf(data) {
   ].forEach((line) => heading(line, { gap: -lineH + 12 }));
   if (stamp) pdf.addImage(stamp, 'PNG', left + 12, w.y - 4, 66, 67);
 
-  pdf.save(`Offer-Letter-${candidateName.replace(/[^a-z0-9]+/gi, '-')}.pdf`);
+  return { pdf, fileName: `Offer-Letter-${candidateName.replace(/[^a-z0-9]+/gi, '-')}.pdf` };
+}
+
+export async function downloadOfferLetterPdf(data) {
+  const { pdf, fileName } = await buildOfferLetterPdf(data);
+  pdf.save(fileName);
 }
 
 // Internship offer letter: single page on the same letterhead, wording follows
 // HR's approved "Internship offer letter" draft.
-export async function downloadInternshipOfferLetterPdf(data) {
+export async function buildInternshipOfferLetterPdf(data) {
   const {
     candidateName, role, department, startDate, durationMonths, stipend,
     leavesPerMonth, noticeDays, issueDate, signatoryName, signatoryTitle
@@ -1183,8 +1188,16 @@ export async function downloadInternshipOfferLetterPdf(data) {
   line(`(${signatoryTitle || 'Circle Business Head'})`);
   if (stamp) pdf.addImage(stamp, 'PNG', left + 160, signY - 12, 66, 67);
 
-  pdf.save(`Internship-Offer-Letter-${candidateName.replace(/[^a-z0-9]+/gi, '-')}.pdf`);
+  return { pdf, fileName: `Internship-Offer-Letter-${candidateName.replace(/[^a-z0-9]+/gi, '-')}.pdf` };
 }
+
+export async function downloadInternshipOfferLetterPdf(data) {
+  const { pdf, fileName } = await buildInternshipOfferLetterPdf(data);
+  pdf.save(fileName);
+}
+
+// Raw base64 of a finished jsPDF doc (no data-URI prefix), for emailing as an attachment.
+export const pdfToBase64 = (pdf) => pdf.output('datauristring').split(',')[1];
 
 // ─── Non-Disclosure Agreement ────────────────────────────────────────────────
 // Same letterhead as the offer letters; clause wording is verbatim from HR's

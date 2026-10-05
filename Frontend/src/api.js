@@ -278,6 +278,12 @@ export const api = {
     body: JSON.stringify(updates),
   }),
 
+  // Offer letters (emailed to the candidate from the HR mailbox)
+  sendOfferLetter: (payload) => request('/offer-letters/send', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+
   // HR daily work log (interviews and other HR work)
   getHrWorkLogs: ({ month, loggedBy } = {}) => {
     const params = new URLSearchParams();

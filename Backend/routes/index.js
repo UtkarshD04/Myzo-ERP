@@ -27,6 +27,7 @@ import { getPerformanceSummary } from '../controllers/performanceController.js';
 import { getExpenseClaims, addExpenseClaim, modifyExpenseClaimStatus } from '../controllers/expenseClaimController.js';
 import { getAssets, addAsset, modifyAsset } from '../controllers/assetController.js';
 import { getVendors, addVendor, modifyVendor } from '../controllers/vendorController.js';
+import { sendOfferLetter } from '../controllers/offerLetterController.js';
 import { getHrWorkLogs, addHrWorkLog, modifyHrWorkLog, removeHrWorkLog } from '../controllers/hrWorkLogController.js';
 import { getWebsiteUsers } from '../controllers/websiteUserController.js';
 import { getProductEnquiries, modifyProductEnquiryStatus } from '../controllers/productEnquiryController.js';
@@ -110,6 +111,7 @@ export const routes = [
   { method: 'GET', path: '/api/vendors', handler: getVendors },
   { method: 'POST', path: '/api/vendors', handler: addVendor },
   { method: 'PATCH', path: '/api/vendors/:id', handler: modifyVendor },
+  { method: 'POST', path: '/api/offer-letters/send', handler: sendOfferLetter },
   { method: 'GET', path: '/api/hr-work-logs', handler: getHrWorkLogs },
   { method: 'POST', path: '/api/hr-work-logs', handler: addHrWorkLog },
   { method: 'PATCH', path: '/api/hr-work-logs/:id', handler: modifyHrWorkLog },
