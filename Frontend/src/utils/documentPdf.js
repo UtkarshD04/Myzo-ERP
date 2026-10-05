@@ -927,40 +927,9 @@ export async function downloadPayslipPdf({ employee = {}, payslip, monthLabel })
 
 // ─── Offer letter ────────────────────────────────────────────────────────────
 // Page 1 is laid over the company letterhead image (public/offer-letter-template.jpg,
-// header + footer only — body blanked); page 2 is the plain Annexure-A salary
-// table. Wording mirrors HR's approved "Full time offer letter" draft.
+// header + footer only — body blanked). Wording mirrors HR's approved "Full time offer letter" draft.
 export const OFFER_LETTER_TEMPLATE_URL = '/offer-letter-template.jpg';
 export const OFFER_LETTER_STAMP_URL = '/offer-letter-stamp.png';
-
-export const OFFER_ANNEXURE_EARNINGS = [
-  ['basic', 'Basic'],
-  ['hra', 'HRA'],
-  ['statutoryBonus', 'Statutory Bonus'],
-  ['otherAllowance', 'Other Allowance (Consolidated)']
-];
-export const OFFER_ANNEXURE_DEDUCTIONS = [
-  ['employeePf', "Employee's PF Contribution"],
-  ['professionalTax', 'Professional Tax'],
-  ['employeeEsic', "Employee's ESIC Contribution"]
-];
-export const OFFER_ANNEXURE_BENEFITS = [
-  ['employerPf', 'PF'],
-  ['employerEsic', 'ESIC'],
-  ['gratuity', 'Gratuity'],
-  ['leaveBenefits', 'Leave Benefits']
-];
-
-const sumOf = (rows, values) => rows.reduce((t, [k]) => t + (Number(values[k]) || 0), 0);
-
-// Annexure amounts are entered per month; totals and CTC are derived here so
-// the on-screen preview and the PDF can't disagree.
-export function computeOfferAnnexure(values) {
-  const gross = sumOf(OFFER_ANNEXURE_EARNINGS, values);
-  const deductions = sumOf(OFFER_ANNEXURE_DEDUCTIONS, values);
-  const benefits = sumOf(OFFER_ANNEXURE_BENEFITS, values);
-  const monthlyCtc = gross + benefits;
-  return { gross, deductions, net: gross - deductions, benefits, monthlyCtc, annualCtc: monthlyCtc * 12 };
-}
 
 // Shared letterhead page + text-flow helpers for the offer-style letters.
 // `w.y` is the running cursor so callers can keep laying out after the helpers.
@@ -1155,46 +1124,6 @@ export async function downloadOfferLetterPdf(data) {
     `(${signatoryTitle || 'Circle Business Head'})`
   ].forEach((line) => heading(line, { gap: -lineH + 12 }));
   if (stamp) pdf.addImage(stamp, 'PNG', left + 12, w.y - 4, 66, 67);
-
-  // ── Page 2: Annexure A (plain page, no letterhead — as in the source) ──
-  pdf.addPage();
-  pdf.setTextColor(...ink);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(10.5);
-  pdf.text('Salary Annexure', left - 18, 80);
-
-  const a = computeOfferAnnexure(data.annexure || {});
-  const amt = (v) => (v === '' || v === undefined || v === null ? '' : Math.round(Number(v) || 0).toLocaleString('en-IN'));
-  const val = (k) => amt((data.annexure || {})[k]);
-  const B = { fontStyle: 'bold' };
-  const body = [
-    [{ content: 'Particulars' }, { content: 'Amt', styles: { halign: 'left' } }, { content: 'Notes' }],
-    [{ content: 'Annexure - A' }, '', ''],
-    [{ content: 'Employee Name' }, { content: candidateName, colSpan: 2, styles: { halign: 'left' } }],
-    [{ content: 'Particulars' }, { content: 'Amt', styles: { halign: 'left' } }, ''],
-    ...OFFER_ANNEXURE_EARNINGS.map(([k, label]) => [label, val(k), '']),
-    [{ content: 'Gross Salary (A)', styles: B }, { content: amt(a.gross), styles: B }, ''],
-    ['', '', ''],
-    [{ content: 'Deductions:' }, '', ''],
-    ...OFFER_ANNEXURE_DEDUCTIONS.map(([k, label]) => [label, val(k), '']),
-    [{ content: 'Total Deductions (B)', styles: B }, { content: amt(a.deductions), styles: B }, ''],
-    [{ content: 'Net Take Home (A) - (B)', styles: B }, { content: amt(a.net), styles: B }, ''],
-    ['', '', ''],
-    [{ content: 'Employer Contribution & Benefits' }, '', ''],
-    ...OFFER_ANNEXURE_BENEFITS.map(([k, label]) => [label, val(k), '']),
-    [{ content: 'Total Benefits (C)', styles: B }, { content: amt(a.benefits), styles: B }, ''],
-    ['', '', ''],
-    [{ content: 'CTC (A) + (C)', styles: B }, { content: amt(a.monthlyCtc), styles: B }, ''],
-    [{ content: 'CTC p.a.', styles: B }, { content: amt(a.annualCtc), styles: B }, '']
-  ];
-  autoTable(pdf, {
-    startY: 92,
-    body,
-    theme: 'grid',
-    styles: { font: 'helvetica', fontSize: 9, cellPadding: { top: 5, bottom: 5, left: 5, right: 5 }, lineColor: [40, 40, 40], lineWidth: 0.6, textColor: ink },
-    columnStyles: { 0: { cellWidth: 300 }, 1: { cellWidth: 80, halign: 'right' }, 2: { cellWidth: 'auto' } },
-    margin: { left: left - 18, right: left - 18 }
-  });
 
   pdf.save(`Offer-Letter-${candidateName.replace(/[^a-z0-9]+/gi, '-')}.pdf`);
 }

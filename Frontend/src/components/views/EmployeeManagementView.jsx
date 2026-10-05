@@ -10,6 +10,15 @@ const QUOTE_STATUS_STYLES = {
 
 const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
+// Annexure-A monthly salary breakup, in the order they appear on the annexure.
+const BREAKUP_EARNINGS = [['basic', 'Basic'], ['hra', 'HRA'], ['statutoryBonus', 'Statutory Bonus'], ['otherAllowance', 'Other Allowance (Consolidated)']];
+const BREAKUP_DEDUCTIONS = [['employeePf', "Employee's PF Contribution"], ['professionalTax', 'Professional Tax'], ['employeeEsic', "Employee's ESIC Contribution"]];
+const BREAKUP_BENEFITS = [['employerPf', 'Employer PF'], ['employerEsic', 'Employer ESIC'], ['gratuity', 'Gratuity'], ['leaveBenefits', 'Leave Benefits']];
+const BREAKUP_KEYS = [...BREAKUP_EARNINGS, ...BREAKUP_DEDUCTIONS, ...BREAKUP_BENEFITS].map(([k]) => k);
+const EMPTY_BREAKUP = Object.fromEntries(BREAKUP_KEYS.map(k => [k, '']));
+const sumBreakup = (rows, b) => rows.reduce((t, [k]) => t + (Number(b[k]) || 0), 0);
+const inr = (n) => Math.round(n).toLocaleString('en-IN');
+
 const EMPTY_FORM = {
   name: '',
   officialEmail: '',
@@ -27,6 +36,7 @@ const EMPTY_FORM = {
   medicalAllowance: '',
   pfPercent: '',
   commissionPercent: '',
+  salaryBreakup: EMPTY_BREAKUP,
   bankName: '',
   accountNo: '',
   ifscCode: '',
@@ -110,6 +120,7 @@ export default function EmployeeManagementView({ employee, employees = [], atten
       medicalAllowance: emp.medicalAllowance ?? '',
       pfPercent: emp.pfPercent ?? '',
       commissionPercent: emp.commissionPercent ?? '',
+      salaryBreakup: { ...EMPTY_BREAKUP, ...(emp.salaryBreakup || {}) },
       bankName: emp.bankName || '',
       accountNo: emp.accountNo || '',
       ifscCode: emp.ifscCode || '',
@@ -148,7 +159,8 @@ export default function EmployeeManagementView({ employee, employees = [], atten
       hraPercent: form.hraPercent !== '' ? Number(form.hraPercent) : 0,
       medicalAllowance: form.medicalAllowance !== '' ? Number(form.medicalAllowance) : 0,
       pfPercent: form.pfPercent !== '' ? Number(form.pfPercent) : 0,
-      commissionPercent: form.commissionPercent !== '' ? Number(form.commissionPercent) : 0
+      commissionPercent: form.commissionPercent !== '' ? Number(form.commissionPercent) : 0,
+      salaryBreakup: Object.fromEntries(BREAKUP_KEYS.map(k => [k, Number(form.salaryBreakup?.[k]) || 0]))
     };
 
     try {
@@ -902,6 +914,49 @@ export default function EmployeeManagementView({ employee, employees = [], atten
               />
               <p className="text-[9px] text-slate-400 font-medium mt-1">Paid on quotations this employee closes each month; included automatically in payroll.</p>
             </div>
+          </div>
+
+          <div className="border-t border-slate-100 pt-4">
+            <h3 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-1">Annexure A — Monthly Salary Breakup (₹)</h3>
+            <p className="text-[10px] text-slate-400 font-semibold mb-3">Totals, net take-home and CTC are calculated automatically.</p>
+            {(() => {
+              const b = form.salaryBreakup || EMPTY_BREAKUP;
+              const gross = sumBreakup(BREAKUP_EARNINGS, b);
+              const deductions = sumBreakup(BREAKUP_DEDUCTIONS, b);
+              const benefits = sumBreakup(BREAKUP_BENEFITS, b);
+              const monthlyCtc = gross + benefits;
+              const field = ([k, label]) => (
+                <div key={k}>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">{label}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={b[k] ?? ''}
+                    onChange={(e) => setForm({ ...form, salaryBreakup: { ...b, [k]: e.target.value } })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              );
+              const total = (label, value) => (
+                <div className="flex justify-between text-xs font-bold text-slate-700 bg-slate-50 rounded-xl px-3 py-2">
+                  <span>{label}</span><span>₹ {inr(value)}</span>
+                </div>
+              );
+              return (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">{BREAKUP_EARNINGS.map(field)}</div>
+                  {total('Gross Salary (A)', gross)}
+                  <div className="grid grid-cols-3 gap-4">{BREAKUP_DEDUCTIONS.map(field)}</div>
+                  {total('Total Deductions (B)', deductions)}
+                  {total('Net Take Home (A) - (B)', gross - deductions)}
+                  <div className="grid grid-cols-2 gap-4">{BREAKUP_BENEFITS.map(field)}</div>
+                  {total('Total Benefits (C)', benefits)}
+                  {total('CTC (A) + (C) — monthly', monthlyCtc)}
+                  {total('CTC p.a.', monthlyCtc * 12)}
+                </div>
+              );
+            })()}
           </div>
 
           <div>

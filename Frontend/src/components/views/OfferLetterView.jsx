@@ -1,9 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { FileText, Download } from 'lucide-react';
-import {
-  downloadOfferLetterPdf, downloadInternshipOfferLetterPdf, downloadNdaPdf, computeOfferAnnexure,
-  OFFER_ANNEXURE_EARNINGS, OFFER_ANNEXURE_DEDUCTIONS, OFFER_ANNEXURE_BENEFITS
-} from '../../utils/documentPdf';
+import { downloadOfferLetterPdf, downloadInternshipOfferLetterPdf, downloadNdaPdf } from '../../utils/documentPdf';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -26,7 +23,6 @@ const EMPTY_NDA = {
 };
 
 const inputClass = 'w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
-const inr = (n) => Math.round(n).toLocaleString('en-IN');
 
 function Field({ label, children }) {
   return (
@@ -39,15 +35,12 @@ function Field({ label, children }) {
 
 export default function OfferLetterView({ candidates = [], employees = [] }) {
   const [form, setForm] = useState(EMPTY_FORM);
-  const [annexure, setAnnexure] = useState({});
   const [type, setType] = useState('fulltime');
   const [intern, setIntern] = useState(EMPTY_INTERN);
   const [nda, setNda] = useState(EMPTY_NDA);
   const setN = (key) => (e) => setNda(f => ({ ...f, [key]: e.target.value }));
   const setI = (key) => (e) => setIntern(f => ({ ...f, [key]: e.target.value }));
   const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
-  const setAmt = (key) => (e) => setAnnexure(a => ({ ...a, [key]: e.target.value }));
-  const totals = useMemo(() => computeOfferAnnexure(annexure), [annexure]);
 
   const prefillFromCandidate = (id) => {
     const c = candidates.find(x => x.id === id);
@@ -67,19 +60,8 @@ export default function OfferLetterView({ candidates = [], employees = [] }) {
     e.preventDefault();
     if (type === 'nda') downloadNdaPdf(nda);
     else if (type === 'intern') downloadInternshipOfferLetterPdf(intern);
-    else downloadOfferLetterPdf({ ...form, annexure });
+    else downloadOfferLetterPdf(form);
   };
-
-  const amountRow = ([key, label]) => (
-    <Field key={key} label={label}>
-      <input type="number" min="0" className={inputClass} value={annexure[key] ?? ''} onChange={setAmt(key)} placeholder="0" />
-    </Field>
-  );
-  const totalRow = (label, value) => (
-    <div className="flex justify-between text-sm font-bold text-slate-700 bg-slate-50 rounded-xl px-3 py-2">
-      <span>{label}</span><span>₹ {inr(value)}</span>
-    </div>
-  );
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -156,22 +138,6 @@ export default function OfferLetterView({ candidates = [], employees = [] }) {
           </div>
           )}
         </div>
-
-        {type === 'fulltime' && <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm space-y-4">
-          <div>
-            <h4 className="text-sm font-bold text-slate-800">Annexure A — monthly salary (₹)</h4>
-            <p className="text-[11px] text-slate-400 mt-0.5">Totals, net take-home and CTC are calculated automatically.</p>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-4">{OFFER_ANNEXURE_EARNINGS.map(amountRow)}</div>
-          {totalRow('Gross Salary (A)', totals.gross)}
-          <div className="grid sm:grid-cols-3 gap-4">{OFFER_ANNEXURE_DEDUCTIONS.map(amountRow)}</div>
-          {totalRow('Total Deductions (B)', totals.deductions)}
-          {totalRow('Net Take Home (A) - (B)', totals.net)}
-          <div className="grid sm:grid-cols-2 gap-4">{OFFER_ANNEXURE_BENEFITS.map(amountRow)}</div>
-          {totalRow('Total Benefits (C)', totals.benefits)}
-          {totalRow('CTC (A) + (C) — monthly', totals.monthlyCtc)}
-          {totalRow('CTC p.a.', totals.annualCtc)}
-        </div>}
 
         <button type="submit" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700">
           <Download size={14} /> {type === 'nda' ? 'Download NDA' : 'Download Offer Letter'}

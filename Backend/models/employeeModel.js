@@ -57,6 +57,13 @@ const employeeSchema = new mongoose.Schema({
   // % of the total value of quotations this employee closed (status
   // "Accepted") in a given month, paid out as sales commission via payroll.
   commissionPercent: { type: Number, default: 0 },
+  // Annexure-A monthly salary breakup (₹/month), captured when the employee is
+  // added. Totals/CTC are derived from these, never stored.
+  salaryBreakup: {
+    basic: Number, hra: Number, statutoryBonus: Number, otherAllowance: Number,
+    employeePf: Number, professionalTax: Number, employeeEsic: Number,
+    employerPf: Number, employerEsic: Number, gratuity: Number, leaveBenefits: Number
+  },
   // No default: a hardcoded default here would be stored in plaintext (this
   // schema has no hashing hook), reintroducing the same known-password gap
   // authService.login guards against. Every real creation path (see
@@ -82,7 +89,7 @@ const PUBLIC_PROJECTION = { password: 0, resetTokenHash: 0, resetTokenExpiry: 0 
 export const SENSITIVE_EMPLOYEE_FIELDS = [
   'bankName', 'accountNo', 'ifscCode', 'pan', 'esiNo', 'pfNo', 'uanNo',
   'fatherName', 'fatherDob', 'motherName', 'motherDob',
-  'salary', 'basicPercent', 'hraPercent', 'medicalAllowance', 'pfPercent', 'commissionPercent'
+  'salary', 'basicPercent', 'hraPercent', 'medicalAllowance', 'pfPercent', 'commissionPercent', 'salaryBreakup'
 ];
 
 export function stripSensitiveEmployeeFields(employee) {
