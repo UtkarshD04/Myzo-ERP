@@ -1180,7 +1180,7 @@ export async function buildInternshipOfferLetterPdf(data) {
   line('We hope your time will be very fruitful and fulfilling.');
   line('For MZOBS,');
   line(`Name: ${candidateName}`);
-  line('Date: ..............................');
+  line(`Date: ${fmtDate(issueDate)}`);
   line('Place: Lucknow', { gap: 16 });
   const signY = w.y;
   line('With Best Wishes');
