@@ -63,6 +63,7 @@ export default function InterviewLogView({ employee, employees = [] }) {
       online: count(r => r.mode === 'Online'),
       offline: count(r => r.mode === 'Offline'),
       byResult: RESULTS.map(r => [r, count(x => x.result === r)]),
+      days: Object.entries(rows.reduce((acc, r) => ({ ...acc, [r.date]: (acc[r.date] || 0) + 1 }), {})).sort(([a], [b]) => a.localeCompare(b)),
       domains: Object.entries(rows.reduce((acc, r) => ({ ...acc, [r.domain]: (acc[r.domain] || 0) + 1 }), {}))
     };
   }, [rows]);
@@ -126,8 +127,8 @@ export default function InterviewLogView({ employee, employees = [] }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><ClipboardList size={18} /> Interview Log</h3>
-          <p className="text-xs text-slate-500 mt-1">Record every interview you take each day. At month end, download the full sheet for Excel.</p>
+          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><ClipboardList size={18} /> {isAdmin ? 'HR Interview Work' : 'My Interview Work'}</h3>
+          <p className="text-xs text-slate-500 mt-1">Add the interviews you take each day. The whole month's work is shown below and can be downloaded for Excel.</p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <Field label="Month"><input type="month" className={inputClass} value={month} onChange={(e) => setMonth(e.target.value)} /></Field>
@@ -184,6 +185,9 @@ export default function InterviewLogView({ employee, employees = [] }) {
           </div>
         ))}
       </div>
+      {summary.days.length > 0 && (
+        <p className="text-xs text-slate-500"><span className="font-bold text-slate-600">Days worked: {summary.days.length}</span> · {summary.days.map(([d, n]) => `${d.slice(8)}/${d.slice(5, 7)} (${n})`).join(' · ')}</p>
+      )}
       {summary.domains.length > 0 && (
         <p className="text-xs text-slate-500"><span className="font-bold text-slate-600">By domain:</span> {summary.domains.map(([d, n]) => `${d} (${n})`).join(' · ')}</p>
       )}
@@ -197,7 +201,7 @@ export default function InterviewLogView({ employee, employees = [] }) {
           </thead>
           <tbody>
             {loading && <tr><td colSpan={8} className="px-4 py-6 text-center text-slate-400">Loading…</td></tr>}
-            {!loading && rows.length === 0 && <tr><td colSpan={8} className="px-4 py-6 text-center text-slate-400">No interviews logged for this month.</td></tr>}
+            {!loading && rows.length === 0 && <tr><td colSpan={8} className="px-4 py-6 text-center text-slate-400">No interview work logged for this month.</td></tr>}
             {rows.map(row => (
               <tr key={row.id} className="border-b border-slate-50 last:border-0">
                 <td className="px-4 py-3 whitespace-nowrap">{row.date}</td>

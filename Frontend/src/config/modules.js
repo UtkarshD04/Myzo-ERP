@@ -40,6 +40,7 @@ export function getModules(employee) {
         { id: 'workreport', label: 'Work Logs' },
         { id: 'expenses', label: 'Expenses' },
         { id: 'assets', label: 'Assets' },
+        ...(canSeeHR ? [{ id: 'interview-log', label: 'My Interviews' }] : []),
       ],
     },
     {
@@ -52,7 +53,6 @@ export function getModules(employee) {
             { id: 'recruitment', label: 'Recruitment' },
             { id: 'onboarding', label: 'Onboarding' },
             { id: 'payroll', label: 'Payroll' },
-            { id: 'interview-log', label: 'Interview Log' },
             { id: 'offer-letter', label: 'Offer Letter & NDA' },
           ]
         : [],
