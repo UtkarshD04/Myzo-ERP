@@ -278,22 +278,22 @@ export const api = {
     body: JSON.stringify(updates),
   }),
 
-  // HR Interview Log
-  getInterviewLogs: ({ month, conductedBy } = {}) => {
+  // HR daily work log (interviews and other HR work)
+  getHrWorkLogs: ({ month, loggedBy } = {}) => {
     const params = new URLSearchParams();
     if (month) params.set('month', month);
-    if (conductedBy) params.set('conductedBy', conductedBy);
-    return request(`/interview-logs?${params.toString()}`);
+    if (loggedBy) params.set('loggedBy', loggedBy);
+    return request(`/hr-work-logs?${params.toString()}`);
   },
-  addInterviewLog: (payload) => request('/interview-logs', {
+  addHrWorkLog: (payload) => request('/hr-work-logs', {
     method: 'POST',
     body: JSON.stringify(payload),
   }),
-  updateInterviewLog: (id, updates) => request(`/interview-logs/${id}`, {
+  updateHrWorkLog: (id, updates) => request(`/hr-work-logs/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(updates),
   }),
-  deleteInterviewLog: (id) => request(`/interview-logs/${id}`, {
+  deleteHrWorkLog: (id) => request(`/hr-work-logs/${id}`, {
     method: 'DELETE',
   }),
 

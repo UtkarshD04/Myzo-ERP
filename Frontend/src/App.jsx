@@ -28,7 +28,7 @@ import InvoicesView from './components/views/InvoicesView';
 import ProductsManagementView from './components/views/ProductsManagementView';
 import PayrollView from './components/views/PayrollView';
 import OfferLetterView from './components/views/OfferLetterView';
-import InterviewLogView from './components/views/InterviewLogView';
+import HrWorkLogView from './components/views/HrWorkLogView';
 import LeaveManagementView from './components/views/LeaveManagementView';
 import RecruitmentView from './components/views/RecruitmentView';
 import OnboardingView from './components/views/OnboardingView';
@@ -943,8 +943,8 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'interview-log' && (
-            <InterviewLogView employee={employee} employees={employees} />
+          {activeTab === 'hr-work' && (
+            <HrWorkLogView employee={employee} employees={employees} />
           )}
 
           {activeTab === 'offer-letter' && (
