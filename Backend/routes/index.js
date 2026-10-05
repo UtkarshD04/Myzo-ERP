@@ -27,6 +27,7 @@ import { getPerformanceSummary } from '../controllers/performanceController.js';
 import { getExpenseClaims, addExpenseClaim, modifyExpenseClaimStatus } from '../controllers/expenseClaimController.js';
 import { getAssets, addAsset, modifyAsset } from '../controllers/assetController.js';
 import { getVendors, addVendor, modifyVendor } from '../controllers/vendorController.js';
+import { getInterviewLogs, addInterviewLog, modifyInterviewLog, removeInterviewLog } from '../controllers/interviewLogController.js';
 import { getWebsiteUsers } from '../controllers/websiteUserController.js';
 import { getProductEnquiries, modifyProductEnquiryStatus } from '../controllers/productEnquiryController.js';
 import { getAfterSalesServices, modifyAfterSalesServiceStatus } from '../controllers/afterSalesServiceController.js';
@@ -109,6 +110,10 @@ export const routes = [
   { method: 'GET', path: '/api/vendors', handler: getVendors },
   { method: 'POST', path: '/api/vendors', handler: addVendor },
   { method: 'PATCH', path: '/api/vendors/:id', handler: modifyVendor },
+  { method: 'GET', path: '/api/interview-logs', handler: getInterviewLogs },
+  { method: 'POST', path: '/api/interview-logs', handler: addInterviewLog },
+  { method: 'PATCH', path: '/api/interview-logs/:id', handler: modifyInterviewLog },
+  { method: 'DELETE', path: '/api/interview-logs/:id', handler: removeInterviewLog },
   // Read-mostly views onto the public website's shared MongoDB collections
   // (see models/websiteUserModel.js and friends) — website visitor activity
   // surfaced for the sales/support team without a second app to log into.

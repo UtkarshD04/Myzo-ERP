@@ -28,6 +28,7 @@ import InvoicesView from './components/views/InvoicesView';
 import ProductsManagementView from './components/views/ProductsManagementView';
 import PayrollView from './components/views/PayrollView';
 import OfferLetterView from './components/views/OfferLetterView';
+import InterviewLogView from './components/views/InterviewLogView';
 import LeaveManagementView from './components/views/LeaveManagementView';
 import RecruitmentView from './components/views/RecruitmentView';
 import OnboardingView from './components/views/OnboardingView';
@@ -940,6 +941,10 @@ export default function App() {
               onUpdatePayroll={handleUpdatePayroll}
               onSendPayrollToBank={handleSendPayrollToBank}
             />
+          )}
+
+          {activeTab === 'interview-log' && (
+            <InterviewLogView employee={employee} employees={employees} />
           )}
 
           {activeTab === 'offer-letter' && (

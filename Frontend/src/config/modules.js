@@ -52,6 +52,7 @@ export function getModules(employee) {
             { id: 'recruitment', label: 'Recruitment' },
             { id: 'onboarding', label: 'Onboarding' },
             { id: 'payroll', label: 'Payroll' },
+            { id: 'interview-log', label: 'Interview Log' },
             { id: 'offer-letter', label: 'Offer Letter & NDA' },
           ]
         : [],

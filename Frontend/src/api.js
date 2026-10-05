@@ -278,6 +278,25 @@ export const api = {
     body: JSON.stringify(updates),
   }),
 
+  // HR Interview Log
+  getInterviewLogs: ({ month, conductedBy } = {}) => {
+    const params = new URLSearchParams();
+    if (month) params.set('month', month);
+    if (conductedBy) params.set('conductedBy', conductedBy);
+    return request(`/interview-logs?${params.toString()}`);
+  },
+  addInterviewLog: (payload) => request('/interview-logs', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  updateInterviewLog: (id, updates) => request(`/interview-logs/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  }),
+  deleteInterviewLog: (id) => request(`/interview-logs/${id}`, {
+    method: 'DELETE',
+  }),
+
   // Website Activity (read views onto the public website's shared DB)
   getWebsiteUsers: () => request('/website-users'),
   getProductEnquiries: () => request('/product-enquiries'),
