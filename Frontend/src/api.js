@@ -284,6 +284,12 @@ export const api = {
     body: JSON.stringify(payload),
   }),
 
+  getOfferLetterHistory: () => request('/offer-letters/history'),
+  recordOfferLetterDownload: (payload) => request('/offer-letters/history', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+
   // HR daily work log (interviews and other HR work)
   getHrWorkLogs: ({ month, loggedBy } = {}) => {
     const params = new URLSearchParams();
