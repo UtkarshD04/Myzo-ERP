@@ -163,7 +163,7 @@ export default function OfferLetterView({ candidates = [], employees = [] }) {
             <Field label="Candidate name *"><input required className={inputClass} value={form.candidateName} onChange={set('candidateName')} /></Field>
             <Field label="Candidate email (needed to send)"><input type="email" className={inputClass} placeholder="Offer letter is emailed here" value={form.candidateEmail} onChange={set('candidateEmail')} /></Field>
             <Field label="Appointed as (position) *"><input required className={inputClass} value={form.position} onChange={set('position')} /></Field>
-            <Field label="Effective date (joining) *"><input required type="date" className={inputClass} value={form.joiningDate} onChange={set('joiningDate')} /></Field>
+            <Field label="Effective date (joining)"><input type="date" className={inputClass} value={form.joiningDate} onChange={set('joiningDate')} /></Field>
             <Field label="Reporting to *">
               <input required className={inputClass} list="offer-reporting" value={form.reportingTo} onChange={set('reportingTo')} />
               <datalist id="offer-reporting">{employees.map(e => <option key={e.id} value={e.name} />)}</datalist>
