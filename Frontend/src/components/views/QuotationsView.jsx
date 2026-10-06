@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Trash2, FileSpreadsheet, IndianRupee, Info, ArrowLeft, FileEdit, Send, Users, Mail, User, ChevronDown, MoreHorizontal, SlidersHorizontal, Share2, Printer, ChevronLeft, ChevronRight, Package, Download, MessageCircle, ArrowRightLeft, BellRing } from 'lucide-react';
+import { Plus, Search, Trash2, FileSpreadsheet, IndianRupee, Info, ArrowLeft, FileEdit, Send, Users, Mail, User, ChevronDown, MoreHorizontal, SlidersHorizontal, Share2, Printer, ChevronLeft, ChevronRight, Package, Download, Eye, MessageCircle, ArrowRightLeft, BellRing } from 'lucide-react';
 import { downloadDocumentPdf, DEFAULT_TERMS_AND_CONDITIONS } from '../../utils/documentPdf';
 
 const EMPTY_ITEM = { productId: '', productName: '', model: '', quantity: 1, unitPrice: 0, discount: 0, wattage: '' };
@@ -1119,6 +1119,12 @@ export default function QuotationsView({ employee, employees = [], quotations = 
                   </div>
                 )}
               </div>
+              <button
+                onClick={() => downloadDocumentPdf({ type: 'QUOTATION', doc: q, preview: true })}
+                className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-blue-300 hover:text-blue-600 cursor-pointer transition-all"
+              >
+                <Eye className="w-3.5 h-3.5" /> Preview
+              </button>
               <button
                 onClick={() => downloadDocumentPdf({ type: 'QUOTATION', doc: q })}
                 className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-blue-300 hover:text-blue-600 cursor-pointer transition-all"

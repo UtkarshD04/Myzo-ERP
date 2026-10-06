@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Download, Printer, Shield, FolderOpen, ArrowRight } from 'lucide-react';
+import { Download, Eye, Printer, Shield, FolderOpen, ArrowRight } from 'lucide-react';
 import {
   downloadPayslipPdf, numberToIndianWords, payslipAmount, payslipWhole,
   PAYSLIP_TEMPLATE_URL, PAYSLIP_TEMPLATE_IMAGE_SIZE, PAYSLIP_TEMPLATE_FIELDS, PAYSLIP_PAGE_SIZE, PAYSLIP_CONTACT
@@ -120,6 +120,10 @@ export default function DocumentsView({ employee, payrolls = [], policyAcknowled
     window.print();
   };
 
+  const handlePreview = () => {
+    downloadPayslipPdf({ employee, payslip: selectedSlip, monthLabel: monthLabel(selectedSlip.month), preview: true });
+  };
+
   const handleDownload = () => {
     downloadPayslipPdf({ employee, payslip: selectedSlip, monthLabel: monthLabel(selectedSlip.month) });
   };
@@ -211,6 +215,13 @@ export default function DocumentsView({ employee, payrolls = [], policyAcknowled
                 title="Print statement"
               >
                 <Printer className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handlePreview}
+                className="p-2 border border-slate-200 hover:border-slate-350 text-slate-500 hover:text-slate-700 bg-white rounded-xl transition-all cursor-pointer"
+                title="Preview PDF"
+              >
+                <Eye className="w-4 h-4" />
               </button>
               <button
                 onClick={handleDownload}

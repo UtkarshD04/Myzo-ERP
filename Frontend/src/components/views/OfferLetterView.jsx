@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FileText, Download, Send } from 'lucide-react';
+import { FileText, Download, Eye, Send } from 'lucide-react';
 import { api } from '../../api';
 import { exportToCsv } from '../../utils/exportCsv';
+import { openPdfPreview } from '../../utils/pdfPreview';
 import { buildOfferLetterPdf, buildInternshipOfferLetterPdf, downloadNdaPdf, pdfToBase64 } from '../../utils/documentPdf';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -87,13 +88,15 @@ export default function OfferLetterView({ candidates = [], employees = [] }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus(null);
+    const wantsPreview = e.nativeEvent.submitter?.value === 'preview';
     if (type === 'nda') {
+      if (wantsPreview) { downloadNdaPdf(nda, { preview: true }); return; }
       downloadNdaPdf(nda);
       recordDownload('NDA', nda.employeeName, '', '');
       return;
     }
 
-    const action = e.nativeEvent.submitter?.value === 'send' ? 'send' : 'download';
+    const action = e.nativeEvent.submitter?.value === 'send' ? 'send' : wantsPreview ? 'preview' : 'download';
     const isIntern = type === 'intern';
     const data = isIntern ? intern : form;
     const to = (data.candidateEmail || '').trim();
@@ -105,6 +108,10 @@ export default function OfferLetterView({ candidates = [], employees = [] }) {
     setSending(true);
     try {
       const { pdf, fileName } = await (isIntern ? buildInternshipOfferLetterPdf(data) : buildOfferLetterPdf(data));
+      if (action === 'preview') {
+        openPdfPreview(pdf, fileName);
+        return;
+      }
       if (action === 'download') {
         pdf.save(fileName);
         setStatus({ ok: true, message: 'Offer letter downloaded.' });
@@ -220,6 +227,9 @@ export default function OfferLetterView({ candidates = [], employees = [] }) {
         )}
 
         <div className="flex flex-wrap gap-3">
+          <button type="submit" value="preview" disabled={sending} className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-xl hover:border-blue-300 hover:text-blue-600 disabled:opacity-50">
+            <Eye size={14} /> Preview
+          </button>
           <button type="submit" value="download" disabled={sending} className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 text-white text-sm font-bold rounded-xl hover:bg-slate-900 disabled:opacity-50">
             <Download size={14} /> {type === 'nda' ? 'Download NDA' : 'Download Offer Letter'}
           </button>

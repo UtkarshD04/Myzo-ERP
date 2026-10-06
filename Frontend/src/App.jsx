@@ -38,6 +38,7 @@ import AssetTrackingView from './components/views/AssetTrackingView';
 import VendorDirectoryView from './components/views/VendorDirectoryView';
 import WebsiteActivityView from './components/views/WebsiteActivityView';
 import PoliciesView from './components/views/PoliciesView';
+import PdfPreviewModal from './components/common/PdfPreviewModal';
 import LateCheckoutRequestPage from './components/attendance/LateCheckoutRequestPage';
 
 export default function App() {
@@ -979,6 +980,7 @@ export default function App() {
         </nav>
 
       </div>
+      <PdfPreviewModal />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wallet, Users, IndianRupee, CheckCircle2, Clock, PlayCircle, FileText, Download, Landmark, X } from 'lucide-react';
+import { Wallet, Users, IndianRupee, CheckCircle2, Clock, PlayCircle, FileText, Eye, Download, Landmark, X } from 'lucide-react';
 import { downloadSalaryDisbursementPdf, buildSalaryDisbursementPdfBase64, buildChequePdfBase64 } from '../../utils/documentPdf';
 import { exportToCsv } from '../../utils/exportCsv';
 
@@ -52,6 +52,10 @@ export default function PayrollView({ payrolls = [], employees = [], companyBank
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handlePreviewDisbursementLetter = () => {
+    downloadSalaryDisbursementPdf({ monthLabel: monthLabel(selectedMonth), rows: monthRows, employees, preview: true });
   };
 
   const handleDownloadDisbursementLetter = () => {
@@ -207,6 +211,13 @@ export default function PayrollView({ payrolls = [], employees = [], companyBank
               >
                 <Download className="w-3.5 h-3.5" />
                 Export CSV
+              </button>
+              <button
+                onClick={handlePreviewDisbursementLetter}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 text-slate-600 font-bold rounded-lg text-[11px] cursor-pointer transition-all"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                Preview Letter
               </button>
               <button
                 onClick={handleDownloadDisbursementLetter}

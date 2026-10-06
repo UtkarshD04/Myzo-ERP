@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, ArrowLeft, ChevronDown, MoreHorizontal, SlidersHorizontal, Mail, User, Package, ChevronLeft, ChevronRight, Printer, Download } from 'lucide-react';
+import { Search, ArrowLeft, ChevronDown, MoreHorizontal, SlidersHorizontal, Mail, User, Package, ChevronLeft, ChevronRight, Printer, Download, Eye } from 'lucide-react';
 import { downloadDocumentPdf, DEFAULT_TERMS_AND_CONDITIONS } from '../../utils/documentPdf';
 
 const STATUS_STYLES = {
@@ -67,6 +67,12 @@ export default function InvoicesView({ employee, invoices = [], onUpdateInvoice 
             </button>
 
             <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                onClick={() => downloadDocumentPdf({ type: 'INVOICE', doc: inv, preview: true })}
+                className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-blue-300 hover:text-blue-600 cursor-pointer transition-all"
+              >
+                <Eye className="w-3.5 h-3.5" /> Preview
+              </button>
               <button
                 onClick={() => downloadDocumentPdf({ type: 'INVOICE', doc: inv })}
                 className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:border-blue-300 hover:text-blue-600 cursor-pointer transition-all"

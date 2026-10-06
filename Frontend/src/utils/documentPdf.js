@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { deliverPdf } from './pdfPreview';
 
 const money = (n) => `Rs. ${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
@@ -133,7 +134,7 @@ export function numberToIndianWords(amount) {
  * share the same shape (customer/items/totals) so one generator covers both,
  * keyed off the differing field names (quoteDate/validUntil vs invoiceDate/dueDate).
  */
-export async function downloadDocumentPdf({ type, doc }) {
+export async function downloadDocumentPdf({ type, doc, preview = false }) {
   const isQuote = type === 'QUOTATION';
   const biz = QUOTATION_BUSINESS_INFO;
   const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
@@ -434,7 +435,7 @@ export async function downloadDocumentPdf({ type, doc }) {
     }
   }
 
-  pdf.save(`${doc.id}.pdf`);
+  deliverPdf(pdf, `${doc.id}.pdf`, { preview });
 }
 
 /**
@@ -552,8 +553,8 @@ function buildSalaryDisbursementPdf({ monthLabel, rows = [], employees = [] }) {
   return pdf;
 }
 
-export function downloadSalaryDisbursementPdf({ monthLabel, rows = [], employees = [] }) {
-  buildSalaryDisbursementPdf({ monthLabel, rows, employees }).save(`Salary-Disbursement-${monthLabel.replace(/\s+/g, '-')}.pdf`);
+export function downloadSalaryDisbursementPdf({ monthLabel, rows = [], employees = [], preview = false }) {
+  deliverPdf(buildSalaryDisbursementPdf({ monthLabel, rows, employees }), `Salary-Disbursement-${monthLabel.replace(/\s+/g, '-')}.pdf`, { preview });
 }
 
 // Base64 body only (no data: URI prefix) — used to upload this PDF as an
@@ -835,7 +836,7 @@ export const PAYSLIP_TEMPLATE_FIELDS = {
  * position, so the printed slip is exact to the template rather than a
  * hand-recreated approximation of it.
  */
-export async function downloadPayslipPdf({ employee = {}, payslip, monthLabel }) {
+export async function downloadPayslipPdf({ employee = {}, payslip, monthLabel, preview = false }) {
   if (!payslip) return;
 
   const pdf = new jsPDF({ unit: 'pt', format: [PAYSLIP_PAGE_SIZE.width, PAYSLIP_PAGE_SIZE.height] });
@@ -922,7 +923,7 @@ export async function downloadPayslipPdf({ employee = {}, payslip, monthLabel })
     field('fatherDob', employee.fatherDob || '--');
   }
 
-  pdf.save(`Payslip-${(employee.name || 'Employee').replace(/\s+/g, '-')}-${monthLabel.replace(/\s+/g, '-')}.pdf`);
+  deliverPdf(pdf, `Payslip-${(employee.name || 'Employee').replace(/\s+/g, '-')}-${monthLabel.replace(/\s+/g, '-')}.pdf`, { preview });
 }
 
 // ─── Offer letter ────────────────────────────────────────────────────────────
@@ -1128,9 +1129,9 @@ export async function buildOfferLetterPdf(data) {
   return { pdf, fileName: `Offer-Letter-${candidateName.replace(/[^a-z0-9]+/gi, '-')}.pdf` };
 }
 
-export async function downloadOfferLetterPdf(data) {
+export async function downloadOfferLetterPdf(data, { preview = false } = {}) {
   const { pdf, fileName } = await buildOfferLetterPdf(data);
-  pdf.save(fileName);
+  deliverPdf(pdf, fileName, { preview });
 }
 
 // Internship offer letter: single page on the same letterhead, wording follows
@@ -1155,15 +1156,16 @@ export async function buildInternshipOfferLetterPdf(data) {
 
   line(`Date: ${fmtDate(issueDate)}`, { gap: 14 });
   flow([
-    { t: 'Congratulations! We are pleased to offer you the role of ' },
-    { t: `${role || '..........'}.`, b: true }
+    { t: 'Welcome to MZOBS! This letter confirms your joining as ' },
+    { t: `${role || '..........'} Intern`, b: true },
+    { t: ` with effect from ${fmtDate(startDate)}.` }
   ], { justify: false });
   flow([{ t: 'The internship is a significant step in your development into a qualified professional. We hope you will use this opportunity to create mutual value for yourself and the organization.' }], { justify: false });
-  flow([{ t: 'Please find the details regarding your internship below:' }], { justify: false, gap: 14 });
+  flow([{ t: 'Please find the details regarding your joining below:' }], { justify: false, gap: 14 });
 
   line(`Title: ${role || '..........'} Intern`);
   line(`Department: ${department || '..........'}`);
-  line(`Internship Start Date: ${fmtDate(startDate)}`);
+  line(`Date of Joining: ${fmtDate(startDate)}`);
   line(`Duration: ${monthsLabel}`);
   line(`Stipend: ${stipendLabel}/- PER MONTH`, { gap: 14 });
 
@@ -1188,12 +1190,12 @@ export async function buildInternshipOfferLetterPdf(data) {
   line(`(${signatoryTitle || 'Circle Business Head'})`);
   if (stamp) pdf.addImage(stamp, 'PNG', left + 160, signY - 12, 66, 67);
 
-  return { pdf, fileName: `Internship-Offer-Letter-${candidateName.replace(/[^a-z0-9]+/gi, '-')}.pdf` };
+  return { pdf, fileName: `Internship-Joining-Letter-${candidateName.replace(/[^a-z0-9]+/gi, '-')}.pdf` };
 }
 
-export async function downloadInternshipOfferLetterPdf(data) {
+export async function downloadInternshipOfferLetterPdf(data, { preview = false } = {}) {
   const { pdf, fileName } = await buildInternshipOfferLetterPdf(data);
-  pdf.save(fileName);
+  deliverPdf(pdf, fileName, { preview });
 }
 
 // Raw base64 of a finished jsPDF doc (no data-URI prefix), for emailing as an attachment.
@@ -1280,8 +1282,8 @@ export async function buildNdaPdf({ employeeName, agreementDate, effectiveDate, 
   return pdf;
 }
 
-export async function downloadNdaPdf(data) {
+export async function downloadNdaPdf(data, { preview = false } = {}) {
   const pdf = await buildNdaPdf(data);
   const fileName = (data.employeeName || 'Employee').replace(/[^a-z0-9]+/gi, '-');
-  pdf.save(`NDA-${fileName}.pdf`);
+  deliverPdf(pdf, `NDA-${fileName}.pdf`, { preview });
 }
