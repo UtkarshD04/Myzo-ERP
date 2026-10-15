@@ -25,7 +25,7 @@ import { findAllAfterSalesServices } from '../models/afterSalesServiceModel.js';
 import { findAllBecomePartners } from '../models/becomePartnerModel.js';
 import { findAllCareerApplications, filterCareerApplicationsForViewer } from '../models/careerApplicationModel.js';
 import { findAllPolicyAcknowledgements, filterPolicyAcknowledgementsForViewer } from '../models/policyAcknowledgementModel.js';
-import { getHolidays, withCustomHolidays } from '../services/holidayService.js';
+import { getAllHolidays } from '../services/holidayService.js';
 
 export async function getBootstrapData(req, res) {
   const rawEmployees = await Employee.find({}, { password: 0, resetTokenHash: 0, resetTokenExpiry: 0 }).lean();
@@ -64,12 +64,6 @@ export async function getBootstrapData(req, res) {
   const careerApplications = filterCareerApplicationsForViewer(await findAllCareerApplications(), req.user);
   const policyAcknowledgements = filterPolicyAcknowledgementsForViewer(await findAllPolicyAcknowledgements(), req.user);
 
-  // Try to get real holidays from Calendarific, fallback to an empty list
-  const liveHolidays = await getHolidays(
-    process.env.HOLIDAY_COUNTRY || 'IN',
-    new Date().getFullYear()
-  );
-
   res.json({
     employees,
     attendance,
@@ -99,6 +93,6 @@ export async function getBootstrapData(req, res) {
     becomePartners,
     careerApplications,
     policyAcknowledgements,
-    holidays: withCustomHolidays(liveHolidays),
+    holidays: await getAllHolidays(),
   });
 }

@@ -17,6 +17,7 @@ import { addSalesOrderFromQuotation, getSalesOrders, modifySalesOrder } from '..
 import { addReport, getReports, modifyReport } from '../controllers/reportController.js';
 import { addTask, getTasks, modifyTask } from '../controllers/taskController.js';
 import { getPayrolls, generatePayroll, modifyPayroll, sendPayrollToBank } from '../controllers/payrollController.js';
+import { getHolidays, addHoliday, removeHoliday } from '../controllers/holidayController.js';
 import { getCompanyBankSettings, updateCompanyBankSettings } from '../controllers/companyBankController.js';
 import { getLeaves, requestLeave, modifyLeaveStatus } from '../controllers/leaveController.js';
 import { getCandidates, addCandidate, modifyCandidate } from '../controllers/candidateController.js';
@@ -85,6 +86,9 @@ export const routes = [
   { method: 'POST', path: '/api/payroll/generate', handler: generatePayroll },
   { method: 'PATCH', path: '/api/payroll/:id', handler: modifyPayroll },
   { method: 'POST', path: '/api/payroll/:month/send-to-bank', handler: sendPayrollToBank },
+  { method: 'GET', path: '/api/holidays', handler: getHolidays },
+  { method: 'POST', path: '/api/holidays', handler: addHoliday },
+  { method: 'DELETE', path: '/api/holidays/:id', handler: removeHoliday },
   { method: 'GET', path: '/api/company-bank', handler: getCompanyBankSettings },
   { method: 'PATCH', path: '/api/company-bank', handler: updateCompanyBankSettings },
   { method: 'GET', path: '/api/leaves', handler: getLeaves },

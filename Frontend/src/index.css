@@ -106,3 +106,39 @@ body {
   .lg\:hidden, nav, aside, header, button { display: none !important; }
   main { overflow: visible !important; }
 }
+/* ─── Dark Mode ─────────────────────────────────────────────────────────────── */
+/* Views hardcode light utilities (bg-white, slate-*, tinted -50/-100 badges),
+   so dark mode remaps the palette variables those utilities read instead of
+   touching every component. slate-800/900/950 stay as-is: they're used as dark
+   *backgrounds* (sidebar, buttons) next to text-white, so only their *text*
+   utilities are flipped below. */
+html.dark {
+  color-scheme: dark;
+  --color-slate-50:  #0b1220;
+  --color-slate-100: #1a2335;
+  --color-slate-200: #263247;
+  --color-slate-300: #334155;
+  --color-slate-400: #8c9bb3;
+  --color-slate-500: #9aa8bf;
+  --color-slate-600: #b4c0d3;
+  --color-slate-700: #d0d9e6;
+
+  --color-blue-50: #12254a;    --color-blue-100: #172f5e;
+  --color-red-50: #3a1519;     --color-red-100: #4b1b20;
+  --color-emerald-50: #0f2e24; --color-emerald-100: #12402f;
+  --color-amber-50: #36270c;   --color-amber-100: #4a350d;
+  --color-indigo-50: #1d1f4d;  --color-indigo-100: #272a63;
+  --color-purple-50: #2b1647;
+  --color-orange-50: #3a1f0d;  --color-orange-100: #4d290f;
+  --color-sky-50: #0c2a3d;     --color-sky-100: #0f3550;
+}
+html.dark body { background-color: #070d19; color: #e2e8f0; }
+html.dark .bg-white { background-color: #101828; }
+html.dark .border-white { border-color: #101828; }
+html.dark .text-slate-800,
+html.dark .text-slate-900 { color: #e8edf5; }
+html.dark .erp-card { background: #101828; border-color: rgba(51, 65, 85, 0.8); }
+html.dark ::-webkit-scrollbar-thumb { background: #334155; }
+html.dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
+html.dark input, html.dark select, html.dark textarea { color-scheme: dark; }
+html.dark input::placeholder, html.dark textarea::placeholder { color: #64748b; }

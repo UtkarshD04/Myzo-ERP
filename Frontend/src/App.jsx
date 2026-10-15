@@ -488,6 +488,17 @@ export default function App() {
     return response;
   };
 
+  // ─── Holiday Handlers ───────────────────────────────────────────────────────
+  const handleAddHoliday = async (payload) => {
+    const response = await api.addHoliday(payload);
+    setHolidays(response.holidays);
+  };
+
+  const handleDeleteHoliday = async (id) => {
+    const response = await api.deleteHoliday(id);
+    setHolidays(response.holidays);
+  };
+
   // ─── Company Bank Handlers ──────────────────────────────────────────────────
   const handleUpdateCompanyBank = async (updates) => {
     const { companyBank: updated } = await api.updateCompanyBank(updates);
@@ -790,7 +801,12 @@ export default function App() {
           )}
 
           {activeTab === 'holidays' && (
-            <HolidaysView employee={employee} holidays={holidays} />
+            <HolidaysView
+              employee={employee}
+              holidays={holidays}
+              onAddHoliday={handleAddHoliday}
+              onDeleteHoliday={handleDeleteHoliday}
+            />
           )}
 
           {activeTab === 'profile' && (

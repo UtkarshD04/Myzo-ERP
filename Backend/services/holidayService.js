@@ -1,3 +1,5 @@
+import { countHolidays, findAllHolidays, insertHolidays } from '../models/holidayModel.js';
+
 const CALENDARIFIC_API = 'https://calendarific.com/api/v2/holidays';
 
 // Simple in-memory cache — refreshes once per day
@@ -51,9 +53,9 @@ export async function getHolidays(country = 'IN', year = new Date().getFullYear(
 }
 
 // Company-declared holidays that Calendarific doesn't (or only partly) cover.
-// Merged over the live list in withCustomHolidays — a custom entry wins when
-// both fall on the same date.
-const CUSTOM_HOLIDAYS = [
+// Inserted into the DB once, when the collection is empty, so Admins can
+// manage them from the Holidays page like any holiday they add themselves.
+const DEFAULT_COMPANY_HOLIDAYS = [
   { name: 'Maha Ashtami', date: '2026-10-19' },
   { name: 'Dussehra', date: '2026-10-20' },
   { name: 'Maharishi Valmiki Jayanti', date: '2026-10-26' },
@@ -71,8 +73,15 @@ const CUSTOM_HOLIDAYS = [
   description: ''
 }));
 
-export function withCustomHolidays(liveHolidays) {
-  const customDates = new Set(CUSTOM_HOLIDAYS.map(h => h.date));
-  const live = (liveHolidays || []).filter(h => !customDates.has(h.date));
-  return [...live, ...CUSTOM_HOLIDAYS].sort((a, b) => a.date.localeCompare(b.date));
+// Live (Calendarific) holidays merged with the company's own; a company
+// entry wins when both fall on the same date.
+export async function getAllHolidays() {
+  if (await countHolidays() === 0) await insertHolidays(DEFAULT_COMPANY_HOLIDAYS);
+
+  const custom = await findAllHolidays();
+  const live = await getHolidays(process.env.HOLIDAY_COUNTRY || 'IN', new Date().getFullYear());
+
+  const customDates = new Set(custom.map(h => h.date));
+  const liveOnly = (live || []).filter(h => !customDates.has(h.date));
+  return [...liveOnly, ...custom].sort((a, b) => a.date.localeCompare(b.date));
 }

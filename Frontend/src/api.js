@@ -189,6 +189,13 @@ export const api = {
     body: JSON.stringify(payload),
   }),
 
+  // Holidays
+  addHoliday: (payload) => request('/holidays', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  deleteHoliday: (id) => request(`/holidays/${id}`, { method: 'DELETE' }),
+
   // Company Bank Account (Settings)
   getCompanyBank: () => request('/company-bank'),
   updateCompanyBank: (updates) => request('/company-bank', {

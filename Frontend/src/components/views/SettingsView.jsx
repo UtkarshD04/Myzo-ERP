@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { getStoredTheme, applyTheme } from '../../utils/theme';
 import { Moon, Sun, Bell, Shield, Globe, Monitor, Check, User, Mail, KeyRound, Lock, Landmark, ImagePlus, Trash2 } from 'lucide-react';
 
 // Same "no file-storage backend, store as a base64 data URL" convention
@@ -22,7 +23,7 @@ const CHEQUE_FIELD_LABELS = {
 };
 
 export default function SettingsView({ employee, onUpdateEmployee, companyBank, onUpdateCompanyBank }) {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => getStoredTheme() === 'dark');
   const [notifSound, setNotifSound] = useState(true);
   const [emailAlerts, setEmailAlerts] = useState(true);
   const [compactMode, setCompactMode] = useState(false);
@@ -196,7 +197,7 @@ export default function SettingsView({ employee, onUpdateEmployee, companyBank, 
             <p className="font-semibold text-sm text-slate-700">Dark Mode</p>
             <p className="text-[11px] text-slate-400 mt-0.5">Switch the ERP interface to a dark themed layout</p>
           </div>
-          <Toggle value={darkMode} onChange={setDarkMode} />
+          <Toggle value={darkMode} onChange={(on) => { setDarkMode(on); applyTheme(on ? 'dark' : 'light'); }} />
         </div>
 
         <div className="flex items-center justify-between py-3 border-b border-slate-50">
