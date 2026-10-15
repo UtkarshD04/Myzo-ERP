@@ -49,3 +49,30 @@ export async function getHolidays(country = 'IN', year = new Date().getFullYear(
     return null;
   }
 }
+
+// Company-declared holidays that Calendarific doesn't (or only partly) cover.
+// Merged over the live list in withCustomHolidays — a custom entry wins when
+// both fall on the same date.
+const CUSTOM_HOLIDAYS = [
+  { name: 'Maha Ashtami', date: '2026-10-19' },
+  { name: 'Dussehra', date: '2026-10-20' },
+  { name: 'Maharishi Valmiki Jayanti', date: '2026-10-26' },
+  { name: 'Dhanteras', date: '2026-11-06' },
+  { name: 'Choti Diwali', date: '2026-11-07' },
+  { name: 'Diwali', date: '2026-11-08' },
+  { name: 'Govardhan Puja', date: '2026-11-09' },
+  { name: 'Bhai Dooj', date: '2026-11-11' },
+  { name: 'Chhath Puja', date: '2026-11-15' },
+  { name: 'Guru Nanak Jayanti', date: '2026-11-24' }
+].map((h, i) => ({
+  id: `HOL-CUS-${String(i + 1).padStart(3, '0')}`,
+  ...h,
+  type: 'National',
+  description: ''
+}));
+
+export function withCustomHolidays(liveHolidays) {
+  const customDates = new Set(CUSTOM_HOLIDAYS.map(h => h.date));
+  const live = (liveHolidays || []).filter(h => !customDates.has(h.date));
+  return [...live, ...CUSTOM_HOLIDAYS].sort((a, b) => a.date.localeCompare(b.date));
+}

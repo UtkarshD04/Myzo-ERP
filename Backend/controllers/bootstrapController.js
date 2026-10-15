@@ -25,7 +25,7 @@ import { findAllAfterSalesServices } from '../models/afterSalesServiceModel.js';
 import { findAllBecomePartners } from '../models/becomePartnerModel.js';
 import { findAllCareerApplications, filterCareerApplicationsForViewer } from '../models/careerApplicationModel.js';
 import { findAllPolicyAcknowledgements, filterPolicyAcknowledgementsForViewer } from '../models/policyAcknowledgementModel.js';
-import { getHolidays } from '../services/holidayService.js';
+import { getHolidays, withCustomHolidays } from '../services/holidayService.js';
 
 export async function getBootstrapData(req, res) {
   const rawEmployees = await Employee.find({}, { password: 0, resetTokenHash: 0, resetTokenExpiry: 0 }).lean();
@@ -99,6 +99,6 @@ export async function getBootstrapData(req, res) {
     becomePartners,
     careerApplications,
     policyAcknowledgements,
-    holidays: liveHolidays || [],
+    holidays: withCustomHolidays(liveHolidays),
   });
 }
