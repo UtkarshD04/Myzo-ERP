@@ -48,7 +48,12 @@ export async function updateAttendanceRecord(employeeId, date, updater) {
 // company-wide visibility (matches HRDashboard's "who's in today" widget),
 // everyone else only ever needs their own (AttendanceView already only
 // renders `myAttendance`, filtered client-side by employee.id).
+//
+// Admins' own attendance is visible only to a Super Admin (and to the admin
+// themself) — other Admins, HR and Managers never see it.
 export function filterAttendanceForViewer(records, viewer) {
-  if (['Admin', 'HR', 'Manager'].includes(viewer.role)) return records;
-  return records.filter(r => r.employeeId === viewer.id);
+  if (viewer.isSuperAdmin) return records;
+  const visible = records.filter(r => r.role !== 'Admin' || r.employeeId === viewer.id);
+  if (['Admin', 'HR', 'Manager'].includes(viewer.role)) return visible;
+  return visible.filter(r => r.employeeId === viewer.id);
 }
