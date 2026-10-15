@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { findAllEmployees, findEmployeeById, createEmployee, updateEmployeeById, deleteEmployeeById, sanitizeEmployeeForViewer } from '../models/employeeModel.js';
+import { Employee, findAllEmployees, findEmployeeById, createEmployee, updateEmployeeById, deleteEmployeeById, sanitizeEmployeeForViewer } from '../models/employeeModel.js';
 import { buildId } from '../services/timeService.js';
 
 const REQUIRED_FIELDS = ['name', 'officialEmail', 'department', 'designation', 'role', 'password'];
@@ -140,6 +140,25 @@ export async function modifyEmployee(req, res) {
   if (updates.officialEmail) {
     updates.officialEmail = updates.officialEmail.trim().toLowerCase();
     updates.email = updates.officialEmail;
+
+    // The edit form resubmits the unchanged email with every save, so only a
+    // real change is gated: login email is an identity field, so just Admins
+    // (incl. the Super Admin) may change it, not HR.
+    if (updates.officialEmail === existing?.officialEmail) {
+      delete updates.officialEmail;
+      delete updates.email;
+    } else {
+      if (requesterRole !== 'Admin') {
+        const error = new Error('Access denied. Only an Admin can change an employee\'s email.');
+        error.statusCode = 403;
+        throw error;
+      }
+      if (await Employee.exists({ officialEmail: updates.officialEmail, id: { $ne: id } })) {
+        const error = new Error('Another employee already uses this email.');
+        error.statusCode = 409;
+        throw error;
+      }
+    }
   }
 
   const employee = await updateEmployeeById(id, updates);

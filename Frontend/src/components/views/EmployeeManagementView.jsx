@@ -734,7 +734,7 @@ export default function EmployeeManagementView({ employee, employees = [], atten
             <input
               type="email"
               required
-              disabled={!!editingId}
+              disabled={!!editingId && employee?.role !== 'Admin'}
               value={form.officialEmail}
               onChange={(e) => setForm({ ...form, officialEmail: e.target.value })}
               className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500 disabled:text-slate-400"
