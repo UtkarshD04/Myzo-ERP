@@ -216,6 +216,17 @@ export default function App() {
     setActiveTab('dashboard');
   };
 
+  // Fired by api.js when the server rejects the session (e.g. an Admin just
+  // blocked this account) so the user is signed out right away, not at next login.
+  useEffect(() => {
+    const onSessionEnded = (e) => {
+      handleLogout();
+      if (e.detail?.message) window.alert(e.detail.message);
+    };
+    window.addEventListener('myzo:session-ended', onSessionEnded);
+    return () => window.removeEventListener('myzo:session-ended', onSessionEnded);
+  }, []);
+
   const handleLogout = () => {
     api.logout();
     setEmployee(null);

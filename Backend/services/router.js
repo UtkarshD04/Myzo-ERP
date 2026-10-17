@@ -102,7 +102,7 @@ export async function requestHandler(req, rawRes) {
     }
     req.body = ['POST', 'PUT', 'PATCH'].includes(req.method) ? await readJsonBody(req) : {};
     if (!route.public) {
-      authenticate(req);
+      await authenticate(req);
     }
     await route.handler(req, res);
   } catch (error) {

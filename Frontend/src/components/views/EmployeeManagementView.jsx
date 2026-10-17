@@ -177,8 +177,21 @@ export default function EmployeeManagementView({ employee, employees = [], atten
     }
   };
 
+  // Blocking/restoring login is Admin-only (Super Admin included); never your
+  // own account, and only the Super Admin may touch another Admin. The server
+  // enforces the same rules — this just hides buttons that would be refused.
+  const canToggleAccess = (emp) =>
+    employee?.role === 'Admin' &&
+    emp.id !== employee.id &&
+    !emp.isSuperAdmin &&
+    (emp.role !== 'Admin' || !!employee.isSuperAdmin);
+
   const toggleStatus = async (emp) => {
     const nextStatus = emp.employmentStatus === 'Inactive' ? 'Active' : 'Inactive';
+    const question = nextStatus === 'Inactive'
+      ? `Block ${emp.name} from logging in? They will be signed out immediately.`
+      : `Allow ${emp.name} to log in again?`;
+    if (!window.confirm(question)) return;
     try {
       await onUpdateEmployee(emp.id, { employmentStatus: nextStatus });
     } catch (err) {
@@ -1234,7 +1247,7 @@ export default function EmployeeManagementView({ employee, employees = [], atten
                           <UserCog className="w-3.5 h-3.5" />
                         </button>
                       )}
-                      {(!emp.isSuperAdmin || employee?.id === emp.id) && (
+                      {canToggleAccess(emp) && (
                         <button
                           onClick={() => toggleStatus(emp)}
                           title={emp.employmentStatus === 'Inactive' ? 'Reactivate employee' : 'Deactivate employee'}

@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { Employee } from '../models/employeeModel.js';
 import { addNotification } from '../models/notificationModel.js';
 import { signToken } from './tokenService.js';
+import { isAccountActive } from './accountStatus.js';
 import { sendPasswordResetEmail } from './mailService.js';
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -43,9 +44,8 @@ export async function login({ email, password }) {
     throw error;
   }
 
-  const status = employee.status || employee.employmentStatus;
-  if (status && status !== 'Active') {
-    const error = new Error('This account has been deactivated. Contact HR/Admin for access.');
+  if (!isAccountActive(employee)) {
+    const error = new Error('This account has been deactivated. Contact an Admin for access.');
     error.statusCode = 403;
     throw error;
   }

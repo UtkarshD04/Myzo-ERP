@@ -133,6 +133,37 @@ export async function modifyEmployee(req, res) {
     }
   }
 
+  // Blocking or restoring someone's login is Admin-only (Super Admin included)
+  // — HR can't, and nobody can lock out their own account. Only the Super
+  // Admin may change another Admin's access. The edit form resubmits fields
+  // unchanged, so only a real change to the status is gated.
+  if (updates.employmentStatus !== undefined) {
+    if (!['Active', 'Inactive'].includes(updates.employmentStatus)) {
+      const error = new Error('Status must be Active or Inactive.');
+      error.statusCode = 400;
+      throw error;
+    }
+    if (updates.employmentStatus === (existing?.employmentStatus || 'Active')) {
+      delete updates.employmentStatus;
+    } else {
+      if (requesterRole !== 'Admin') {
+        const error = new Error('Access denied. Only an Admin can block or restore an employee\'s login.');
+        error.statusCode = 403;
+        throw error;
+      }
+      if (isSelf) {
+        const error = new Error('You cannot change the login access of your own account.');
+        error.statusCode = 403;
+        throw error;
+      }
+      if (existing?.role === 'Admin' && !req.user.isSuperAdmin) {
+        const error = new Error('Access denied. Only the Super Admin can block or restore another Admin.');
+        error.statusCode = 403;
+        throw error;
+      }
+    }
+  }
+
   if (updates.password) {
     updates.password = await bcrypt.hash(updates.password, 10);
   }

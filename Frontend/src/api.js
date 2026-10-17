@@ -21,6 +21,12 @@ async function request(path, options = {}) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    // A 401 on an authenticated call means the session is dead (expired, or the
+    // account was blocked/removed) — tell the app to sign out. Login/reset
+    // calls are excluded: a wrong password is also a 401 there.
+    if (res.status === 401 && token && !path.startsWith('/auth/')) {
+      window.dispatchEvent(new CustomEvent('myzo:session-ended', { detail: { message: data.message } }));
+    }
     const error = new Error(data.message || 'Request failed');
     error.status = res.status;
     Object.assign(error, data);
